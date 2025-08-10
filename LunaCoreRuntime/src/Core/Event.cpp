@@ -50,6 +50,50 @@ void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName) {
     lua_pop(L, 3);
 }
 
+// void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, const std::map<std::string, std::any>& eventObject) {
+//     Core::CrashHandler::core_state = Core::CrashHandler::CORE_EVENT;
+
+//     lua_getglobal(L, "Game");               // Push Game table onto the stack
+//     lua_getfield(L, -1, "Event");           // Push Game.Event table onto the stack
+//     lua_getfield(L, -1, eventName.c_str()); // Push Game.Event.<eventName> onto the stack
+//     lua_getfield(L, -1, "Trigger");         // Push Game.Event.<eventName>.Trigger onto the stack
+
+//     if (lua_isfunction(L, -1)) {
+//         lua_pushvalue(L, -2);               // Push Game.Event.<eventName> as the first argument
+
+//         // Create a Lua table for the event object
+//         lua_newtable(L);
+//         for (const auto& [key, value] : eventObject) {
+//             lua_pushstring(L, key.c_str()); // Push the key
+
+//             // Push the value based on its type
+//             if (value.type() == typeid(int)) {
+//                 lua_pushinteger(L, std::any_cast<int>(value));
+//             } else if (value.type() == typeid(double)) {
+//                 lua_pushnumber(L, std::any_cast<double>(value));
+//             } else if (value.type() == typeid(std::string)) {
+//                 lua_pushstring(L, std::any_cast<std::string>(value).c_str());
+//             } else if (value.type() == typeid(bool)) {
+//                 lua_pushboolean(L, std::any_cast<bool>(value));
+//             } else {
+//                 lua_pushnil(L); // Push nil for unsupported types
+//             }
+
+//             lua_settable(L, -3); // Set the key-value pair in the table
+//         }
+
+//         // Call the Lua function with 2 arguments (event table + event object)
+//         if (lua_pcall(L, 2, 0, 0)) {
+//             Core::Debug::LogError("Game.Event." + eventName + " error: " + std::string(lua_tostring(L, -1)));
+//             lua_pop(L, 1); // Pop the error message
+//         }
+//     } else {
+//         Core::Debug::LogError("Game.Event." + eventName + ":Trigger error. Unexpected type");
+//         lua_pop(L, 1); // Pop the non-function value
+//     }
+//     lua_pop(L, 3); // Pop Game, Game.Event, and Game.Event.<eventName>
+// }
+
 void Core::EventHandlerCallback()
 {
     Lua_Global_Mut.lock();
@@ -237,6 +281,13 @@ bool Core::Module::RegisterEventModule(lua_State *L)
     lua_setfield(L, -2, "listeners");
     luaC_setmetatable(L, "EventClass");
     lua_setfield(L, -2, "OnGameCreativeItemsRegister");
+
+    //$@@@Game.Event.OnGameEntitySpawn: EventClass
+    lua_newtable(L);
+    lua_newtable(L);
+    lua_setfield(L, -2, "listeners");
+    luaC_setmetatable(L, "EventClass");
+    lua_setfield(L, -2, "OnGameEntitySpawn");
 
     //$@@@Game.Event.OnKeyPressed: EventClass
     lua_newtable(L);

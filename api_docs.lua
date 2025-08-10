@@ -70,6 +70,9 @@ Game.Event.OnGameItemsRegisterTexture = {}
 ---@class OnGameCreativeItemsRegister: EventClass
 Game.Event.OnGameCreativeItemsRegister = {}
 
+---@class OnGameEntitySpawn: EventClass
+Game.Event.OnGameEntitySpawn = {}
+
 ---@class OnKeyPressed: EventClass
 Game.Event.OnKeyPressed = {}
 
@@ -386,7 +389,7 @@ local InventorySlot = {}
 ---@return boolean
 function InventorySlot:isEmpty() end
 
----@type GameItem
+---@type GameItem?
 InventorySlot.Item = {}
 
 InventorySlot.ItemCount = 0

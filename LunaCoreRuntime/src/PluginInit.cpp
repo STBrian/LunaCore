@@ -11,6 +11,7 @@
 #include "Core/TCPConnection.hpp"
 #include "Core/Config.hpp"
 #include "Core/Debug.hpp"
+#include "Game/Hooks/GameHooks.hpp"
 
 using namespace CTRPluginFramework;
 
@@ -142,6 +143,10 @@ void InitMenu(PluginMenu &menu)
             if (!Core::Config::SaveConfig(CONFIG_FILE, config))
                 Core::Debug::LogMessage("Failed to save configs", true);
         }
+    }));
+    devFolder->Append(new MenuEntry("Patch proccess", nullptr, [](MenuEntry *entry) {
+        hookSomeFunctions();
+        MessageBox("Process patched successfully")();
     }));
     devFolder->Append(new MenuEntry("Load script from network", nullptr, [](MenuEntry *entry) {
         initSockets();

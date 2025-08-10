@@ -144,10 +144,6 @@ void InitMenu(PluginMenu &menu)
                 Core::Debug::LogMessage("Failed to save configs", true);
         }
     }));
-    devFolder->Append(new MenuEntry("Patch proccess", nullptr, [](MenuEntry *entry) {
-        hookSomeFunctions();
-        MessageBox("Process patched successfully")();
-    }));
     devFolder->Append(new MenuEntry("Load script from network", nullptr, [](MenuEntry *entry) {
         initSockets();
         Core::Network::TCPServer tcp(5432);

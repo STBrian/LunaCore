@@ -70,6 +70,9 @@ Game.Event.OnGameItemsRegisterTexture = {}
 ---@class OnGameCreativeItemsRegister: EventClass
 Game.Event.OnGameCreativeItemsRegister = {}
 
+---@class OnGameEntitySpawnStart: EventClass
+Game.Event.OnGameEntitySpawnStart = {}
+
 ---@class OnGameEntitySpawn: EventClass
 Game.Event.OnGameEntitySpawn = {}
 

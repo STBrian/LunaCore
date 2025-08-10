@@ -103,13 +103,13 @@ static void RegisterItemsHook(CoreHookContext* ctx) {
     totemItem->padding[6] = 1;
     Game::Item::mTotem = totemItem;
 
-    Lua_Global_Mut.lock();
+    {
+        CustomLockGuard Lock(Lua_Global_Mut);
 
-    GameState.LoadingItems.store(true);
-    Core::Event::TriggerEvent(Lua_global, "OnGameItemsRegister");
-    GameState.LoadingItems.store(false);
-
-    Lua_Global_Mut.unlock();
+        GameState.LoadingItems.store(true);
+        Core::Event::TriggerEvent(Lua_global, "OnGameItemsRegister");
+        GameState.LoadingItems.store(false);
+    }
 
     reinterpret_cast<void(*)()>(0x0056e450)();
     GameState.LoadingItems.store(false);
@@ -131,9 +131,10 @@ static void RegisterItemsTexturesHook(CoreHookContext* ctx) {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
     GameState.SettingItemsTextures.store(true);
 
-    Lua_Global_Mut.lock();
-    Core::Event::TriggerEvent(Lua_global, "OnGameItemsRegisterTexture");
-    Lua_Global_Mut.unlock();
+    {
+        CustomLockGuard Lock(Lua_Global_Mut);
+        Core::Event::TriggerEvent(Lua_global, "OnGameItemsRegisterTexture");
+    }
 
     GameState.SettingItemsTextures.store(false);
     Core::CrashHandler::core_state = lastcState;
@@ -155,9 +156,10 @@ static void RegisterCreativeItemsHook(CoreHookContext* ctx) {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
     GameState.LoadingCreativeItems.store(true);
 
-    Lua_Global_Mut.lock();
-    Core::Event::TriggerEvent(Lua_global, "OnGameCreativeItemsRegister");
-    Lua_Global_Mut.unlock();
+    {
+        CustomLockGuard Lock(Lua_Global_Mut);
+        Core::Event::TriggerEvent(Lua_global, "OnGameCreativeItemsRegister");
+    }
 
     GameState.LoadingCreativeItems.store(false);
     Core::CrashHandler::core_state = lastcState;

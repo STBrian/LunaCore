@@ -208,6 +208,8 @@ void InitMenu(PluginMenu &menu)
         if (Lua_Global_Mut.try_lock() && Core::LoadBuffer(buffer, size, ("net:/"+std::string(namebuf)).c_str())) {
             MessageBox("Script loaded")();
             if (MessageBox("Do you want to save this script to the sd card?", DialogType::DialogYesNo)()) {
+                if (!Directory::IsExists(PLUGIN_FOLDER "/scripts/"))
+                    Directory::Create(PLUGIN_FOLDER "/scripts/");
                 File scriptOut;
                 File::Open(scriptOut, PLUGIN_FOLDER "/scripts/"+std::string(namebuf), File::WRITE|File::CREATE);
                 if (!scriptOut.IsOpen()) {

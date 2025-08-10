@@ -13,6 +13,14 @@
 #include "CoreGlobals.hpp"
 #include "Core/Utils/GameState.hpp"
 
+static inline void core_newevent(lua_State* L, const char* eventname) {
+    lua_newtable(L);
+    lua_newtable(L);
+    lua_setfield(L, -2, "listeners");
+    luaC_setmetatable(L, "EventClass");
+    lua_setfield(L, -2, eventname);
+}
+
 namespace CTRPF = CTRPluginFramework;
 
 CTRPF::Clock timeoutEventClock;
@@ -29,7 +37,9 @@ void TimeoutEventHook(lua_State *L, lua_Debug *ar)
         luaL_error(L, "Event listener exceeded execution time (5000 ms)");
 }
 
-void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName) {
+void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsigned int nargs) {
+    int baseIdx = lua_gettop(L) - nargs;
+    int argsIdx = baseIdx + 1;
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_EVENT;
     lua_getglobal(L, "Game");
     lua_getfield(L, -1, "Event");
@@ -39,17 +49,17 @@ void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName) {
     if (lua_isfunction(L, -1))
     {
         lua_pushvalue(L, -2);
-        if (lua_pcall(L, 1, 0, 0))
-        {
-            Core::Debug::LogError("Game.Event." + eventName + "error: " + std::string(lua_tostring(L, -1)));
-            lua_pop(L, 1);
-        }
+        for (int i = 0; i < nargs; i++)
+            lua_pushvalue(L, argsIdx + i);
+        if (lua_pcall(L, 1 + nargs, 0, 0))
+            Core::Debug::LogError("Game.Event." + eventName + " error: " + std::string(lua_tostring(L, -1)));
+            //lua_pop(L, 1);
     }
-    else {
+    else
         Core::Debug::LogError("Game.Event." + eventName + ":Trigger error. Unexpected type");
-        lua_pop(L, 1);
-    }
-    lua_pop(L, 3);
+        //lua_pop(L, 1);
+    //lua_pop(L, 3);
+    lua_settop(L, baseIdx);
 }
 
 std::map<std::string, std::any> Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, const std::map<std::string, std::any>& eventObject) {
@@ -124,23 +134,27 @@ std::map<std::string, std::any> Core::Event::TriggerEvent(lua_State* L, const st
 
 void Core::EventHandlerCallback()
 {
-    Lua_Global_Mut.lock();
+    CustomLockGuard Lock(Lua_Global_Mut);
     lua_State *L = Lua_global;
 
     // KeyPressed Event
     u32 pressedKeys = CTRPF::Controller::GetKeysPressed();
     u32 downKeys = CTRPF::Controller::GetKeysDown();
     u32 releasedKeys = CTRPF::Controller::GetKeysReleased();
-    if (pressedKeys > 0)
-        Core::Event::TriggerEvent(L, "OnKeyPressed");
+    if (pressedKeys > 0) {
+        lua_pushnumber(L, pressedKeys);
+        Core::Event::TriggerEvent(L, "OnKeyPressed", 1);
+    }
 
-    if (downKeys > 0)
-        Core::Event::TriggerEvent(L, "OnKeyDown");
+    if (downKeys > 0) {
+        lua_pushnumber(L, downKeys);
+        Core::Event::TriggerEvent(L, "OnKeyDown", 1);
+    }
 
-    if (releasedKeys > 0)
-        Core::Event::TriggerEvent(L, "OnKeyReleased");
-
-    Lua_Global_Mut.unlock();
+    if (releasedKeys > 0) {
+        lua_pushnumber(L, releasedKeys);
+        Core::Event::TriggerEvent(L, "OnKeyReleased", 1);
+    }
 
     /*static float lastSlider = 0;
     float slider = osGet3DSliderState();
@@ -283,32 +297,16 @@ bool Core::Module::RegisterEventModule(lua_State *L)
     lua_getfield(L, -1, "Event");
 
     //$@@@Game.Event.OnGameLoad: EventClass
-    lua_newtable(L);
-    lua_newtable(L);
-    lua_setfield(L, -2, "listeners");
-    luaC_setmetatable(L, "EventClass");
-    lua_setfield(L, -2, "OnGameLoad");
+    core_newevent(L, "OnGameLoad");
     
     //$@@@Game.Event.OnGameItemsRegister: EventClass
-    lua_newtable(L);
-    lua_newtable(L);
-    lua_setfield(L, -2, "listeners");
-    luaC_setmetatable(L, "EventClass");
-    lua_setfield(L, -2, "OnGameItemsRegister");
+    core_newevent(L, "OnGameItemsRegister");
 
     //$@@@Game.Event.OnGameItemsRegisterTexture: EventClass
-    lua_newtable(L);
-    lua_newtable(L);
-    lua_setfield(L, -2, "listeners");
-    luaC_setmetatable(L, "EventClass");
-    lua_setfield(L, -2, "OnGameItemsRegisterTexture");
+    core_newevent(L, "OnGameItemsRegisterTexture");
 
     //$@@@Game.Event.OnGameCreativeItemsRegister: EventClass
-    lua_newtable(L);
-    lua_newtable(L);
-    lua_setfield(L, -2, "listeners");
-    luaC_setmetatable(L, "EventClass");
-    lua_setfield(L, -2, "OnGameCreativeItemsRegister");
+    core_newevent(L, "OnGameCreativeItemsRegister");
 
     //$@@@Game.Event.OnGameEntitySpawnStart: EventClass
     lua_newtable(L);
@@ -325,39 +323,19 @@ bool Core::Module::RegisterEventModule(lua_State *L)
     lua_setfield(L, -2, "OnGameEntitySpawn");
 
     //$@@@Game.Event.OnKeyPressed: EventClass
-    lua_newtable(L);
-    lua_newtable(L);
-    lua_setfield(L, -2, "listeners");
-    luaC_setmetatable(L, "EventClass");
-    lua_setfield(L, -2, "OnKeyPressed");
+    core_newevent(L, "OnKeyPressed");
 
     //$@@@Game.Event.OnKeyDown: EventClass
-    lua_newtable(L);
-    lua_newtable(L);
-    lua_setfield(L, -2, "listeners");
-    luaC_setmetatable(L, "EventClass");
-    lua_setfield(L, -2, "OnKeyDown");
+    core_newevent(L, "OnKeyDown");
 
     //$@@@Game.Event.OnKeyReleased: EventClass
-    lua_newtable(L);
-    lua_newtable(L);
-    lua_setfield(L, -2, "listeners");
-    luaC_setmetatable(L, "EventClass");
-    lua_setfield(L, -2, "OnKeyReleased");
+    core_newevent(L, "OnKeyReleased");
 
     //$@@@Game.Event.OnPlayerJoinWorld: EventClass
-    lua_newtable(L);
-    lua_newtable(L);
-    lua_setfield(L, -2, "listeners");
-    luaC_setmetatable(L, "EventClass");
-    lua_setfield(L, -2, "OnPlayerJoinWorld");
+    core_newevent(L, "OnPlayerJoinWorld");
 
     //$@@@Game.Event.OnPlayerLeaveWorld: EventClass
-    lua_newtable(L);
-    lua_newtable(L);
-    lua_setfield(L, -2, "listeners");
-    luaC_setmetatable(L, "EventClass");
-    lua_setfield(L, -2, "OnPlayerLeaveWorld");
+    core_newevent(L, "OnPlayerLeaveWorld");
 
     lua_pop(L, 2);
 

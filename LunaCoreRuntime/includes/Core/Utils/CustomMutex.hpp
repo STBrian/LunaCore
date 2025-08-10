@@ -30,3 +30,16 @@ class CustomMutex
             this->locked.store(false);
         }
 };
+
+class CustomLockGuard {
+    private:
+        CustomMutex& m_mutex;
+    public:
+        CustomLockGuard(CustomMutex& mutex): m_mutex(mutex) {
+            m_mutex.lock();
+        };
+
+        ~CustomLockGuard() {
+            m_mutex.unlock();
+        };
+};

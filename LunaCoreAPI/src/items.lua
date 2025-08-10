@@ -279,30 +279,18 @@ end)
 ---@param itemName string
 ---@return integer?
 function CoreAPI.Items.getItemId(itemName)
-    local itemId
+    local itemId = nil
     itemName = string.lower(itemName)
     if string.match(itemName, "^minecraft:") then
         itemName = string.gsub(itemName, "^minecraft:", "")
         local item = Game.Items.findItemByName(itemName)
-        if item then
-            itemId = item.ID
-        else
-            itemId = nil
-        end
+        if item then itemId = item.ID end
     elseif not string.find(itemName, ":", 1, true) then
         local item = Game.Items.findItemByName(itemName)
-        if item then
-            itemId = item.ID
-        else
-            itemId = nil
-        end
+        if item then itemId = item.ID end
     else
         local instance = itemsGlobals.registry[itemName]
-        if instance then
-            itemId = instance.itemId
-        else
-            itemId = nil
-        end
+        if instance then itemId = instance.itemId end
     end
     return itemId
 end

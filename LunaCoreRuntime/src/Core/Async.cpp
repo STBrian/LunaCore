@@ -24,7 +24,7 @@ static void TimeoutAsyncHook(lua_State *L, lua_Debug *ar)
 
 void Core::AsyncHandlerCallback()
 {
-    Lua_Global_Mut.lock();
+    CustomLockGuard Lock(Lua_Global_Mut);
     lua_State *L = Lua_global;
 
     // Async handles timeout hooks individually so no need to configure
@@ -43,7 +43,6 @@ void Core::AsyncHandlerCallback()
     else
         lua_pop(L, 1);
     lua_pop(L, 1);
-    Lua_Global_Mut.unlock();
 }
 
 // ----------------------------------------------------------------------------
@@ -93,26 +92,10 @@ static int l_Async_tick(lua_State *L)
         lua_State *co = lua_tothread(L, -1);
         int coIdx = lua_gettop(L);
 
-        int status = lua_status(co);
-        if (status != 0 && status != LUA_YIELD) {
-            lua_pop(L, 1); // Remove co
-            // Remove co from table with table.remove
-            lua_getglobal(L, "table");
-            lua_getfield(L, -1, "remove");
-            lua_remove(L, -2);
-            lua_pushvalue(L, scriptsTableIdx);
-            lua_pushinteger(L, i);
-            if (lua_pcall(L, 2, 1, 0))
-                Core::Debug::LogError(CTRPF::Utils::Format("Core::Async::tick error: %s", lua_tostring(L, -1)));
-            lua_pop(L, 1); // Remove either error string or returned value
-            lua_gc(L, LUA_GCCOLLECT, 0);
-            continue;
-        }
-
         timeoutAsynClock.Restart();
         int call_result = lua_resume(co, 0);
 
-        if (call_result != 0 && call_result != LUA_YIELD) {
+        if (call_result != 0 && call_result != LUA_YIELD) { // Ended with error
             const char *errMsg = lua_tostring(co, -1);
             
             lua_getglobal(L, "debug");
@@ -143,8 +126,21 @@ static int l_Async_tick(lua_State *L)
             lua_pop(L, 1); // Remove either error string or returned value
             lua_gc(L, LUA_GCCOLLECT, 0);
             continue;
+        } else if (call_result == 0) { // Ended successfully
+            lua_pop(L, 1); // Remove co
+            // Remove co from table with table.remove
+            lua_getglobal(L, "table");
+            lua_getfield(L, -1, "remove");
+            lua_remove(L, -2);
+            lua_pushvalue(L, scriptsTableIdx);
+            lua_pushinteger(L, i);
+            if (lua_pcall(L, 2, 1, 0))
+                Core::Debug::LogError(CTRPF::Utils::Format("Core::Async::tick error: %s", lua_tostring(L, -1)));
+            lua_pop(L, 1); // Remove either error string or returned value
+            lua_gc(L, LUA_GCCOLLECT, 0);
+            continue;
         }
-        lua_pop(L, 1); // Remove co
+        lua_pop(L, 1); // Remove co 
     }
     lua_pop(L, 1); // Remove scripts
     return 0;

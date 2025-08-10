@@ -12,8 +12,7 @@ namespace Core {
     void EventHandlerCallback();
 
     namespace Event {
-        void TriggerEvent(lua_State* L, const std::string& eventName);
-        std::map<std::string, std::any> TriggerEvent(lua_State* L, const std::string& eventName, const std::map<std::string, std::any>& eventObject);
+        void TriggerEvent(lua_State* L, const std::string& eventName, unsigned int nargs = 0);
     }
 
     namespace Module {

@@ -2,20 +2,20 @@
     "configurations": [
         {
             "name": "Win32",
-            "compilerPath": "/opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc",
+            "compilerPath": "${DEVKITPRO_HOME}/devkitARM/bin/arm-none-eabi-gcc",
             "compilerArgs": [
                 "-std=gnu++20"
             ],
             "includePath": [
                 "${workspaceFolder}/**",
-                "/opt/devkitpro/libctru/include/**",
-                "/opt/devkitpro/portlibs/3ds/include/**",
-                "/opt/devkitpro/portlibs/3ds/include/lua5.1/**",
-                "/opt/devkitpro/devkitARM/arm-none-eabi/include/**",
-                "/opt/devkitpro/libctru/include/**",
+                "${DEVKITPRO_HOME}/libctru/include/**",
+                "${DEVKITPRO_HOME}/portlibs/3ds/include/**",
+                "${DEVKITPRO_HOME}/portlibs/3ds/include/lua5.1/**",
+                "${DEVKITPRO_HOME}/devkitARM/arm-none-eabi/include/**",
+                "${DEVKITPRO_HOME}/libctru/include/**",
                 "${workspaceFolder}/LunaCoreRuntime/includes/**",
-                "/opt/devkitpro/**",
-                "/opt/devkitpro/libctrpf/include/**"
+                "${DEVKITPRO_HOME}/**",
+                "${DEVKITPRO_HOME}/libctrpf/include/**"
             ],
             "defines": [
                 "_DEBUG",

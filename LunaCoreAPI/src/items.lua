@@ -198,8 +198,8 @@ function itemRegistry:registerItems()
         for _, definition in ipairs(self.definitions) do
             local regItem = Game.Items.registerItem(definition.name, definition.itemId)
             if regItem ~= nil then
-                definition.udata = regItem
-                itemsGlobals.registry[definition.nameId].udata = regItem
+                definition.item = regItem
+                itemsGlobals.registry[definition.nameId].item = regItem
             else
                 Core.Debug.log("[Warning] CoreAPI: Failed to register item '" .. definition.nameId .. "'", false)
             end
@@ -207,15 +207,15 @@ function itemRegistry:registerItems()
     end)
     Game.Event.OnGameItemsRegisterTexture:Connect(function ()
         for _, definition in ipairs(self.definitions) do
-            if definition.udata ~= nil then
-                Game.Items.registerItemTexture(definition.udata, definition.name, 0)
+            if definition.item ~= nil then
+                definition.item:setTexture(definition.name, 0)
             end
         end
     end)
     Game.Event.OnGameCreativeItemsRegister:Connect(function ()
         for _, definition in ipairs(self.definitions) do
-            if definition.group ~= nil and definition.group:is(CoreAPI.ItemGroups.ItemGroupIdentifier) and definition.udata ~= nil then
-                Game.Items.registerCreativeItem(definition.udata, definition.group.id, definition.group:getCreativePosition())
+            if definition.group ~= nil and definition.group:is(CoreAPI.ItemGroups.ItemGroupIdentifier) and definition.item ~= nil then
+                Game.Items.registerCreativeItem(definition.item, definition.group.id, definition.group:getCreativePosition())
             end
         end
     end)
@@ -283,9 +283,19 @@ function CoreAPI.Items.getItemId(itemName)
     itemName = string.lower(itemName)
     if string.match(itemName, "^minecraft:") then
         itemName = string.gsub(itemName, "^minecraft:", "")
-        itemId = Game.Items.findItemIDByName(itemName)
+        local item = Game.Items.findItemByName(itemName)
+        if item then
+            itemId = item.ID
+        else
+            itemId = nil
+        end
     elseif not string.find(itemName, ":", 1, true) then
-        itemId = Game.Items.findItemIDByName(itemName)
+        local item = Game.Items.findItemByName(itemName)
+        if item then
+            itemId = item.ID
+        else
+            itemId = nil
+        end
     else
         local instance = itemsGlobals.registry[itemName]
         if instance then

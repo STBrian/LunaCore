@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <cstring>
+#include <map>
 
 #include <CTRPluginFramework.hpp>
 
@@ -196,7 +197,7 @@ static void RegisterCreativeItemsHook(CoreHookContext* ctx) {
 
 // 0x004df688 < r2 contains x,y,z
 
-static __attribute((naked)) void EntitySpawnStartedOverwriteReturn() {
+static __attribute((naked)) void EntitySpawnStartOverwriteReturn() {
     asm volatile (
         "ldr r10, =0x00b0ac0c\n"
         "ldr r0, [r10, #0x10]\n"
@@ -207,27 +208,52 @@ static __attribute((naked)) void EntitySpawnStartedOverwriteReturn() {
     );
 }
 
-static void EntitySpawnStartedHook(CoreHookContext *ctx) {
+static void EntitySpawnStartHook(CoreHookContext *ctx) {
     Core::CrashHandler::CoreState lastcState = Core::CrashHandler::core_state;
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
 
+    float spawnX = 0.0f;
+    float spawnY = 0.0f;
+    float spawnZ = 0.0f;
+
     // Core::Debug::LogMessage(CTRPF::Utils::Format("Entity spawn started, r1: 0x%08X", ctx->r1), true);
     if (ctx->r2 != 0x0) {
-        float spawnX = *reinterpret_cast<float*>(ctx->r2);
-        float spawnY = *reinterpret_cast<float*>(ctx->r2 + 4);
-        float spawnZ = *reinterpret_cast<float*>(ctx->r2 + 8);
+        spawnX = *reinterpret_cast<float*>(ctx->r2);
+        spawnY = *reinterpret_cast<float*>(ctx->r2 + 4);
+        spawnZ = *reinterpret_cast<float*>(ctx->r2 + 8);
         // Core::Debug::LogMessage(CTRPF::Utils::Format("Entity spawn started at (%f, %f, %f)", spawnX, spawnY, spawnZ), true);
         
         // Set y to 20
-        *reinterpret_cast<float*>(ctx->r2 + 4) = 20.0f;
+        // *reinterpret_cast<float*>(ctx->r2 + 4) = 20.0f;
     }
+    
+    std::map<std::string, std::any> eventData = {
+        {"x", spawnX},
+        {"y", spawnY},
+        {"z", spawnZ}
+    };
 
     Lua_Global_Mut.lock();
-    Core::Event::TriggerEvent(Lua_global, "OnGameEntitySpawn");
+    std::map<std::string, std::any> eventReturn = Core::Event::TriggerEvent(Lua_global, "OnGameEntitySpawnStart", eventData);
     Lua_Global_Mut.unlock();
 
+    Core::Debug::LogMessage(CTRPF::Utils::Format("Return object size: %zu", eventReturn.size()), true);
+
+    if (eventReturn.find("x") != eventReturn.end()) {
+        Core::Debug::LogMessage(CTRPF::Utils::Format("Entity spawn start event returned x: %f", std::any_cast<float>(eventReturn["x"])), true);
+        *reinterpret_cast<float*>(ctx->r2) = std::any_cast<float>(eventReturn["x"]);
+    }
+    if (eventReturn.find("y") != eventReturn.end()) {
+        Core::Debug::LogMessage(CTRPF::Utils::Format("Entity spawn start event returned y: %f", std::any_cast<float>(eventReturn["y"])), true);
+        *reinterpret_cast<float*>(ctx->r2 + 4) = std::any_cast<float>(eventReturn["y"]);
+    }
+    if (eventReturn.find("z") != eventReturn.end()) {
+        Core::Debug::LogMessage(CTRPF::Utils::Format("Entity spawn start event returned z: %f", std::any_cast<float>(eventReturn["z"])), true);
+        *reinterpret_cast<float*>(ctx->r2 + 8) = std::any_cast<float>(eventReturn["z"]);
+    }
+
     Core::CrashHandler::core_state = lastcState;
-    hookReturnOverwrite(ctx, (u32)EntitySpawnStartedOverwriteReturn);
+    hookReturnOverwrite(ctx, (u32)EntitySpawnStartOverwriteReturn);
 }
 
 static __attribute((naked)) void EntitySpawnFinishedOverwriteReturn() {
@@ -305,7 +331,7 @@ void hookSomeFunctions() {
     hookFunction(0x00578358, (u32)RegisterCreativeItemsHook);
     //hookFunction(0x005f65a8, (u32)EntitySpawnHook);
     // hookFunction(0x005f6994, (u32)EntitySpawnStartedHook);
-    hookFunction(0x004df688, (u32)EntitySpawnStartedHook);
+    hookFunction(0x004df688, (u32)EntitySpawnStartHook);
     hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
     //hookFunction(0x0022da8c, (u32)LoadGame);
     Core::CrashHandler::core_state = lastcState;

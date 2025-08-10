@@ -252,33 +252,6 @@ static void EntitySpawnFinishedHook(CoreHookContext *ctx) {
     // Core::Debug::LogError("Successfully hooked entity spawn");
 }
 
-static __attribute((naked)) void LoadGameOverwriteReturn() {
-    asm volatile (
-        "stmdb sp!, {r4-r11, lr}\n"
-        "vpush {d8, d9}\n"
-        "cpy r4, r0\n"
-        "sub sp, sp, #0xfc\n"
-        "ldr r2, =0x22de4c\n"
-        "ldr r1, [r2, #0x0]\n"
-        "ldr r2, =0x22daa0\n"
-        "bx r2\n"
-    );
-}
-
-static void LoadGame(CoreHookContext *ctx) {
-    Core::CrashHandler::CoreState lastcState = Core::CrashHandler::core_state;
-    Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
-
-    Core::InitCore();
-
-    Lua_Global_Mut.lock();
-    Core::Event::TriggerEvent(Lua_global, "OnGameLoad");
-    Lua_Global_Mut.unlock();
-
-    Core::CrashHandler::core_state = lastcState;
-    hookReturnOverwrite(ctx, (u32)LoadGameOverwriteReturn);
-}
-
 void hookSomeFunctions() {
     Core::CrashHandler::CoreState lastcState = Core::CrashHandler::core_state;
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOKING;
@@ -287,6 +260,5 @@ void hookSomeFunctions() {
     hookFunction(0x00578358, (u32)RegisterCreativeItemsHook);
     hookFunction(0x004df688, (u32)EntitySpawnStartHook);
     // hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
-    //hookFunction(0x0022da8c, (u32)LoadGame);
     Core::CrashHandler::core_state = lastcState;
 }

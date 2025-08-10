@@ -62,76 +62,6 @@ void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsig
     lua_settop(L, baseIdx);
 }
 
-std::map<std::string, std::any> Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, const std::map<std::string, std::any>& eventObject) {
-    Core::CrashHandler::core_state = Core::CrashHandler::CORE_EVENT;
-    std::map<std::string, std::any> returnMap = {};
-     
-    lua_getglobal(L, "Game");               // Push Game table onto the stack
-    lua_getfield(L, -1, "Event");           // Push Game.Event table onto the stack
-    lua_getfield(L, -1, eventName.c_str()); // Push Game.Event.<eventName> onto the stack
-    lua_getfield(L, -1, "Trigger");         // Push Game.Event.<eventName>.Trigger onto the stack
-    if (lua_isfunction(L, -1)) {
-        lua_pushvalue(L, -2);               // Push Game.Event.<eventName> as the first argument
-        // Create a Lua table for the event object
-        lua_newtable(L);
-        for (const auto& [key, value] : eventObject) {
-            lua_pushstring(L, key.c_str()); // Push the key
-            // Push the value based on its type.
-            if (std::any_cast<int>(&value)) {
-                lua_pushinteger(L, std::any_cast<int>(value));
-            } else if (std::any_cast<float>(&value)) {
-                lua_pushnumber(L, std::any_cast<float>(value));
-            } else if (std::any_cast<std::string>(&value)) {
-                lua_pushstring(L, std::any_cast<std::string>(value).c_str());
-            } else if (std::any_cast<bool>(&value)) {
-                lua_pushboolean(L, std::any_cast<bool>(value));
-            } else {
-                lua_pushnil(L); // Push nil for unsupported types
-            }
-            lua_settable(L, -3); // Set the key-value pair in the table
-        }
-        // if (lua_pcall(L, 2, 0, 0)) {
-        //     Core::Debug::LogError("Game.Event." + eventName + " error: " + std::string(lua_tostring(L, -1)));
-        //     lua_pop(L, 1); // Pop the error message
-        // }
-
-        // Call the Lua function with 2 arguments (event table + event object) and get return value
-        if (lua_pcall(L, 2, 1, 0)) {
-            Core::Debug::LogError("Game.Event." + eventName + " error: " + std::string(lua_tostring(L, -1)));
-            lua_pop(L, 1); // Pop the error message
-        }
-
-        if (lua_istable(L, -1)) {
-            int tableIndex = lua_gettop(L); // Store the absolute index of the returned table
-            lua_pushnil(L); // First key for table iteration
-            while (lua_next(L, tableIndex) != 0) {
-                // Get the key and value from the stack
-                const char* key = lua_tostring(L, -2);
-                if (key) {
-                    std::any value;
-                    if (lua_isnumber(L, -1)) {
-                        value = lua_tonumber(L, -1);
-                    } else if (lua_isboolean(L, -1)) {
-                        value = lua_toboolean(L, -1);
-                    } else if (lua_isstring(L, -1)) {
-                        value = lua_tostring(L, -1);
-                    } else {
-                        value = nullptr; // Handle unsupported types
-                    }
-                    returnMap[key] = value; // Store in the map
-                }
-                lua_pop(L, 1); // Pop the value, keep the key for next iteration
-            }
-        }
-    } else {
-        Core::Debug::LogError("Game.Event." + eventName + ":Trigger error. Unexpected type");
-        lua_pop(L, 1); // Pop the non-function value
-    }
-    lua_pop(L, 3); // Pop Game, Game.Event, and Game.Event.<eventName>
-
-    return returnMap;
-}
-
 void Core::EventHandlerCallback()
 {
     CustomLockGuard Lock(Lua_Global_Mut);
@@ -263,10 +193,92 @@ static int l_Event_BaseEvent_Trigger(lua_State *L)
     return 0;
 }
 
+
+static int l_EventData_Index(lua_State* L) {
+    EventData* evt = (EventData*)luaL_checkudata(L, 1, "EventData");
+    const char* key = luaL_checkstring(L, 2);
+    for (int i = 0; i < evt->field_count; ++i) {
+        if (strcmp(key, evt->fields[i].name) == 0) {
+            switch (evt->fields[i].type) {
+                case EVENT_DATA_FLOAT:
+                    lua_pushnumber(L, *evt->fields[i].ptr.f);
+                    break;
+                case EVENT_DATA_INT:
+                    lua_pushinteger(L, *evt->fields[i].ptr.i);
+                    break;
+                case EVENT_DATA_BOOL:
+                    lua_pushboolean(L, *evt->fields[i].ptr.b);
+                    break;
+                case EVENT_DATA_STRING:
+                    lua_pushstring(L, *evt->fields[i].ptr.s);
+                    break;
+                case EVENT_DATA_POINTER:
+                    lua_pushlightuserdata(L, *evt->fields[i].ptr.p);
+                    break;
+                default:
+                    lua_pushnil(L);
+            }
+            return 1;
+        }
+    }
+    lua_pushnil(L);
+    return 1;
+}
+
+static int l_EventData_NewIndex(lua_State* L) {
+    EventData* evt = (EventData*)luaL_checkudata(L, 1, "EventData");
+    const char* key = luaL_checkstring(L, 2);
+    for (int i = 0; i < evt->field_count; ++i) {
+        if (strcmp(key, evt->fields[i].name) == 0) {
+            switch (evt->fields[i].type) {
+                case EVENT_DATA_FLOAT:
+                    *evt->fields[i].ptr.f = (float)luaL_checknumber(L, 3);
+                    break;
+                case EVENT_DATA_INT:
+                    *evt->fields[i].ptr.i = (int)luaL_checkinteger(L, 3);
+                    break;
+                case EVENT_DATA_BOOL:
+                    *evt->fields[i].ptr.b = lua_toboolean(L, 3) != 0;
+                    break;
+                case EVENT_DATA_STRING:
+                    *evt->fields[i].ptr.s = luaL_checkstring(L, 3);
+                    break;
+                case EVENT_DATA_POINTER:
+                    *evt->fields[i].ptr.p = lua_touserdata(L, 3);
+                    break;
+                default:
+                    break;
+            }
+            return 0;
+        }
+    }
+    return 0;
+}
+
+void l_Push_EventData(lua_State* L, const std::vector<EventDataField>& fields) {
+    EventData* evt = (EventData*)lua_newuserdata(L, sizeof(EventData));
+    evt->field_count = (int)fields.size();
+    for (int i = 0; i < evt->field_count; ++i) {
+        evt->fields[i] = fields[i];
+    }
+    luaC_setmetatable(L, "EventData");
+}
+
 // ----------------------------------------------------------------------------
+
+static inline void RegisterEventMetatables(lua_State *L) {
+    luaL_newmetatable(L, "EventData");
+    lua_pushcfunction(L, l_EventData_Index);
+    lua_setfield(L, -2, "__index");
+    lua_pushcfunction(L, l_EventData_NewIndex);
+    lua_setfield(L, -2, "__newindex");
+    lua_pop(L, 1);
+}
 
 bool Core::Module::RegisterEventModule(lua_State *L)
 {
+    RegisterEventMetatables(L);
+
     lua_getglobal(L, "Game");
     lua_newtable(L); // Game.Event
 

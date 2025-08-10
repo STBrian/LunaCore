@@ -11,7 +11,6 @@
 #include "Core/TCPConnection.hpp"
 #include "Core/Config.hpp"
 #include "Core/Debug.hpp"
-#include "Game/Hooks/GameHooks.hpp"
 
 using namespace CTRPluginFramework;
 

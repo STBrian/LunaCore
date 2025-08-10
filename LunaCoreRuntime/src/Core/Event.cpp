@@ -2,7 +2,6 @@
 
 #include <atomic>
 #include <map>
-#include <any>
 
 #include <CTRPluginFramework.hpp>
 

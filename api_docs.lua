@@ -1,16 +1,5 @@
 ---@diagnostic disable: missing-return, duplicate-set-field
 
-Async = {}
-
----Adds the function to the queue that will run apart from the game until the functions ends
----@param func function
-function Async.create(func) end
-
----Yeilds the current task until time has passed. Always returns true
----@param seconds number?
----@return boolean
-function Async.wait(seconds) end
-
 Game = {}
 
 Core = {}
@@ -42,48 +31,6 @@ function Core.Debug.logerror(msg) end
 ---Show error on screen
 ---@param msg string
 function Core.Debug.error(msg) end
-
-Game.Event = {}
-
----@class EventClass
-local EventClass = {}
-
----Adds a function to call when this events fires
----@param func function
-function EventClass:Connect(func) end
-
----Fire this event
-function EventClass:Trigger() end
-
----@class BaseEvent: EventClass
-Game.Event.BaseEvent = {}
-
----@class OnGameLoad: EventClass
-Game.Event.OnGameLoad = {}
-
----@class OnGameItemsRegister: EventClass
-Game.Event.OnGameItemsRegister = {}
-
----@class OnGameItemsRegisterTexture: EventClass
-Game.Event.OnGameItemsRegisterTexture = {}
-
----@class OnGameCreativeItemsRegister: EventClass
-Game.Event.OnGameCreativeItemsRegister = {}
-
----@class OnKeyPressed: EventClass
-Game.Event.OnKeyPressed = {}
-
----@class OnKeyDown: EventClass
-Game.Event.OnKeyDown = {}
-
----@class OnKeyReleased: EventClass
-Game.Event.OnKeyReleased = {}
-
----@class OnPlayerJoinWorld: EventClass
-Game.Event.OnPlayerJoinWorld = {}
-
----@class OnPlayerLeaveWorld: EventClass
-Game.Event.OnPlayerLeaveWorld = {}
 
 Core.Filesystem = {}
 
@@ -241,53 +188,6 @@ Game.Gamepad.KeyCodes.CPAD = 2952790016
 
 Game.Gamepad.KeyCodes.CSTICK = 184549376
 
-Game.Items = {}
-
----@class GameItem
-local GameItem = {}
-
----Find an item using its ID
----@param name string
----@return GameItem?
-function Game.Items.findItemByName(name) end
-
----Find and item using its name
----@param itemID integer
----@return GameItem?
-function Game.Items.findItemByID(itemID) end
-
----Get the item position in creative using the id
----@param itemID integer
----@param groupID integer
----@return number
-function Game.Items.getCreativePosition(itemID, groupID) end
-
----Creates a new item and stores it in the game's items table. Returns the address to the item
----@param itemName string
----@param itemId integer
----@return GameItem?
-function Game.Items.registerItem(itemName, itemId) end
-
----Takes a registered item with Game.Items.registerItem, and sets its texture
----@param item GameItem
----@param textureName string
----@param textureIndex integer
-function GameItem:setTexture(item, textureName, textureIndex) end
-
----Takes a registered item with Game.Items.registerItem, and registers it in creative menu
----@param item GameItem
----@param groupId integer
----@param position integer
-function Game.Items.registerCreativeItem(item, groupId, position) end
-
-GameItem.StackSize = 64
-
-GameItem.ID = 1
-
-GameItem.NameID = ""
-
-GameItem.DescriptionID = ""
-
 Game.LocalPlayer = {}
 
 Game.LocalPlayer.Position = {}
@@ -386,7 +286,7 @@ local InventorySlot = {}
 ---@return boolean
 function InventorySlot:isEmpty() end
 
----@type GameItem
+---@type GameItem?
 InventorySlot.Item = {}
 
 InventorySlot.ItemCount = 0
@@ -414,6 +314,53 @@ Game.World.Raining = false
 Game.World.Thunderstorm = false
 
 Game.World.CloudsHeight = 0.0
+
+Game.Items = {}
+
+---@class GameItem
+local GameItem = {}
+
+---Find an item using its ID
+---@param name string
+---@return GameItem?
+function Game.Items.findItemByName(name) end
+
+---Find and item using its name
+---@param itemID integer
+---@return GameItem?
+function Game.Items.findItemByID(itemID) end
+
+---Get the item position in creative using the id
+---@param itemID integer
+---@param groupID integer
+---@return number
+function Game.Items.getCreativePosition(itemID, groupID) end
+
+---Creates a new item and stores it in the game's items table. Returns the address to the item
+---@param itemName string
+---@param itemId integer
+---@return GameItem?
+function Game.Items.registerItem(itemName, itemId) end
+
+---Takes a registered item with Game.Items.registerItem, and sets its texture
+---@param item GameItem
+---@param textureName string
+---@param textureIndex integer
+function GameItem:setTexture(item, textureName, textureIndex) end
+
+---Takes a registered item with Game.Items.registerItem, and registers it in creative menu
+---@param item GameItem
+---@param groupId integer
+---@param position integer
+function Game.Items.registerCreativeItem(item, groupId, position) end
+
+GameItem.StackSize = 64
+
+GameItem.ID = 1
+
+GameItem.NameID = ""
+
+GameItem.DescriptionID = ""
 
 Core.Graphics = {}
 
@@ -563,3 +510,56 @@ Core.System = {}
 ---Returns UNIX time
 ---@return number
 function Core.System.getTime() end
+
+Async = {}
+
+---Adds the function to the queue that will run apart from the game until the functions ends
+---@param func function
+function Async.create(func) end
+
+---Yeilds the current task until time has passed. Always returns true
+---@param seconds number?
+---@return boolean
+function Async.wait(seconds) end
+
+Game.Event = {}
+
+---@class EventClass
+local EventClass = {}
+
+---Adds a function to call when this events fires
+---@param func function
+function EventClass:Connect(func) end
+
+---Fire this event
+function EventClass:Trigger() end
+
+---@class BaseEvent: EventClass
+Game.Event.BaseEvent = {}
+
+---@class OnGameLoad: EventClass
+Game.Event.OnGameLoad = {}
+
+---@class OnGameRegisterItems: EventClass
+Game.Event.OnGameRegisterItems = {}
+
+---@class OnGameRegisterItemsTextures: EventClass
+Game.Event.OnGameRegisterItemsTextures = {}
+
+---@class OnGameRegisterCreativeItems: EventClass
+Game.Event.OnGameRegisterCreativeItems = {}
+
+---@class OnKeyPressed: EventClass
+Game.Event.OnKeyPressed = {}
+
+---@class OnKeyDown: EventClass
+Game.Event.OnKeyDown = {}
+
+---@class OnKeyReleased: EventClass
+Game.Event.OnKeyReleased = {}
+
+---@class OnPlayerJoinWorld: EventClass
+Game.Event.OnPlayerJoinWorld = {}
+
+---@class OnPlayerLeaveWorld: EventClass
+Game.Event.OnPlayerLeaveWorld = {}

@@ -40,6 +40,15 @@ class LuaObject {
 
     static void RegisterNewObject(lua_State* L, const char* name, const LuaObjectField* fields);
 
+    static void SetGCObjectField(lua_State* L, const char* objtype, lua_CFunction gcfuncion) {
+        if (!objsLayouts.contains(objtype))
+            return;
+        luaL_getmetatable(L, objtype);
+        lua_pushcfunction(L, gcfuncion);
+        lua_setfield(L, -2, "__gc");
+        lua_pop(L, 1);
+    }
+
     static void NewObject(lua_State* L, const char* objtype, void* addr) {
         if (!objsLayouts.contains(objtype)) {
             lua_pushnil(L);

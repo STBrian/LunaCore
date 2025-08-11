@@ -241,6 +241,12 @@ bool Core::Module::RegisterEventModule(lua_State *L)
 
     //$@@@Game.Event.OnGameRegisterCreativeItems: EventClass
     core_newevent(L, "OnGameRegisterCreativeItems");
+  
+    //$@@@Game.Event.OnGameEntitySpawnStart: EventClass
+    core_newevent(L, "OnGameEntitySpawnStart");
+  
+    //$@@@Game.Event.OnGameEntitySpawn: EventClass
+    core_newevent(L, "OnGameEntitySpawn");
 
     //$@@@Game.Event.OnKeyPressed: EventClass
     core_newevent(L, "OnKeyPressed");

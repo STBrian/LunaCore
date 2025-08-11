@@ -62,7 +62,8 @@ void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsig
 
 void Core::EventHandlerCallback()
 {
-    CustomLockGuard Lock(Lua_Global_Mut);
+    Lua_Global_Mut.lock();
+    //CustomLockGuard Lock(Lua_Global_Mut);
     lua_State *L = Lua_global;
 
     // KeyPressed Event
@@ -90,6 +91,7 @@ void Core::EventHandlerCallback()
         CTRPF::OSD::Notify(CTRPF::Utils::Format("%f", slider));
         lastSlider = slider;
     }*/
+   Lua_Global_Mut.unlock();
 }
 
 // ----------------------------------------------------------------------------
@@ -227,14 +229,14 @@ bool Core::Module::RegisterEventModule(lua_State *L)
     //$@@@Game.Event.OnGameLoad: EventClass
     core_newevent(L, "OnGameLoad");
     
-    //$@@@Game.Event.OnGameItemsRegister: EventClass
-    core_newevent(L, "OnGameItemsRegister");
+    //$@@@Game.Event.OnGameRegisterItems: EventClass
+    core_newevent(L, "OnGameRegisterItems");
 
-    //$@@@Game.Event.OnGameItemsRegisterTexture: EventClass
-    core_newevent(L, "OnGameItemsRegisterTexture");
+    //$@@@Game.Event.OnGameRegisterItemsTextures: EventClass
+    core_newevent(L, "OnGameRegisterItemsTextures");
 
-    //$@@@Game.Event.OnGameCreativeItemsRegister: EventClass
-    core_newevent(L, "OnGameCreativeItemsRegister");
+    //$@@@Game.Event.OnGameRegisterCreativeItems: EventClass
+    core_newevent(L, "OnGameRegisterCreativeItems");
 
     //$@@@Game.Event.OnKeyPressed: EventClass
     core_newevent(L, "OnKeyPressed");

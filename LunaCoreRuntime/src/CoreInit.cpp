@@ -35,7 +35,8 @@ void Core::InitCore() {
     u64 titleID = CTRPF::Process::GetTitleID();
         if (!IS_TARGET_ID(titleID))
             return;
-    CustomLockGuard Lock(Lua_Global_Mut);
+    Lua_Global_Mut.lock();
+    //CustomLockGuard Lock(Lua_Global_Mut);
 
     if (!fslib::initialize()) {
         Core::Debug::LogError("Failed to initialize fslib");
@@ -80,6 +81,7 @@ void Core::InitCore() {
     }
     
     Event::TriggerEvent(Lua_global, "OnGameLoad");
+    Lua_Global_Mut.unlock();
 }
 
 void TimeoutLoadHook(lua_State *L, lua_Debug *ar)

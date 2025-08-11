@@ -194,7 +194,7 @@ function itemRegistry:registerItems()
         end
     end
 
-    Game.Event.OnGameItemsRegister:Connect(function ()
+    Game.Event.OnGameRegisterItems:Connect(function ()
         for _, definition in ipairs(self.definitions) do
             local regItem = Game.Items.registerItem(definition.name, definition.itemId)
             if regItem ~= nil then
@@ -205,7 +205,7 @@ function itemRegistry:registerItems()
             end
         end
     end)
-    Game.Event.OnGameItemsRegisterTexture:Connect(function ()
+    Game.Event.OnGameRegisterItemsTextures:Connect(function ()
         for _, definition in ipairs(self.definitions) do
             if definition.item ~= nil then
                 definition.item:setTexture(definition.name, 0)
@@ -223,7 +223,7 @@ end
 
 --- Modify every locale file
 for _, localeName in pairs(CoreAPI.Languages) do
-    Game.Event.OnGameItemsRegister:Connect(function ()
+    Game.Event.OnGameRegisterItems:Connect(function ()
         local count = 0
         for _ in pairs(itemsGlobals.registry) do
             count = count + 1
@@ -262,16 +262,16 @@ for _, localeName in pairs(CoreAPI.Languages) do
     end)
 end
 
-Game.Event.OnGameItemsRegister:Connect(function ()
+Game.Event.OnGameRegisterItems:Connect(function ()
     Core.Debug.log("[Info] CoreAPI: Register items", false)
     uvs_packer = nil
     uvs_rebuilder = nil
     atlas_handler = nil
 end)
-Game.Event.OnGameItemsRegisterTexture:Connect(function ()
+Game.Event.OnGameRegisterItemsTextures:Connect(function ()
     Core.Debug.log("[Info] CoreAPI: Register items texture", false)
 end)
-Game.Event.OnGameCreativeItemsRegister:Connect(function ()
+Game.Event.OnGameRegisterCreativeItems:Connect(function ()
     Core.Debug.log("[Info] CoreAPI: Register creative items", false)
 end)
 

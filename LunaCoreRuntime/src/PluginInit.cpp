@@ -215,13 +215,13 @@ void InitMenu(PluginMenu &menu)
                     scriptOut.Flush();
                 }
             }
+            Lua_Global_Mut.unlock();
         } else {
             MessageBox("Error executing the script")();
         }
         exitSockets();
         delete namebuf;
         delete buffer;
-        Lua_Global_Mut.unlock();
     }));
     devFolder->Append(new MenuEntry("Clean Lua environment", nullptr, [](MenuEntry *entry) {
         if (!MessageBox("This will unload all loaded scripts. Continue?", DialogType::DialogYesNo)())

@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include "string_hash.hpp"
+#include "lua_object.hpp"
 
 #include "Game/Minecraft.hpp"
 
@@ -61,13 +62,10 @@ u16 Core::Items::GetCreativeItemPositionOfGroup(u16 itemId, u16 groupId) {
 static int l_Items_findItemByName(lua_State *L) {
     const char *name = luaL_checkstring(L, 1);
     Item *itemData = Core::Items::SearchItemByName(name);
-    if (itemData == NULL) {
+    if (itemData == NULL)
         lua_pushnil(L);
-    } else {
-        Item** item_ptr = (Item**)lua_newuserdata(L, sizeof(void*));
-        *item_ptr = itemData;
-        luaC_setmetatable(L, "GameItem");
-    }
+    else
+        LuaObject::NewObject(L, "GameItem", itemData);
     return 1;
 }
 
@@ -80,13 +78,10 @@ static int l_Items_findItemByName(lua_State *L) {
 static int l_Items_findItemByID(lua_State *L) {
     u16 itemID = luaL_checknumber(L, 1);
     Item *itemData = Core::Items::SearchItemByID(itemID);
-    if (itemData == NULL) {
+    if (itemData == NULL)
         lua_pushnil(L);
-    } else {
-        Item** item_ptr = (Item**)lua_newuserdata(L, sizeof(void*));
-        *item_ptr = itemData;
-        luaC_setmetatable(L, "GameItem");
-    }
+    else
+        LuaObject::NewObject(L, "GameItem", itemData);
     return 1;
 }
 
@@ -118,11 +113,8 @@ static int l_Items_registerItem(lua_State *L) {
     Item* regItem = Game::registerItem(itemName, itemId);
     if (regItem == nullptr)
         lua_pushnil(L);
-    else {
-        Item** item_ptr = (Item**)lua_newuserdata(L, sizeof(void*));
-        *item_ptr = regItem;
-        luaC_setmetatable(L, "GameItem");
-    }
+    else
+        LuaObject::NewObject(L, "GameItem", regItem);
     return 1;
 }
 
@@ -134,7 +126,7 @@ static int l_Items_registerItem(lua_State *L) {
 ### GameItem:setTexture
 */
 static int l_Items_registerItemTexture(lua_State *L) {
-    Item* item_ptr = *(Item**)luaC_funccheckudata(L, 1, "GameItem");
+    Item* item_ptr = *(Item**)LuaObject::CheckObject(L, 1, "GameItem");
     const char* textureName = luaL_checkstring(L, 2);
     u16 textureIndex = luaL_checkinteger(L, 3);
     item_ptr->setTexture(hash(textureName), textureIndex);
@@ -149,7 +141,7 @@ static int l_Items_registerItemTexture(lua_State *L) {
 ### Game.Items.registerCreativeItem
 */
 static int l_Items_registerCreativeItem(lua_State *L) {
-    Item* item_ptr = *(Item**)luaC_funccheckudata(L, 1, "GameItem");
+    Item* item_ptr = *(Item**)LuaObject::CheckObject(L, 1, "GameItem");
     u16 groupId = luaL_checkinteger(L, 2);
     s16 position = luaL_checkinteger(L, 3);
     Item::addCreativeItem(item_ptr, groupId, position);
@@ -165,83 +157,26 @@ static const luaL_Reg items_functions[] = {
     {NULL, NULL}
 };
 
+// ----------------------------------------------------------------------------
+
 /*
 =GameItem.StackSize = 64
 =GameItem.ID = 1
 =GameItem.NameID = ""
 =GameItem.DescriptionID = ""
 */
-static int l_GameItem_index(lua_State *L) {
-    Item* item_ptr = *(Item**)lua_touserdata(L, 1);
-    if (lua_type(L, 2) != LUA_TSTRING)
-        return 0;
-    u32 key = hash(lua_tostring(L, 2));
 
-    switch (key) {
-        case hash("setTexture"):
-            lua_pushcfunction(L, l_Items_registerItemTexture);
-            break;
-        case hash("StackSize"):
-            lua_pushnumber(L, item_ptr->maxStackSize);
-            break;
-        case hash("ID"):
-            lua_pushnumber(L, item_ptr->itemId);
-            break;
-        case hash("NameID"):
-            lua_pushstring(L, item_ptr->nameId.c_str());
-            break;
-        case hash("DescriptionID"):
-            lua_pushstring(L, item_ptr->descriptionId.c_str());
-            break;
-        default:
-            lua_pushnil(L);
-            break;
-    }
-    return 1;
-}
+static const LuaObjectField GameItemFields[] = {
+    {"StackSize", OBJF_TYPE_INT, offsetof(Item, maxStackSize), OBJF_ACCESS_ALL},
+    {"ID", OBJF_TYPE_INT, offsetof(Item, itemId), OBJF_ACCESS_INDEX},
+    {"NameID", OBJF_TYPE_STRING, offsetof(Item, nameId), OBJF_ACCESS_INDEX},
+    {"DescriptionID", OBJF_TYPE_STRING, offsetof(Item, descriptionId), OBJF_ACCESS_INDEX},
+    {"setTexture", OBJF_TYPE_METHOD, (u32)l_Items_registerItemTexture, OBJF_ACCESS_ALL},
+    {NULL, OBJF_TYPE_NIL, 0, OBJF_ACCESS_ALL}
+};
 
-static int l_GameItem_newindex(lua_State *L) {
-    Item* item_ptr = *(Item**)lua_touserdata(L, 1);
-    if (lua_type(L, 2) != LUA_TSTRING)
-        return luaL_error(L, "Unable to set field '?' of 'GameItem' instance");
-    u32 key = hash(lua_tostring(L, 2));
-
-    switch (key) {
-        case hash("StackSize"):
-            item_ptr->maxStackSize = luaC_indexchecknumber(L, 3);
-            break;
-        default:
-            luaL_error(L, "Unable to set field '%s' of 'GameItem' instance", lua_tostring(L, 2));
-            break;
-    }
-    return 0;
-}
-
-static int l_GameItem_eq(lua_State *L) {
-    Item* pItem = *(Item**)lua_touserdata(L, 1);
-    Item* pItem2 = *(Item**)lua_touserdata(L, 2);
-    lua_pushboolean(L, pItem == pItem2);
-    return 1;
-}
-
-// ----------------------------------------------------------------------------
-
-static inline void RegisterItemsMetatables(lua_State *L) {
-    luaL_newmetatable(L, "GameItem");
-    lua_pushcfunction(L, l_GameItem_index);
-    lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, l_GameItem_newindex);
-    lua_setfield(L, -2, "__newindex");
-    lua_pushcfunction(L, l_GameItem_eq);
-    lua_setfield(L, -2, "__eq");
-    lua_pushstring(L, "GameItem");
-    lua_setfield(L, -2, "__name");
-    lua_pop(L, 1);
-}
-
-bool Core::Module::RegisterItemsModule(lua_State *L)
-{
-    RegisterItemsMetatables(L);
+bool Core::Module::RegisterItemsModule(lua_State *L) {
+    //LuaObject::RegisterNewObject(L, "GameItem", GameItemFields);
     lua_getglobal(L, "Game");
     luaC_register_field(L, items_functions, "Items");
     lua_pop(L, 1);

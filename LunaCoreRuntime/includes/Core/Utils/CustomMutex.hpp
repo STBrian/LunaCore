@@ -12,9 +12,8 @@ class CustomMutex
         ~CustomMutex() {}
 
         void lock() {
-            while (this->locked.load()) {
-                svcSleepThread(1000000);
-            }
+            //while (this->locked.load())
+                //svcSleepThread(1000000);
             this->locked.store(true);
         }
 
@@ -29,17 +28,4 @@ class CustomMutex
         void unlock() {
             this->locked.store(false);
         }
-};
-
-class CustomLockGuard {
-    private:
-        CustomMutex& m_mutex;
-    public:
-        CustomLockGuard(CustomMutex& mutex): m_mutex(mutex) {
-            m_mutex.lock();
-        };
-
-        ~CustomLockGuard() {
-            m_mutex.unlock();
-        };
 };

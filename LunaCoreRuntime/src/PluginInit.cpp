@@ -206,7 +206,7 @@ void InitMenu(PluginMenu &menu)
                 if (!Directory::IsExists(PLUGIN_FOLDER "/scripts/"))
                     Directory::Create(PLUGIN_FOLDER "/scripts/");
                 File scriptOut;
-                File::Open(scriptOut, PLUGIN_FOLDER "/scripts/"+std::string(namebuf), File::WRITE|File::CREATE);
+                File::Open(scriptOut, PLUGIN_FOLDER "/scripts/"+std::string(namebuf, fnameSize), File::WRITE|File::CREATE);
                 if (!scriptOut.IsOpen()) {
                     MessageBox("Failed to write to sd card")();
                 } else {

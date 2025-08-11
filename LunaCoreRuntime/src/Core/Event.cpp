@@ -1,6 +1,7 @@
 #include "Core/Event.hpp"
 
 #include <atomic>
+#include <mutex>
 
 #include <CTRPluginFramework.hpp>
 
@@ -42,6 +43,11 @@ void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsig
     lua_getglobal(L, "Game");
     lua_getfield(L, -1, "Event");
     lua_getfield(L, -1, eventName.c_str());
+    if (lua_type(L, -1) == LUA_TNIL) {
+        Core::Debug::LogError(CTRPF::Utils::Format("Core internal error: Tried to trigger unknown event '%s'", eventName.c_str()));
+        lua_settop(L, baseIdx);
+        return;
+    }
     lua_getfield(L, -1, "Trigger");
 
     if (lua_isfunction(L, -1))
@@ -62,8 +68,7 @@ void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsig
 
 void Core::EventHandlerCallback()
 {
-    Lua_Global_Mut.lock();
-    //CustomLockGuard Lock(Lua_Global_Mut);
+    std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
     lua_State *L = Lua_global;
 
     // KeyPressed Event
@@ -91,7 +96,6 @@ void Core::EventHandlerCallback()
         CTRPF::OSD::Notify(CTRPF::Utils::Format("%f", slider));
         lastSlider = slider;
     }*/
-   Lua_Global_Mut.unlock();
 }
 
 // ----------------------------------------------------------------------------

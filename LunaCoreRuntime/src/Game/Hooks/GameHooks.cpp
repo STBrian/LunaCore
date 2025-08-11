@@ -103,15 +103,10 @@ static void RegisterItemsHook(CoreHookContext* ctx) {
     Game::Item::mTotem = totemItem;
 
     {
-        CTRPF::OSD::Notify("Hola xdxd");
-        Lua_Global_Mut.lock();
-        //std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
-        //CustomLockGuard Lock(Lua_Global_Mut);
-
+        std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
         GameState.LoadingItems.store(true);
         Core::Event::TriggerEvent(Lua_global, "OnGameRegisterItems");
         GameState.LoadingItems.store(false);
-        Lua_Global_Mut.unlock();
     }
 
     reinterpret_cast<void(*)()>(0x0056e450)();
@@ -135,10 +130,8 @@ static void RegisterItemsTexturesHook(CoreHookContext* ctx) {
     GameState.SettingItemsTextures.store(true);
 
     {
-        Lua_Global_Mut.lock();
-        //CustomLockGuard Lock(Lua_Global_Mut);
+        std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
         Core::Event::TriggerEvent(Lua_global, "OnGameRegisterItemsTextures");
-        Lua_Global_Mut.unlock();
     }
 
     GameState.SettingItemsTextures.store(false);
@@ -162,10 +155,8 @@ static void RegisterCreativeItemsHook(CoreHookContext* ctx) {
     GameState.LoadingCreativeItems.store(true);
 
     {
-        Lua_Global_Mut.lock();
-        //CustomLockGuard Lock(Lua_Global_Mut);
-        Core::Event::TriggerEvent(Lua_global, "OnGameCreativeItemsRegister");
-        Lua_Global_Mut.unlock();
+        std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
+        Core::Event::TriggerEvent(Lua_global, "OnGameRegisterCreativeItems");
     }
 
     GameState.LoadingCreativeItems.store(false);

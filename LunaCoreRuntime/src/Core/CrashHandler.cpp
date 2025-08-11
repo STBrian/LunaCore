@@ -106,7 +106,7 @@ namespace Core {
         "Weird, it works for me",
         "Someone should fix this",
         "Two guys are walking, and the game falls",
-        "(O_O\")",
+        "  (O_O\"\\)  ",
         "I'm sorry :(",
         "We learn from our mistakes"
     };
@@ -121,6 +121,7 @@ namespace Core {
             }
             bool possibleOOM = false;
             bool luaEnvBusy = !Lua_Global_Mut.try_lock();
+            Lua_Global_Mut.unlock();
             if (Lua_global != NULL) {
                 if (!luaEnvBusy)
                     possibleOOM = lua_gc(Lua_global, LUA_GCCOUNT, 0) >= 2000;

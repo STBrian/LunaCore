@@ -1,6 +1,7 @@
 #include "Game/Hooks/GameHooks.hpp"
 
 #include <vector>
+#include <mutex>
 #include <memory>
 #include <cstring>
 
@@ -103,10 +104,9 @@ static void RegisterItemsHook(CoreHookContext* ctx) {
     Game::Item::mTotem = totemItem;
 
     {
-        CustomLockGuard Lock(Lua_Global_Mut);
-
+        std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
         GameState.LoadingItems.store(true);
-        Core::Event::TriggerEvent(Lua_global, "OnGameItemsRegister");
+        Core::Event::TriggerEvent(Lua_global, "OnGameRegisterItems");
         GameState.LoadingItems.store(false);
     }
 
@@ -131,8 +131,8 @@ static void RegisterItemsTexturesHook(CoreHookContext* ctx) {
     GameState.SettingItemsTextures.store(true);
 
     {
-        CustomLockGuard Lock(Lua_Global_Mut);
-        Core::Event::TriggerEvent(Lua_global, "OnGameItemsRegisterTexture");
+        std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
+        Core::Event::TriggerEvent(Lua_global, "OnGameRegisterItemsTextures");
     }
 
     GameState.SettingItemsTextures.store(false);
@@ -156,8 +156,8 @@ static void RegisterCreativeItemsHook(CoreHookContext* ctx) {
     GameState.LoadingCreativeItems.store(true);
 
     {
-        CustomLockGuard Lock(Lua_Global_Mut);
-        Core::Event::TriggerEvent(Lua_global, "OnGameCreativeItemsRegister");
+        std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
+        Core::Event::TriggerEvent(Lua_global, "OnGameRegisterCreativeItems");
     }
 
     GameState.LoadingCreativeItems.store(false);

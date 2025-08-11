@@ -1,6 +1,7 @@
 #include "Core/Async.hpp"
 
 #include <CTRPluginFramework.hpp>
+#include <mutex>
 
 #include "Core/Debug.hpp"
 #include "Core/Utils/Utils.hpp"
@@ -24,7 +25,7 @@ static void TimeoutAsyncHook(lua_State *L, lua_Debug *ar)
 
 void Core::AsyncHandlerCallback()
 {
-    CustomLockGuard Lock(Lua_Global_Mut);
+    std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
     lua_State *L = Lua_global;
 
     // Async handles timeout hooks individually so no need to configure

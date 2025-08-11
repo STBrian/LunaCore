@@ -1,7 +1,7 @@
 #include "Core/Event.hpp"
 
 #include <atomic>
-#include <map>
+#include <mutex>
 
 #include <CTRPluginFramework.hpp>
 
@@ -43,6 +43,11 @@ void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsig
     lua_getglobal(L, "Game");
     lua_getfield(L, -1, "Event");
     lua_getfield(L, -1, eventName.c_str());
+    if (lua_type(L, -1) == LUA_TNIL) {
+        Core::Debug::LogError(CTRPF::Utils::Format("Core internal error: Tried to trigger unknown event '%s'", eventName.c_str()));
+        lua_settop(L, baseIdx);
+        return;
+    }
     lua_getfield(L, -1, "Trigger");
 
     if (lua_isfunction(L, -1))
@@ -63,7 +68,7 @@ void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsig
 
 void Core::EventHandlerCallback()
 {
-    CustomLockGuard Lock(Lua_Global_Mut);
+    std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
     lua_State *L = Lua_global;
 
     // KeyPressed Event
@@ -192,92 +197,10 @@ static int l_Event_BaseEvent_Trigger(lua_State *L)
     return 0;
 }
 
-
-static int l_EventData_Index(lua_State* L) {
-    EventData* evt = (EventData*)luaL_checkudata(L, 1, "EventData");
-    const char* key = luaL_checkstring(L, 2);
-    for (int i = 0; i < evt->field_count; ++i) {
-        if (strcmp(key, evt->fields[i].name) == 0) {
-            switch (evt->fields[i].type) {
-                case EVENT_DATA_FLOAT:
-                    lua_pushnumber(L, *evt->fields[i].ptr.f);
-                    break;
-                case EVENT_DATA_INT:
-                    lua_pushinteger(L, *evt->fields[i].ptr.i);
-                    break;
-                case EVENT_DATA_BOOL:
-                    lua_pushboolean(L, *evt->fields[i].ptr.b);
-                    break;
-                case EVENT_DATA_STRING:
-                    lua_pushstring(L, *evt->fields[i].ptr.s);
-                    break;
-                case EVENT_DATA_POINTER:
-                    lua_pushlightuserdata(L, *evt->fields[i].ptr.p);
-                    break;
-                default:
-                    lua_pushnil(L);
-            }
-            return 1;
-        }
-    }
-    lua_pushnil(L);
-    return 1;
-}
-
-static int l_EventData_NewIndex(lua_State* L) {
-    EventData* evt = (EventData*)luaL_checkudata(L, 1, "EventData");
-    const char* key = luaL_checkstring(L, 2);
-    for (int i = 0; i < evt->field_count; ++i) {
-        if (strcmp(key, evt->fields[i].name) == 0) {
-            switch (evt->fields[i].type) {
-                case EVENT_DATA_FLOAT:
-                    *evt->fields[i].ptr.f = (float)luaL_checknumber(L, 3);
-                    break;
-                case EVENT_DATA_INT:
-                    *evt->fields[i].ptr.i = (int)luaL_checkinteger(L, 3);
-                    break;
-                case EVENT_DATA_BOOL:
-                    *evt->fields[i].ptr.b = lua_toboolean(L, 3) != 0;
-                    break;
-                case EVENT_DATA_STRING:
-                    *evt->fields[i].ptr.s = luaL_checkstring(L, 3);
-                    break;
-                case EVENT_DATA_POINTER:
-                    *evt->fields[i].ptr.p = lua_touserdata(L, 3);
-                    break;
-                default:
-                    break;
-            }
-            return 0;
-        }
-    }
-    return 0;
-}
-
-void l_Push_EventData(lua_State* L, const std::vector<EventDataField>& fields) {
-    EventData* evt = (EventData*)lua_newuserdata(L, sizeof(EventData));
-    evt->field_count = (int)fields.size();
-    for (int i = 0; i < evt->field_count; ++i) {
-        evt->fields[i] = fields[i];
-    }
-    luaC_setmetatable(L, "EventData");
-}
-
 // ----------------------------------------------------------------------------
-
-static inline void RegisterEventMetatables(lua_State *L) {
-    luaL_newmetatable(L, "EventData");
-    lua_pushcfunction(L, l_EventData_Index);
-    lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, l_EventData_NewIndex);
-    lua_setfield(L, -2, "__newindex");
-    lua_pop(L, 1);
-}
 
 bool Core::Module::RegisterEventModule(lua_State *L)
 {
-    RegisterEventMetatables(L);
-
     lua_getglobal(L, "Game");
     lua_newtable(L); // Game.Event
 
@@ -310,28 +233,20 @@ bool Core::Module::RegisterEventModule(lua_State *L)
     //$@@@Game.Event.OnGameLoad: EventClass
     core_newevent(L, "OnGameLoad");
     
-    //$@@@Game.Event.OnGameItemsRegister: EventClass
-    core_newevent(L, "OnGameItemsRegister");
+    //$@@@Game.Event.OnGameRegisterItems: EventClass
+    core_newevent(L, "OnGameRegisterItems");
 
-    //$@@@Game.Event.OnGameItemsRegisterTexture: EventClass
-    core_newevent(L, "OnGameItemsRegisterTexture");
+    //$@@@Game.Event.OnGameRegisterItemsTextures: EventClass
+    core_newevent(L, "OnGameRegisterItemsTextures");
 
-    //$@@@Game.Event.OnGameCreativeItemsRegister: EventClass
-    core_newevent(L, "OnGameCreativeItemsRegister");
-
+    //$@@@Game.Event.OnGameRegisterCreativeItems: EventClass
+    core_newevent(L, "OnGameRegisterCreativeItems");
+  
     //$@@@Game.Event.OnGameEntitySpawnStart: EventClass
-    lua_newtable(L);
-    lua_newtable(L);
-    lua_setfield(L, -2, "listeners");
-    luaC_setmetatable(L, "EventClass");
-    lua_setfield(L, -2, "OnGameEntitySpawnStart");
-
+    core_newevent(L, "OnGameEntitySpawnStart");
+  
     //$@@@Game.Event.OnGameEntitySpawn: EventClass
-    lua_newtable(L);
-    lua_newtable(L);
-    lua_setfield(L, -2, "listeners");
-    luaC_setmetatable(L, "EventClass");
-    lua_setfield(L, -2, "OnGameEntitySpawn");
+    core_newevent(L, "OnGameEntitySpawn");
 
     //$@@@Game.Event.OnKeyPressed: EventClass
     core_newevent(L, "OnKeyPressed");

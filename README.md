@@ -6,11 +6,9 @@ Is the result of merging different community contributions into a single project
 The plugin runs alongside the game thanks to Luma3DS plugin loader and is built using CTRPluginFramework which provides the essentials to work together with the game. The script engine uses Lua 5.1 as scripting language, an easy language to use with a lot of possibilities. It was also chosen because of its easy implementation in embedded systems, for its powerful C API and for being lightweight.
 
 ## Credits
-LunaCore is made up of various projects or contributions to the Minecraft: New Nintendo 3DS Edition and homebrew community.
-
 LunaCore wouldn't be possible without the contributions made to the Minecraft: New Nintendo 3DS Edition community and homebrew libraries. Credits to the authors and sources that are part of LunaCore are shown below.
 
-| Elements/Fields | Module | Thanks to |
+| Components | Module | Thanks to |
 | --- | --- | --- | 
 | SwimSpeed, ReachDistance | Game.LocalPlayer | [Minecraft-3DS-Community/GamePatches](https://github.com/Minecraft-3DS-Community/GamePatches) |
 | OnGround, Sneaking, Jumping, Sprinting, Flying, UnderWater, TouchingWall, Invincible, CanFly, CanConsumeItems, BaseMoveSpeed, MoveSpeed, FlySpeed, CurrentHP, MaxHP, CurrentHunger, MaxHunger, CurrentLevel, LevelProgress, Gamemode, SprintDelay, Position, Velocity | Game.LocalPlayer | `Minecraft Class v1.1` by `Discord: @rairai6895` |
@@ -24,7 +22,7 @@ LunaCore wouldn't be possible without the contributions made to the Minecraft: N
 
 ### Special thanks
 - `Discord: @rairai6895` - Made `Minecraft Class v1.1` (you can join [Asterium Discord](https://discord.gg/MXFfpyEk) server for more information)
-- [@Cracko298](https://github.com/Cracko298) - Made [Minecraft-3DS-Community/GamePatches](https://github.com/Minecraft-3DS-Community/GamePatches)
-- [CTRPluginFramework](https://gitlab.com/thepixellizeross/ctrpluginframework) - All plugin functionalities
+- [@Cracko298](https://github.com/Cracko298) - Contributed to [Minecraft-3DS-Community/GamePatches](https://github.com/Minecraft-3DS-Community/GamePatches)
+- [CTRPluginFramework](https://gitlab.com/thepixellizeross/ctrpluginframework) - Plugin essentials
 - [Luma3DS](https:/github.com/LumaTeam/Luma3DS) - Plugin loader
 - [devkitPro](https://github.com/devkitPro) - ctrulib and development environment

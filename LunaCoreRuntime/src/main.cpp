@@ -154,7 +154,7 @@ namespace CTRPluginFramework
                 luaMemoryUsage = memusgkb * 1024 + memusgb;
                 Lua_Global_Mut.unlock();
             }
-            screen.Draw("Lua memory: "+std::to_string(luaMemoryUsage), 10, 10, Color::Black, Color(0, 0, 0, 0));
+            screen.Draw("Lua memory: "+std::to_string(luaMemoryUsage), 5, 5, Color::Black, Color(0, 0, 0, 0));
         }
         return false;
     }

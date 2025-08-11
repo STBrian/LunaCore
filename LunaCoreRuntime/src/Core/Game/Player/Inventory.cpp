@@ -8,6 +8,7 @@
 #include "string_hash.hpp"
 #include "Game/Minecraft.hpp"
 #include "Game/Inventory.hpp"
+#include "lua_object.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 using InventorySlot = Game::Inventory::InventorySlot;
@@ -74,11 +75,9 @@ static int l_Inventory_Slot_class_index(lua_State *L)
             lua_pushcfunction(L, l_InventorySlot_isEmpty);
             break;
         case hash("Item"): {
-            if (slotData->itemData != nullptr) {
-                Item** item_ptr = (Item**)lua_newuserdata(L, sizeof(void*));
-                *item_ptr = slotData->itemData;
-                luaC_setmetatable(L, "GameItem");
-            } else 
+            if (slotData->itemData != nullptr)
+                LuaObject::NewObject(L, "GameItem", slotData->itemData);
+            else 
                 lua_pushnil(L);
             break;
         }

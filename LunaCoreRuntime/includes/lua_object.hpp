@@ -6,6 +6,8 @@
 #include "types.h"
 
 typedef enum {
+    OBJF_TYPE_CHAR,
+    OBJF_TYPE_SHORT,
     OBJF_TYPE_INT,
     OBJF_TYPE_FLOAT,
     OBJF_TYPE_DOUBLE,

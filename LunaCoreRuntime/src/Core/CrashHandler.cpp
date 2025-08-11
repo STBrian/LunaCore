@@ -106,7 +106,7 @@ namespace Core {
         "Weird, it works for me",
         "Someone should fix this",
         "Two guys are walking, and the game falls",
-        "(O_O\")",
+        "  (O_O\"\\)  ",
         "I'm sorry :(",
         "We learn from our mistakes"
     };

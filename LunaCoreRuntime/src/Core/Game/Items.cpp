@@ -167,8 +167,8 @@ static const luaL_Reg items_functions[] = {
 */
 
 static const LuaObjectField GameItemFields[] = {
-    {"StackSize", OBJF_TYPE_INT, offsetof(Item, maxStackSize), OBJF_ACCESS_ALL},
-    {"ID", OBJF_TYPE_INT, offsetof(Item, itemId), OBJF_ACCESS_INDEX},
+    {"StackSize", OBJF_TYPE_SHORT, offsetof(Item, maxStackSize), OBJF_ACCESS_ALL},
+    {"ID", OBJF_TYPE_SHORT, offsetof(Item, itemId), OBJF_ACCESS_INDEX},
     {"NameID", OBJF_TYPE_STRING, offsetof(Item, nameId), OBJF_ACCESS_INDEX},
     {"DescriptionID", OBJF_TYPE_STRING, offsetof(Item, descriptionId), OBJF_ACCESS_INDEX},
     {"setTexture", OBJF_TYPE_METHOD, (u32)l_Items_registerItemTexture, OBJF_ACCESS_ALL},
@@ -176,7 +176,7 @@ static const LuaObjectField GameItemFields[] = {
 };
 
 bool Core::Module::RegisterItemsModule(lua_State *L) {
-    //LuaObject::RegisterNewObject(L, "GameItem", GameItemFields);
+    LuaObject::RegisterNewObject(L, "GameItem", GameItemFields);
     lua_getglobal(L, "Game");
     luaC_register_field(L, items_functions, "Items");
     lua_pop(L, 1);

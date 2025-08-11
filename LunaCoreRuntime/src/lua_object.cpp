@@ -10,7 +10,7 @@ void LuaObject::RegisterNewObject(lua_State* L, const char* name, const LuaObjec
     lua_setfield(L, -2, "__index");
     lua_pushcfunction(L, LuaObject::l_newindex);
     lua_setfield(L, -2, "__newindex");
-    lua_pushcfunction(L, l_eq);
+    lua_pushcfunction(L, LuaObject::l_eq);
     lua_setfield(L, -2, "__eq");
     lua_pushstring(L, name);
     lua_setfield(L, -2, "__name");
@@ -53,7 +53,7 @@ int LuaObject::l_index(lua_State* L) {
         return 0;
     }
     std::string objName = lua_tostring(L, -1);
-    lua_pop(L, -1);
+    lua_pop(L, 1);
     if (!objsLayouts.contains(objName))
         return 0;
     
@@ -67,6 +67,12 @@ int LuaObject::l_index(lua_State* L) {
     void* dataOff = (void*)((u32)objOffset + objsLayouts[objName][key].offset);
 
     switch (objsLayouts[objName][key].type) {
+        case OBJF_TYPE_CHAR:
+            lua_pushnumber(L, *(char*)dataOff);
+            break;
+        case OBJF_TYPE_SHORT:
+            lua_pushnumber(L, *(short*)dataOff);
+            break;
         case OBJF_TYPE_INT:
             lua_pushnumber(L, *(int*)dataOff);
             break;
@@ -77,12 +83,12 @@ int LuaObject::l_index(lua_State* L) {
             lua_pushnumber(L, *(double*)dataOff);
             break;
         case OBJF_TYPE_STRING:
-            lua_pushstring(L, (char*)dataOff);
+            lua_pushstring(L, *(char**)dataOff);
             break;
         case OBJF_TYPE_METHOD:
             lua_pushcfunction(L, (lua_CFunction)objsLayouts[objName][key].offset);
             break;
-        case OBJF_TYPE_NIL:
+        default:
             lua_pushnil(L);
             break;
     }
@@ -98,7 +104,7 @@ int LuaObject::l_newindex(lua_State* L) {
         return 0;
     }
     std::string objName = lua_tostring(L, -1);
-    lua_pop(L, -1);
+    lua_pop(L, 1);
     if (!objsLayouts.contains(objName))
         return 0;
     
@@ -114,6 +120,16 @@ int LuaObject::l_newindex(lua_State* L) {
         return luaL_error(L, "unable to assign value to read-only field %s", key.c_str());
 
     switch (objsLayouts[objName][key].type) {
+        case OBJF_TYPE_CHAR:
+            if (lua_type(L, 3) != LUA_TNUMBER)
+                return luaL_error(L, "unable to assign %s to %s data type", luaL_typename(L, 3), "integer");
+            *(char*)dataOff = (char)lua_tonumber(L, 3);
+            break;
+        case OBJF_TYPE_SHORT:
+            if (lua_type(L, 3) != LUA_TNUMBER)
+                return luaL_error(L, "unable to assign %s to %s data type", luaL_typename(L, 3), "integer");
+            *(short*)dataOff = (short)lua_tonumber(L, 3);
+            break;
         case OBJF_TYPE_INT:
             if (lua_type(L, 3) != LUA_TNUMBER)
                 return luaL_error(L, "unable to assign %s to %s data type", luaL_typename(L, 3), "integer");

@@ -1,8 +1,8 @@
 local Debug = Core.Debug
 
-Game.Event.OnGameEntitySpawnStart:Connect(function (event)
-    Debug.message("Entity x: " .. tostring(event.x) .. " y: " .. tostring(event.y) .. " z: " .. tostring(event.z))
+Game.Event.OnGameEntitySpawnStart:Connect(function (target)
+    Debug.message("Entity x: " .. tostring(target.X) .. " y: " .. tostring(target.Y) .. " z: " .. tostring(target.Z))
 
     -- Modify the spawn coordinates
-    event.y = 20.0
+    target.Y = target.Y + 20.0
 end)

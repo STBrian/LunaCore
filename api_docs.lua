@@ -362,6 +362,26 @@ GameItem.NameID = ""
 
 GameItem.DescriptionID = ""
 
+---@class GameEntity
+local GameEntity = {}
+
+---@class GameSpawnCoords
+local GameSpawnCoords = {}
+
+GameEntity.X = 0.0
+
+GameEntity.Y = 0.0
+
+GameEntity.Z = 0.0
+
+GameEntity.EntityID = 0
+
+GameSpawnCoords.X = 0.0
+
+GameSpawnCoords.Y = 0.0
+
+GameSpawnCoords.Z = 0.0
+
 Core.Graphics = {}
 
 ---Stops the game and allows to draw on screen. Until Core.Graphics.close is called the function will be executed every frame
@@ -548,6 +568,12 @@ Game.Event.OnGameRegisterItemsTextures = {}
 
 ---@class OnGameRegisterCreativeItems: EventClass
 Game.Event.OnGameRegisterCreativeItems = {}
+
+---@class OnGameEntitySpawnStart: EventClass
+Game.Event.OnGameEntitySpawnStart = {}
+
+---@class OnGameEntitySpawn: EventClass
+Game.Event.OnGameEntitySpawn = {}
 
 ---@class OnKeyPressed: EventClass
 Game.Event.OnKeyPressed = {}

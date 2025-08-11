@@ -14,6 +14,7 @@
 #include "Core/Memory.hpp"
 #include "Core/Game/Gamepad.hpp"
 #include "Core/Game/World.hpp"
+#include "Core/Game/Entity.hpp"
 #include "Core/Game/Player/Player.hpp"
 #include "Core/Game/Items.hpp"
 #include "Core/Event.hpp"
@@ -33,6 +34,7 @@ namespace Core {
         Core::Module::RegisterWorldModule(L);
         Core::Module::RegisterLocalPlayerModule(L);
         Core::Module::RegisterItemsModule(L);
+        Core::Module::RegisterEntityModule(L);
         Core::Module::RegisterEventModule(L);
 
         const char *lua_Code = R"(

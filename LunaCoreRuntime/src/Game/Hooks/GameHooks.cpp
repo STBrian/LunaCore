@@ -9,6 +9,7 @@
 
 #include "string_hash.hpp"
 #include "lua_common.h"
+#include "lua_object.hpp"
 #include "Core/Debug.hpp"
 #include "Core/CrashHandler.hpp"
 #include "Core/Event.hpp"
@@ -126,7 +127,6 @@ static __attribute((naked)) void RegisterItemsTexturesOverwriteReturn() {
 }
 
 static void RegisterItemsTexturesHook(CoreHookContext* ctx) {
-    Core::CrashHandler::CoreState lastcState = Core::CrashHandler::core_state;
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
     GameState.SettingItemsTextures.store(true);
 
@@ -136,7 +136,6 @@ static void RegisterItemsTexturesHook(CoreHookContext* ctx) {
     }
 
     GameState.SettingItemsTextures.store(false);
-    Core::CrashHandler::core_state = lastcState;
     hookReturnOverwrite(ctx, (u32)RegisterItemsTexturesOverwriteReturn);
 }
 
@@ -151,7 +150,6 @@ static __attribute((naked)) void RegisterCreativeItemsOverwriteReturn() {
 }
 
 static void RegisterCreativeItemsHook(CoreHookContext* ctx) {
-    Core::CrashHandler::CoreState lastcState = Core::CrashHandler::core_state;
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
     GameState.LoadingCreativeItems.store(true);
 
@@ -161,7 +159,6 @@ static void RegisterCreativeItemsHook(CoreHookContext* ctx) {
     }
 
     GameState.LoadingCreativeItems.store(false);
-    Core::CrashHandler::core_state = lastcState;
     hookReturnOverwrite(ctx, (u32)RegisterCreativeItemsOverwriteReturn);
 }
 
@@ -177,41 +174,14 @@ static __attribute((naked)) void EntitySpawnStartOverwriteReturn() {
 }
 
 static void EntitySpawnStartHook(CoreHookContext *ctx) {
-    Core::CrashHandler::CoreState lastcState = Core::CrashHandler::core_state;
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
 
-    float spawnCoords[3] = {0.0f, 0.0f, 0.0f};
-    if (ctx->r2 != 0x0) {
-        spawnCoords[0] = *reinterpret_cast<float*>(ctx->r2);
-        spawnCoords[1] = *reinterpret_cast<float*>(ctx->r2 + 4);
-        spawnCoords[2] = *reinterpret_cast<float*>(ctx->r2 + 8);
-    }
-
-
-    std::vector<EventDataField> eventFields = {
-        {"x", EVENT_DATA_FLOAT, {.f = &spawnCoords[0]}},
-        {"y", EVENT_DATA_FLOAT, {.f = &spawnCoords[1]}},
-        {"z", EVENT_DATA_FLOAT, {.f = &spawnCoords[2]}}
-    };
-
-    {
-        CustomLockGuard Lock(Lua_Global_Mut);
-
-        int stackTop = lua_gettop(Lua_global);
-
-        l_Push_EventData(Lua_global, eventFields);
+    if (ctx->r2 != 0) {
+        std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
+        LuaObject::NewObject(Lua_global, "GameSpawnCoords", reinterpret_cast<void*>(ctx->r2)); // Pass the reference
         Core::Event::TriggerEvent(Lua_global, "OnGameEntitySpawnStart", 1);
-
-        lua_settop(Lua_global, stackTop);
     }
 
-    if (ctx->r2 != 0x0) {
-        *reinterpret_cast<float*>(ctx->r2)     = spawnCoords[0];
-        *reinterpret_cast<float*>(ctx->r2 + 4) = spawnCoords[1];
-        *reinterpret_cast<float*>(ctx->r2 + 8) = spawnCoords[2];
-    }
-
-    Core::CrashHandler::core_state = lastcState;
     hookReturnOverwrite(ctx, (u32)EntitySpawnStartOverwriteReturn);
 }
 
@@ -229,27 +199,16 @@ static __attribute((naked)) void EntitySpawnFinishedOverwriteReturn() {
 
 static void EntitySpawnFinishedHook(CoreHookContext *ctx) {
     // Core::Debug::LogError("Trying to hook entity spawn");
-    Core::CrashHandler::CoreState lastcState = Core::CrashHandler::core_state;
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
 
-    if (ctx->r0 == 0x0) {
-        // Core::Debug::LogError("Entity spawn hook called with r0 == 0, skipping");
-    } else {
+    if (ctx->r0 != 0) {
+        std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
         Game::Entity* entity = reinterpret_cast<Game::Entity*>(ctx->r0);
-        // Core::Debug::LogMessage(CTRPF::Utils::Format("Entity spawn detected, r0: 0x%08X", ctx->r0), true);
-        // Core::Debug::LogMessage(CTRPF::Utils::Format("id %d, x %f, y %f, z %f", entity->entityTypeId, entity->x, entity->y, entity->z), true);
+        LuaObject::NewObject(Lua_global, "GameEntity", entity);
+        Core::Event::TriggerEvent(Lua_global, "OnGameEntitySpawn", 1);
     }
-
-    {
-        CustomLockGuard Lock(Lua_Global_Mut);
-
-        Core::Event::TriggerEvent(Lua_global, "OnGameEntitySpawn");
-    }
-
-    Core::CrashHandler::core_state = lastcState;
 
     hookReturnOverwrite(ctx, (u32)EntitySpawnFinishedOverwriteReturn);
-    // Core::Debug::LogError("Successfully hooked entity spawn");
 }
 
 void hookSomeFunctions() {

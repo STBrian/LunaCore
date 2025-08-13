@@ -28,9 +28,7 @@ using json = nlohmann::json;
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
 
-extern int scriptsLoadedCount;
 CTRPF::Clock timeoutLoadClock;
-extern std::unordered_map<std::string, std::string> config;
 
 void Core::InitCore() {
     u64 titleID = CTRPF::Process::GetTitleID();
@@ -51,10 +49,10 @@ void Core::InitCore() {
     if (!CTRPF::Directory::IsExists(PLUGIN_FOLDER"/scripts"))
         CTRPF::Directory::Create(PLUGIN_FOLDER"/scripts");
 
-    bool loadScripts = Core::Config::GetBoolValue(config, "enable_scripts", true);
+    bool loadScripts = Core::Config::GetBoolValue(G_config, "enable_scripts", true);
 
     // Update configs
-    if (!Core::Config::SaveConfig(CONFIG_FILE, config))
+    if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
         Core::Debug::LogMessage("Failed to save configs", true);
     
     Core::Debug::LogMessage("Loading Lua environment", false);
@@ -205,7 +203,7 @@ void Core::PreloadScripts()
             std::string fullPath("sdmc:" + dir.GetFullName() + "/" + file);
             Core::Debug::LogMessage("Loading script '"+fullPath+"'", false);
             if (LoadScript(fullPath.c_str()))
-                scriptsLoadedCount++;
+                loadedScripts++;
         }
         lua_gc(Lua_global, LUA_GCCOLLECT, 0); // If needed collect all garbage
     }

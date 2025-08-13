@@ -32,8 +32,6 @@
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
 
-int scriptsLoadedCount = 0;
-std::unordered_map<std::string, std::string> config;
 GameState_s GameState;
 CTRPF::PluginMenu *gmenu;
 
@@ -105,10 +103,10 @@ namespace CTRPluginFramework
             OSD::Notify(Utils::Format("Failed to open log file '%s'", LOG_FILE));
         Debug::LogMessage(Utils::Format("LunaCore version: %d.%d.%d", PLG_VER_MAJ, PLG_VER_MIN, PLG_VER_PAT), false);
         Debug::LogMessage(Utils::Format("Loading config file '%s'", CONFIG_FILE), false);
-        config = Config::LoadConfig(CONFIG_FILE);
+        G_config = Config::LoadConfig(CONFIG_FILE);
 
-        bool disableZLandZR = Config::GetBoolValue(config, "disable_zl_and_zr", false);
-        bool disableDLandDR = Config::GetBoolValue(config, "disable_dleft_and_dright", false);
+        bool disableZLandZR = Config::GetBoolValue(G_config, "disable_zl_and_zr", false);
+        bool disableDLandDR = Config::GetBoolValue(G_config, "disable_dleft_and_dright", false);
 
         if (Core::Utils::checkCompatibility() || System::IsCitra()) {
             Minecraft::PatchProcess();
@@ -168,13 +166,13 @@ namespace CTRPluginFramework
         if (!Directory::IsExists(PLUGIN_FOLDER"/layouts"))
             Directory::Create(PLUGIN_FOLDER"/layouts");
 
-        bool loadMenuLayout = Config::GetBoolValue(config, "custom_game_menu_layout", true);
+        bool loadMenuLayout = Config::GetBoolValue(G_config, "custom_game_menu_layout", true);
 
         CrashHandler::core_state = CrashHandler::CORE_LOADING_RUNTIME;
         Core::InitCore();
 
         // Update configs
-        if (!Config::SaveConfig(CONFIG_FILE, config))
+        if (!Config::SaveConfig(CONFIG_FILE, G_config))
             Debug::LogMessage("Failed to save configs", true);
 
         if (loadMenuLayout && patchEnabled) {

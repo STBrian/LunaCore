@@ -14,8 +14,6 @@
 
 using namespace CTRPluginFramework;
 
-extern int scriptsLoadedCount;
-extern std::unordered_map<std::string, std::string> config;
 extern PluginMenu *gmenu;
 u32 *socBuffer = NULL;
 
@@ -62,56 +60,56 @@ void InitMenu(PluginMenu &menu)
     optionsFolder->Append(new MenuEntry("Toggle Script Loader", nullptr, [](MenuEntry *entry)
     {
         bool changed = false;
-        if (config["enable_scripts"] == "true") {
+        if (G_config["enable_scripts"] == "true") {
             if (MessageBox("Do you want to DISABLE script loader?", DialogType::DialogYesNo)()) {
-                config["enable_scripts"] = "false";
+                G_config["enable_scripts"] = "false";
                 changed = true;
             }
         } else {
             if (MessageBox("Do you want to ENABLE script loader?", DialogType::DialogYesNo)()) {
-                config["enable_scripts"] = "true";
+                G_config["enable_scripts"] = "true";
                 changed = true;
             }
         }
         if (changed) {
             MessageBox("Restart the game to apply the changes")();
-            if (!Core::Config::SaveConfig(CONFIG_FILE, config))
+            if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
                 Core::Debug::LogMessage("Failed to save configs", true);
         }
     }));
     optionsFolder->Append(new MenuEntry("Toggle Menu Layout", nullptr, [](MenuEntry *entry)
     {
         bool changed = false;
-        if (config["custom_game_menu_layout"] == "true") {
+        if (G_config["custom_game_menu_layout"] == "true") {
             if (MessageBox("Do you want to DISABLE custom menu layout?", DialogType::DialogYesNo)()) {
-                config["custom_game_menu_layout"] = "false";
+                G_config["custom_game_menu_layout"] = "false";
                 changed = true;
             }
         } else {
             if (MessageBox("Do you want to ENABLE custom menu layout?", DialogType::DialogYesNo)()) {
-                config["custom_game_menu_layout"] = "true";
+                G_config["custom_game_menu_layout"] = "true";
                 changed = true;
             }
         }
         if (changed) {
             MessageBox("Restart the game to apply the changes")();
-            if (!Core::Config::SaveConfig(CONFIG_FILE, config))
+            if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
                 Core::Debug::LogMessage("Failed to save configs", true);
         }
     }));
     optionsFolder->Append(new MenuEntry("Toggle Block ZL and ZR keys", nullptr, [](MenuEntry *entry)
     {
         bool changed = false;
-        if (config["disable_zl_and_zr"] == "true") {
+        if (G_config["disable_zl_and_zr"] == "true") {
             if (MessageBox("Do you want to ENABLE ZL and ZR keys?", DialogType::DialogYesNo)()) {
-                config["disable_zl_and_zr"] = "false";
+                G_config["disable_zl_and_zr"] = "false";
                 Process::Write32(0x919530, KEY_ZL); // Pos keycode for ZL
                 Process::Write32(0x919534, KEY_ZR); // Pos keycode for ZR
                 changed = true;
             }
         } else {
             if (MessageBox("Do you want to DISABLE ZL and ZR keys (only scripts will be able to use them)?", DialogType::DialogYesNo)()) {
-                config["disable_zl_and_zr"] = "true";
+                G_config["disable_zl_and_zr"] = "true";
                 Process::Write32(0x919530, 0); // Pos keycode for ZL
                 Process::Write32(0x919534, 0); // Pos keycode for ZR
                 changed = true;
@@ -119,27 +117,27 @@ void InitMenu(PluginMenu &menu)
         }
         if (changed) {
             MessageBox("Restart the game to apply the changes")();
-            if (!Core::Config::SaveConfig(CONFIG_FILE, config))
+            if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
                 Core::Debug::LogMessage("Failed to save configs", true);
         }
     }));
     optionsFolder->Append(new MenuEntry("Toggle Block DPADLEFT and DPADRIGHT keys", nullptr, [](MenuEntry *entry)
     {
         bool changed = false;
-        if (config["disable_zl_and_zr"] == "true") {
+        if (G_config["disable_zl_and_zr"] == "true") {
             if (MessageBox("Do you want to ENABLE DPADLEFT and DPADRIGHT keys?", DialogType::DialogYesNo)()) {
-                config["disable_dleft_and_dright"] = "false";
+                G_config["disable_dleft_and_dright"] = "false";
                 changed = true;
             }
         } else {
             if (MessageBox("Do you want to DISABLE DPADLEFT and DPADRIGHT keys (only scripts will be able to use them)?", DialogType::DialogYesNo)()) {
-                config["disable_dleft_and_dright"] = "true";
+                G_config["disable_dleft_and_dright"] = "true";
                 changed = true;
             }
         }
         if (changed) {
             MessageBox("Restart the game to apply the changes")();
-            if (!Core::Config::SaveConfig(CONFIG_FILE, config))
+            if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
                 Core::Debug::LogMessage("Failed to save configs", true);
         }
     }));
@@ -232,7 +230,7 @@ void InitMenu(PluginMenu &menu)
         lua_close(Lua_global);
         Lua_global = luaL_newstate();
         Core::LoadLuaEnv();
-        scriptsLoadedCount = 0;
+        loadedScripts = 0;
         MessageBox("Lua environment reloaded")();
         Lua_Global_Mut.unlock();
     }));
@@ -245,7 +243,7 @@ void InitMenu(PluginMenu &menu)
         lua_close(Lua_global);
         Lua_global = luaL_newstate();
         Core::LoadLuaEnv();
-        scriptsLoadedCount = 0;
+        loadedScripts = 0;
         Core::PreloadScripts();
         MessageBox("Lua environment reloaded")();
         Lua_Global_Mut.unlock();

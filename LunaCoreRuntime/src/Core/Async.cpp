@@ -27,6 +27,7 @@ void Core::AsyncHandlerCallback()
 {
     std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
     lua_State *L = Lua_global;
+    int curTop = lua_gettop(L);
 
     // Async handles timeout hooks individually so no need to configure
     // Async coroutines
@@ -38,12 +39,13 @@ void Core::AsyncHandlerCallback()
         if (lua_pcall(L, 0, 0, 0))
         {
             Core::Debug::LogError("Core::Async::handler error: " + std::string(lua_tostring(L, -1)));
-            lua_pop(L, 1);
+            //lua_pop(L, 1);
         }
     }
-    else
-        lua_pop(L, 1);
-    lua_pop(L, 1);
+    //else 
+        //lua_pop(L, 1);
+    //lua_pop(L, 1);
+    lua_settop(L, curTop);
 }
 
 // ----------------------------------------------------------------------------

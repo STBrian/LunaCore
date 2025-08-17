@@ -22,7 +22,7 @@ SOURCES 	:= 	src src/Core src/Core/Utils src/Game src/Core/Game src/Game/Hooks s
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
-ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
+ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -marm
 
 CFLAGS		:=	$(ARCH) -Os -s -mword-relocations \
 				-fdata-sections -fomit-frame-pointer -ffunction-sections -fno-strict-aliasing -fvisibility=hidden

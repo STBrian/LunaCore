@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <mutex>
+#include <string>
 #include <FsLib/fslib.hpp>
 
 #include "json.hpp"
@@ -38,12 +39,12 @@ void Core::InitCore() {
 
     if (!fslib::initialize()) {
         Core::Debug::LogError("Failed to initialize fslib");
-        Core::Debug::LogRaw(std::string(fslib::getErrorString())+"\n");
+        Core::Debug::LogRaw(STRING_CLASS(fslib::getErrorString()) + "\n");
     }
 
     if (!fslib::openExtData(u"extdata", static_cast<uint32_t>(titleID >> 8 & 0x00FFFFFF))) {
         Core::Debug::LogError("Failed to open extdata");
-        Core::Debug::LogRaw(std::string(fslib::getErrorString())+"\n");
+        Core::Debug::LogRaw(STRING_CLASS(fslib::getErrorString()) + "\n");
     }
 
     if (!CTRPF::Directory::IsExists(PLUGIN_FOLDER"/scripts"))
@@ -59,7 +60,7 @@ void Core::InitCore() {
     Lua_global = luaL_newstate();
     Core::LoadLuaEnv();
 
-    std::string region;
+    STRING_CLASS region;
     Core::Utils::getRegion(region);
     u16 gameVer = CTRPF::Process::GetVersion();
     if (Core::Utils::checkCompatibility()) {
@@ -99,7 +100,7 @@ void Core::LoadLuaEnv() {
     lua_getfield(L, -1, "path");
     const char *current_path = lua_tostring(L, -1);
     lua_pop(L, 1);
-    std::string newPath(current_path);
+    STRING_CLASS newPath(current_path);
     newPath += ";" PLUGIN_FOLDER "/scripts/?.lua;" PLUGIN_FOLDER "/scripts/?/init.lua";
     lua_pushstring(L, newPath.c_str());
     lua_setfield(L, -2, "path");
@@ -127,7 +128,7 @@ bool Core::LoadBuffer(const char *buffer, size_t size, const char* name) {
     int status_code = luaL_loadbuffer(L, buffer, size, name);
     if (status_code)
     {
-        Core::Debug::LogError("Script load error: "+std::string(lua_tostring(L, -1)));
+        Core::Debug::LogError("Script load error: " + STRING_CLASS(lua_tostring(L, -1)));
         lua_pop(L, 2);
         success = false;
     }
@@ -173,10 +174,10 @@ bool Core::LoadBuffer(const char *buffer, size_t size, const char* name) {
     return success;
 }
 
-bool Core::LoadScript(const std::string& fp)
+bool Core::LoadScript(const STRING_CLASS& fp)
 {
     lua_State* L = Lua_global;
-    std::string fileContent = Core::Utils::LoadFile(fp);
+    STRING_CLASS fileContent = Core::Utils::LoadFile(fp);
     if (fileContent.empty())
     {
         Core::Debug::LogMessage("Failed to open file"+fp, false);
@@ -202,14 +203,14 @@ void Core::PreloadScripts()
 
             std::string fullPath("sdmc:" + dir.GetFullName() + "/" + file);
             Core::Debug::LogMessage("Loading script '"+fullPath+"'", false);
-            if (LoadScript(fullPath.c_str()))
+            if (LoadScript(fullPath))
                 loadedScripts++;
         }
         lua_gc(Lua_global, LUA_GCCOLLECT, 0); // If needed collect all garbage
     }
 }
 
-bool LoadMod(const std::string& modName, std::unordered_map<std::string, std::string> &modsAvailable, std::vector<u32> &modsLoading, std::vector<u32> &modsLoaded, std::vector<u32> &modsDiscarded)
+bool LoadMod(const STRING_CLASS& modName, std::unordered_map<STRING_CLASS, STRING_CLASS>& modsAvailable, std::vector<u32> &modsLoading, std::vector<u32> &modsLoaded, std::vector<u32> &modsDiscarded)
 {
     if (std::find(modsDiscarded.begin(), modsDiscarded.end(), hash(modName.c_str())) != modsDiscarded.end() || 
     std::find(modsLoading.begin(), modsLoading.end(), hash(modName.c_str())) != modsLoading.end())
@@ -218,14 +219,14 @@ bool LoadMod(const std::string& modName, std::unordered_map<std::string, std::st
         return true;
 
     modsLoading.emplace_back(hash(modName.c_str()));
-    std::string fileContent = Core::Utils::LoadFile(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/mod.json");
+    STRING_CLASS fileContent = Core::Utils::LoadFile(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/mod.json");
     if (fileContent.empty()) {
         Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to open 'mod.json'", modsAvailable[modName].c_str()));
         modsDiscarded.emplace_back(hash(modName.c_str()));
         return false;
     }
     
-    json j = json::parse(fileContent, nullptr, false);
+    json j = json::parse(std::string(fileContent), nullptr, false);
     fileContent.clear();
     if (j.is_discarded()) {
         Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to parse 'mod.json'", modsAvailable[modName].c_str()));
@@ -236,11 +237,11 @@ bool LoadMod(const std::string& modName, std::unordered_map<std::string, std::st
     if (j.contains("dependencies") && j["dependencies"].is_array()) {
         for (const auto& modDependency : j["dependencies"]) {
             bool sucess = false;
-            if (modDependency.is_string() && modsAvailable.contains(modDependency))
-                sucess = LoadMod(modsAvailable[modDependency], modsAvailable, modsLoading, modsLoaded, modsDiscarded);
+            if (modDependency.is_string() && modsAvailable.contains(STRING_CLASS(modDependency)))
+                sucess = LoadMod(modsAvailable[STRING_CLASS(modDependency)], modsAvailable, modsLoading, modsLoaded, modsDiscarded);
 
             if (!sucess) {
-                Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to load dependency '%s'", modsAvailable[modName].c_str(), std::string(modDependency).c_str()));
+                Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to load dependency '%s'", modsAvailable[modName].c_str(), STRING_CLASS(modDependency).c_str()));
                 modsDiscarded.emplace_back(hash(modName.c_str()));
                 return false;
             }
@@ -249,8 +250,8 @@ bool LoadMod(const std::string& modName, std::unordered_map<std::string, std::st
 
     if (j.contains("optional_dependencies") && j["optional_dependencies"].is_array()) {
         for (const auto& modDependency : j["optional_dependencies"]) {
-            if (modDependency.is_string() && modsAvailable.contains(modDependency))
-                LoadMod(modsAvailable[modDependency], modsAvailable, modsLoading, modsLoaded, modsDiscarded);
+            if (modDependency.is_string() && modsAvailable.contains(STRING_CLASS(modDependency)))
+                LoadMod(modsAvailable[STRING_CLASS(modDependency)], modsAvailable, modsLoading, modsLoaded, modsDiscarded);
         }
     }
 
@@ -282,7 +283,7 @@ void Core::LoadMods()
         return;
     }
 
-    std::unordered_map<std::string, std::string> modsAvailable;
+    std::unordered_map<STRING_CLASS, STRING_CLASS> modsAvailable;
     std::vector<u32> modsLoading;
     std::vector<u32> modsLoaded;
     std::vector<u32> modsDiscarded;
@@ -290,20 +291,20 @@ void Core::LoadMods()
     std::vector<std::string> mods;
     modsDir.ListDirectories(mods);
     for (auto& dir : mods) {
-        std::string fileContent = Core::Utils::LoadFile(PLUGIN_FOLDER "/mods/" + dir + "/mod.json");
+        STRING_CLASS fileContent = Core::Utils::LoadFile(PLUGIN_FOLDER "/mods/" + dir + "/mod.json");
         if (fileContent.empty()) {
             Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to open 'mod.json'", dir.c_str()));
             continue;
         }
         
-        json j = json::parse(fileContent, nullptr, false);
+        json j = json::parse(std::string(fileContent), nullptr, false);
         if (j.is_discarded()) {
             Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to parse 'mod.json'", dir.c_str()));
             continue;
         }
 
         if (j.contains("name") && j["name"].is_string()) {
-            modsAvailable[j["name"]] = dir;
+            modsAvailable[STRING_CLASS(j["name"])] = dir;
         } else {
             Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Missing name in 'mod.json'", dir.c_str()));
             continue;

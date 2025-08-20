@@ -1,14 +1,15 @@
 #pragma once
 
+#include "CoreGlobals.hpp"
+
 #include <unordered_map>
-#include <string>
 
 namespace Core {
     namespace Config {
-        std::unordered_map<std::string, std::string> LoadConfig(const std::string &filepath);
+        std::unordered_map<STRING_CLASS, STRING_CLASS> LoadConfig(const STRING_CLASS& filepath);
 
-        bool SaveConfig(const std::string &filePath, std::unordered_map<std::string, std::string> &config);
+        bool SaveConfig(const STRING_CLASS& filePath, std::unordered_map<STRING_CLASS, STRING_CLASS>& config);
 
-        bool GetBoolValue(std::unordered_map<std::string, std::string> &config, const std::string &field, bool def);
+        bool GetBoolValue(std::unordered_map<STRING_CLASS, STRING_CLASS>& config, const STRING_CLASS& field, bool def);
     }
 }

@@ -2,8 +2,7 @@
 
 #include <CTRPluginFramework.hpp>
 
-#include <string>
-
+#include "CoreGlobals.hpp"
 #include "lua_common.h"
 #include "Game/world/item/Item.hpp"
 
@@ -15,7 +14,7 @@ namespace Core {
     namespace Items {
         using Item = Game::Item;
         
-        Item *SearchItemByName(const std::string& name);
+        Item *SearchItemByName(const STRING_CLASS& name);
 
         Item *SearchItemByID(u16 id);
 

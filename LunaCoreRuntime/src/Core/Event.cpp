@@ -36,7 +36,7 @@ void TimeoutEventHook(lua_State *L, lua_Debug *ar)
         luaL_error(L, "Event listener exceeded execution time (5000 ms)");
 }
 
-void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsigned int nargs) {
+void Core::Event::TriggerEvent(lua_State* L, const STRING_CLASS& eventName, unsigned int nargs) {
     int baseIdx = lua_gettop(L) - nargs;
     int argsIdx = baseIdx + 1;
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_EVENT;
@@ -56,7 +56,7 @@ void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsig
         for (int i = 0; i < nargs; i++)
             lua_pushvalue(L, argsIdx + i);
         if (lua_pcall(L, 1 + nargs, 0, 0))
-            Core::Debug::LogError("Game.Event." + eventName + " error: " + std::string(lua_tostring(L, -1)));
+            Core::Debug::LogError("Game.Event." + eventName + " error: " + STRING_CLASS(lua_tostring(L, -1)));
             //lua_pop(L, 1);
     }
     else
@@ -270,7 +270,7 @@ bool Core::Module::RegisterEventModule(lua_State *L)
     )";
     if (luaL_dostring(L, lua_Code))
     {
-        Core::Debug::LogError("Core::Event::Load error: "+std::string(lua_tostring(L, -1)));
+        Core::Debug::LogError("Core::Event::Load error: " + STRING_CLASS(lua_tostring(L, -1)));
         lua_pop(L, 1);
         return false;
     }

@@ -12,7 +12,7 @@ CTRPFLIB	?=	$(DEVKITPRO)/libctrpf
 TARGET		:= 	LunaCore
 PLGINFO 	:= 	CTRPluginFramework.plgInfo
 PLGVERMAJ	:=	0
-PLGVERMIN	:=	12
+PLGVERMIN	:=	13
 PLGVERPAT	:=	0
 
 BUILD		:= 	Build
@@ -30,6 +30,9 @@ CFLAGS		:=	$(ARCH) -Os -s -mword-relocations \
 CFLAGS		+=	$(INCLUDE) -D__3DS__ -I $(PORTLIBS)/include/lua5.1 \
 				-DPLG_VER_MAJ=$(PLGVERMAJ) -DPLG_VER_MIN=$(PLGVERMIN) -DPLG_VER_PAT=$(PLGVERPAT)
 
+ifeq ($(USE_CUSTOM_STRING), 1)
+	CFLAGS		+=	-DUSE_CUSTOM_STRING
+endif
 ifeq ($(EXPERIMENTAL), 1)
 	CFLAGS		+=	-DEXPERIMENTAL
 endif

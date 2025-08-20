@@ -1,7 +1,5 @@
 #include "Modules.hpp"
 
-#include <string>
-
 #include <CTRPluginFramework.hpp>
 
 #include "CoreGlobals.hpp"
@@ -61,7 +59,7 @@ namespace Core {
         )";
         if (luaL_dostring(L, lua_Code))
         {
-            Core::Debug::LogError("Core::Load error: "+std::string(lua_tostring(L, -1)));
+            Core::Debug::LogError("Core::Load error: " + STRING_CLASS(lua_tostring(L, -1)));
             lua_pop(L, 1);
             return false;
         }
@@ -69,7 +67,7 @@ namespace Core {
     }
 
     static int l_Core_getModpath(lua_State* L) {
-        std::string modname = luaL_checkstring(L, 1);
+        STRING_CLASS modname(luaL_checkstring(L, 1));
         if (modPaths.contains(modname))
             lua_pushstring(L, modPaths[modname].c_str());
         else

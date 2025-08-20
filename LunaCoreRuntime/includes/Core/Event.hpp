@@ -1,7 +1,6 @@
 #pragma once
 
-#include <string>
-
+#include "CoreGlobals.hpp"
 #include "lua_common.h"
 
 namespace Core {
@@ -10,7 +9,7 @@ namespace Core {
     void EventHandlerCallback();
 
     namespace Event {
-        void TriggerEvent(lua_State* L, const std::string& eventName, unsigned int nargs = 0);
+        void TriggerEvent(lua_State* L, const STRING_CLASS& eventName, unsigned int nargs = 0);
     }
 
     namespace Module {

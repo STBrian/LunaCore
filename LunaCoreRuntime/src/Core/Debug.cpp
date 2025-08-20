@@ -13,7 +13,7 @@ static CTRPF::File logFile;
 
 const char* Core::Debug::tab = "    ";
 
-bool Core::Debug::OpenLogFile(const std::string &filepath)
+bool Core::Debug::OpenLogFile(const STRING_CLASS& filepath)
 {
     if (!CTRPF::File::Exists(filepath))
         CTRPF::File::Create(filepath);
@@ -29,7 +29,7 @@ void Core::Debug::CloseLogFile()
         logFile.Close();
 }
 
-void Core::Debug::LogRaw(const std::string& msg)
+void Core::Debug::LogRaw(const STRING_CLASS& msg)
 {
     std::string newMsg(msg);
     Core::Utils::Replace(newMsg, "\t", "    ");
@@ -37,34 +37,34 @@ void Core::Debug::LogRaw(const std::string& msg)
     logFile.Flush();
 }
 
-static void DebugWriteLog(const std::string& msg)
+static void DebugWriteLog(const STRING_CLASS& msg)
 {
     if (logFile.IsOpen()) {
         std::string out_msg = "[";
-        out_msg += Core::Utils::formatTime(Core::System::getTime()) + "] " + msg;
+        out_msg += Core::Utils::formatTime(Core::System::getTime()) + "] " + std::string(msg);
         Core::Debug::LogRaw(out_msg + "\n");
     }
 }
 
-void Core::Debug::LogMessage(const std::string& msg, bool showOnScreen)
+void Core::Debug::LogMessage(const STRING_CLASS& msg, bool showOnScreen)
 {
     if (showOnScreen)
         CTRPF::OSD::Notify(msg);
     DebugWriteLog(msg);
 }
 
-void Core::Debug::LogError(const std::string& msg)
+void Core::Debug::LogError(const STRING_CLASS& msg)
 {
     Core::Debug::Error(msg);
     DebugWriteLog("[ERROR] " + msg);
 }
 
-void Core::Debug::Message(const std::string& msg)
+void Core::Debug::Message(const STRING_CLASS& msg)
 {
     CTRPF::OSD::Notify(msg);
 }
 
-void Core::Debug::Error(const std::string& msg)
+void Core::Debug::Error(const STRING_CLASS& msg)
 {
     CTRPF::OSD::Notify(msg, CTRPF::Color::Red, CTRPF::Color::Black);
 }
@@ -85,7 +85,7 @@ static int l_Debug_message(lua_State *L)
 {
     const char *msg = lua_tostring(L, 1);
 
-    CTRPF::OSD::Notify(msg);
+    Core::Debug::Message(msg);
     return 0;
 }
 

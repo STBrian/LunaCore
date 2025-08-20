@@ -92,10 +92,10 @@ namespace CTRPluginFramework
             return;
         settings.UseGameHidMemory = true;
         ToggleTouchscreenForceOn();
-        System::OnAbort = CrashHandler::OnAbort;
-        Process::exceptionCallback = CrashHandler::ExceptionCallback;
-        Process::ThrowOldExceptionOnCallbackException = true;
-        CrashHandler::ReserveMemory();
+        //System::OnAbort = CrashHandler::OnAbort;
+        //Process::exceptionCallback = CrashHandler::ExceptionCallback;
+        //Process::ThrowOldExceptionOnCallbackException = true;
+        //CrashHandler::ReserveMemory();
 
         if (!Directory::IsExists(PLUGIN_FOLDER))
             Directory::Create(PLUGIN_FOLDER);
@@ -184,7 +184,7 @@ namespace CTRPluginFramework
 
         gmenu = new PluginMenu("LunaCore", PLG_VER_MAJ, PLG_VER_MIN, PLG_VER_PAT,
             "Allows to execute Lua scripts and other features", 2);
-        std::string &title = gmenu->Title();
+        std::string& title = gmenu->Title();
         title.assign("LunaCore Plugin Menu");
 
         // Synnchronize the menu with frame event

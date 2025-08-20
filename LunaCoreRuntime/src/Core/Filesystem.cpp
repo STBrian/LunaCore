@@ -4,11 +4,11 @@
 #include <FsLib/fslib.hpp>
 #include <3ds.h>
 
-#include <string>
 #include <cstring>
 #include <codecvt>
 #include <locale>
 
+#include "CoreGlobals.hpp"
 #include "Core/Debug.hpp"
 
 #include "string_hash.hpp"
@@ -21,14 +21,14 @@ typedef struct {
     size_t size;
 } FilesystemFile;
 
-static fslib::Path path_from_string(const std::string &str) {
+static fslib::Path path_from_string(const STRING_CLASS& str) {
     std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter;
     return converter.from_bytes(str);
 }
 
-static std::string path_to_string(const std::u16string &path) {
+static STRING_CLASS path_to_string(const std::u16string &path) {
     std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter;
-    return std::string(converter.to_bytes(path));
+    return STRING_CLASS(converter.to_bytes(path));
 }
 
 // ----------------------------------------------------------------------------
@@ -49,7 +49,7 @@ static std::string path_to_string(const std::u16string &path) {
 */
 static int l_Filesystem_open(lua_State *L) {
     const char* filepath = luaL_checkstring(L, 1);
-    std::string filemode(luaL_checkstring(L, 2));
+    STRING_CLASS filemode(luaL_checkstring(L, 2));
 
     bool success = false;
     FilesystemFile* fileStruct = (FilesystemFile*)lua_newuserdata(L, sizeof(FilesystemFile));
@@ -150,7 +150,7 @@ static int l_Filesystem_File_read(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
     size_t bytes = 0;
     if (lua_type(L, 2) == LUA_TSTRING) {
-        std::string readAmount(lua_tostring(L, 2));
+        STRING_CLASS readAmount(lua_tostring(L, 2));
         if (readAmount == "*all" || readAmount == "*a") {
             bytes = std::string::npos;
         } else
@@ -235,7 +235,7 @@ static int l_Filesystem_File_flush(lua_State *L) {
 */
 static int l_Filesystem_File_seek(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
-    std::string whence = "cur";
+    STRING_CLASS whence = "cur";
     size_t offset = 0;
     if (lua_gettop(L) > 1)
         offset = (size_t)luaL_checknumber(L, 2);

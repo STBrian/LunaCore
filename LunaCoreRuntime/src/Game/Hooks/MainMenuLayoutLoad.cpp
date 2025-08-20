@@ -64,7 +64,7 @@ typedef void (*code2Func)(int *);
 typedef struct {
     int x = 0, y = 0, width = 0, height = 0;
     int iconU = 0, iconV = 0, iconW = 0, iconH = 0;
-    std::string text;
+    STRING_CLASS text;
     bool bigIcon = false;
 } MenuBtnData;
 
@@ -76,7 +76,7 @@ typedef struct {
 static std::vector<MenuBtnData> MenuLayoutBtns;
 static MenuChrtData MenuLayoutChrt;
 
-void CreateMenuButtons(int *ptr, std::vector<btn_ctx> &btn_ctxs) {
+static void CreateMenuButtons(int *ptr, std::vector<btn_ctx> &btn_ctxs) {
     GameButton *(*InitMenuButton)(GameButton*ptr1, int* ptr2, MenuButtonID::MenuButtonID submenuID, int posX, int posY, int width, int height, const char *string, int buttonType) = (GameButton*(*)(GameButton*, int*, MenuButtonID::MenuButtonID, int, int, int, int, const char *, int))(0x4d6b58+BASE_OFF);
     void (*LinkButton)(btn_ctx *ptr1, GameButton *btnPtr) = (void(*)(btn_ctx*, GameButton*))(0x7b1bc0+BASE_OFF);
     void (*AddButtonTexUVs)(GameButton* btnPtr, void*, int u, int v, int w, int h, int, uv_vals*, uv_vals*, int, int, int) = (void(*)(GameButton*, void*, int, int, int, int, int, uv_vals*, uv_vals*, int, int, int))(0x4d6a50+BASE_OFF);
@@ -121,7 +121,7 @@ void CreateMenuButtons(int *ptr, std::vector<btn_ctx> &btn_ctxs) {
     }   
 }
 
-void CreateMainMenuCustomLayout(int *ptr) {
+static void CreateMainMenuCustomLayout(int *ptr) {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
     void (*MaybeRegisterData)(int*, void*) = (void(*)(int*, void*))(0x7f9788+BASE_OFF);
     btn_ctx *(*MaybeUpdateData)(btn_ctx*) = (btn_ctx*(*)(btn_ctx*))(0x7b1c18+BASE_OFF);
@@ -177,7 +177,7 @@ void PatchGameMenuLayoutFunction() {
     CTRPF::Process::Write32(0x8ab4a4 + BASE_OFF, (u32)CreateMainMenuCustomLayout); // Patch only reference to CreateMenuButtons
 }
 
-void MainMenuLayoutLoadCallback(int *ptr) {
+static void MainMenuLayoutLoadCallback(int *ptr) {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
     void (*MainMenuLoadOriginal)(int*) = (void(*)(int*))(0x16eda4+BASE_OFF);
     MainMenuLoadOriginal(ptr);
@@ -191,7 +191,7 @@ void SetMainMenuLayoutLoadCallback() {
     CTRPF::Process::Write32(0x8ab4a4 + BASE_OFF, (u32)MainMenuLayoutLoadCallback); // Patch only reference to CreateMenuButtons
 }
 
-void LoadButtonData(json &btnJData, MenuBtnData &btnData, const std::string &btnName) {
+static void LoadButtonData(json &btnJData, MenuBtnData &btnData, const STRING_CLASS& btnName) {
     json& j = btnJData[btnName];
     if (j.contains("x") && j["x"].is_number())
         btnData.x = j.value("x", 0);
@@ -217,11 +217,11 @@ void LoadButtonData(json &btnJData, MenuBtnData &btnData, const std::string &btn
     }
 }
 
-bool LoadGameMenuLayout(const std::string &filepath) {
-    std::string fileCont = Core::Utils::LoadFile(filepath);
+bool LoadGameMenuLayout(const STRING_CLASS& filepath) {
+    STRING_CLASS fileCont = Core::Utils::LoadFile(filepath);
     if (!fileCont.empty()) 
     {
-        json j = json::parse(fileCont, nullptr, false);
+        json j = json::parse(std::string(fileCont), nullptr, false);
         if (!j.is_discarded()) 
         {
             if (j.contains("buttons") && j["buttons"].is_object()) 
@@ -267,7 +267,7 @@ static bool ReplaceStringWithPointer(u32 offset, u32 insAddr, u32 strAddr, u32 p
     return CTRPF::Process::Write32(strAddr + offset, ptrAddr); // Write pointer to offset
 }
 
-static bool ReplaceConstString(u32 offset, u32 insAddr, u32 strAddr, u8 reg, const std::string& text) {
+static bool ReplaceConstString(u32 offset, u32 insAddr, u32 strAddr, u8 reg, const STRING_CLASS& text) {
     char *textPtr = (char*)GameCalloc(text.size() + 1); // Allocate string space in game memory
     if (textPtr == NULL) return false;
     if (!CTRPF::Process::WriteString((u32)textPtr, text.c_str(), text.size() + 1)) return false; // Copy string

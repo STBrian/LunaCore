@@ -23,7 +23,8 @@
                 "_UNICODE",
                 "PLG_VER_MAJ=0",
                 "PLG_VER_MIN=1",
-                "PLG_VER_PAT=0"
+                "PLG_VER_PAT=0",
+                "USE_CUSTOM_STRING"
             ],
             "cStandard": "c11",
             "cppStandard": "gnu++20"

@@ -1,10 +1,10 @@
 #pragma once
 
-#include <string>
+#include "CoreGlobals.hpp"
 
 void PatchGameMenuLayoutFunction();
 
-bool LoadGameMenuLayout(const std::string &filepath);
+bool LoadGameMenuLayout(const STRING_CLASS &filepath);
 
 void PatchMenuCustomLayoutDefault();
 

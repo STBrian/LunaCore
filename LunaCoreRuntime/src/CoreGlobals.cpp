@@ -7,5 +7,5 @@ bool patchEnabled = false;
 int loadedScripts;
 int loadedMods;
 
-std::unordered_map<std::string, std::string> G_config;
-std::unordered_map<std::string, std::string> modPaths;
+std::unordered_map<STRING_CLASS, STRING_CLASS> G_config;
+std::unordered_map<STRING_CLASS, STRING_CLASS> modPaths;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include "CoreGlobals.hpp"
 #include "lua_common.h"
 
 namespace Core {
@@ -10,7 +10,7 @@ namespace Core {
 
     bool LoadBuffer(const char *buffer, size_t size, const char* name);
 
-    bool LoadScript(const std::string& fp);
+    bool LoadScript(const STRING_CLASS& fp);
 
     void PreloadScripts();
 

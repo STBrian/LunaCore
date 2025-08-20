@@ -1,6 +1,5 @@
 #include "Core/Utils/FileLoader.hpp"
 
-#include <string>
 #include <algorithm>
 
 #include "Core/Utils/Utils.hpp"
@@ -9,7 +8,7 @@ static int l_custom_loadfile(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
 
-    std::string scriptContent = Core::Utils::LoadFile(filename);
+    STRING_CLASS scriptContent = Core::Utils::LoadFile(filename);
     if (scriptContent.empty()) {
         return luaL_error(L, "cannot open %s", filename);
     }

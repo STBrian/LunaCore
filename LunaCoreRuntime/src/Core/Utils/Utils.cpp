@@ -22,7 +22,7 @@ namespace Core::Utils {
         return IS_TARGET_ID(titleId);
     }
 
-    void getRegion(std::string &reg) {
+    void getRegion(STRING_CLASS& reg) {
         u64 titleId = CTRPF::Process::GetTitleID();
         if (titleId == USA_REG)
             reg.assign("USA");
@@ -38,9 +38,9 @@ namespace Core::Utils {
         return (IS_VUSA_COMP(titleId, gameVer) || IS_VEUR_COMP(titleId, gameVer) || IS_VJPN_COMP(titleId, gameVer));
     }
 
-    std::string formatTime(time_t time) {
+    STRING_CLASS formatTime(time_t time) {
         struct tm *timeInfo = localtime(&time);
-        std::string outStr;
+        STRING_CLASS outStr;
         if (timeInfo->tm_hour < 10)
             outStr += "0";
         outStr += std::to_string(timeInfo->tm_hour)+":";
@@ -68,8 +68,8 @@ namespace Core::Utils {
         return newStr;
     }
 
-    std::string LoadFile(const std::string &filepath) {
-        std::string content;
+    STRING_CLASS LoadFile(const STRING_CLASS& filepath) {
+        STRING_CLASS content;
         if (!CTRPF::File::Exists(filepath))
             return content;
         CTRPF::File file_ptr;
@@ -79,12 +79,12 @@ namespace Core::Utils {
         file_ptr.Seek(0, CTRPF::File::SeekPos::END);
         size_t fileSize = file_ptr.Tell();
         file_ptr.Seek(0, CTRPF::File::SeekPos::SET);
-        char *fileContent = (char *)malloc(fileSize + 1);
+        char *fileContent = new char[fileSize + 1];
         if (fileContent == NULL) 
             return content;
         file_ptr.Read(fileContent, fileSize);
         fileContent[fileSize] = '\0';
-        content = std::string(fileContent);
+        content = STRING_CLASS(fileContent);
         free(fileContent);
         return content;
     }
@@ -102,7 +102,7 @@ bool Core::RegisterUtilsModule(lua_State *L)
     )";
     if (luaL_dostring(L, lua_Code))
     {
-        Core::Debug::LogError("Core::Utils::Load error: " + std::string(lua_tostring(L, -1)));
+        Core::Debug::LogError("Core::Utils::Load error: " + STRING_CLASS(lua_tostring(L, -1)));
         lua_pop(L, 1);
         return false;
     }

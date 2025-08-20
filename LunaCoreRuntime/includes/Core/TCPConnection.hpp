@@ -1,9 +1,8 @@
 #pragma once
 
-#include <string>
+#include "CoreGlobals.hpp"
 
 #include <stddef.h>
-
 #include <netinet/in.h>
 
 namespace Core {
@@ -23,7 +22,7 @@ namespace Core {
                 TCPServer(int port);
                 ~TCPServer();
 
-                std::string getHostName();
+                STRING_CLASS getHostName();
 
                 bool waitConnection(WaitConnectionCallback callback = nullptr);
 

@@ -1,6 +1,7 @@
 #pragma once
 
-#include <string>
+#include "CoreGlobals.hpp"
+
 #include <unordered_map>
 #include "lua_common.h"
 #include "types.h"
@@ -36,7 +37,7 @@ class LuaObject {
         LuaFieldAccess access;
     } ValueMetadata;
     
-    static std::unordered_map<std::string, std::unordered_map<std::string, ValueMetadata>> objsLayouts;
+    static std::unordered_map<STRING_CLASS, std::unordered_map<STRING_CLASS, ValueMetadata>> objsLayouts;
 
     static void RegisterNewObject(lua_State* L, const char* name, const LuaObjectField* fields);
 

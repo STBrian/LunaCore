@@ -5,6 +5,7 @@
 #include "CoreGlobals.hpp"
 #include "lua_common.h"
 
+#ifndef ASSERT
 #define ASSERT(cond) \
     do { \
         if (!(cond)) { \
@@ -12,6 +13,7 @@
             abort(); \
         } \
     } while (0)
+#endif
 
 namespace Core {
     namespace Debug {

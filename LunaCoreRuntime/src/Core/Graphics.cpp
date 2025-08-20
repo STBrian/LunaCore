@@ -2,13 +2,13 @@
 
 #include <string>
 
+#include "CoreGlobals.hpp"
 #include "Core/Event.hpp"
 #include "Core/Async.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 
-extern "C" lua_State *Lua_global;
-extern "C" CTRPF::PluginMenu *gmenu;
+extern CTRPF::PluginMenu *gmenu;
 static int lua_callback = LUA_NOREF;
 static bool graphicsOpen = false;
 static bool shouldGraphicsClose = false;

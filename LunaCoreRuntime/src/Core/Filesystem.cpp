@@ -1,16 +1,13 @@
 #include "Core/Filesystem.hpp"
 
 #include <CTRPluginFramework.hpp>
-#include <FsLib/fslib.hpp>
 #include <3ds.h>
 
 #include <cstring>
 #include <codecvt>
 #include <locale>
 
-#include "CoreGlobals.hpp"
 #include "Core/Debug.hpp"
-
 #include "string_hash.hpp"
 
 namespace CTRPF = CTRPluginFramework;
@@ -21,12 +18,12 @@ typedef struct {
     size_t size;
 } FilesystemFile;
 
-static fslib::Path path_from_string(const STRING_CLASS& str) {
+fslib::Path path_from_string(const STRING_CLASS& str) {
     std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter;
     return converter.from_bytes(str);
 }
 
-static STRING_CLASS path_to_string(const std::u16string &path) {
+STRING_CLASS path_to_string(const std::u16string &path) {
     std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter;
     return STRING_CLASS(converter.to_bytes(path));
 }

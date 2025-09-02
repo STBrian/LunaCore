@@ -13,6 +13,7 @@
 #include "Modules.hpp"
 #include "Core/Debug.hpp"
 #include "Core/Event.hpp"
+#include "Core/Filesystem.hpp"
 #include "Core/Async.hpp"
 #include "Core/Graphics.hpp"
 #include "Core/Utils/Utils.hpp"
@@ -92,13 +93,15 @@ namespace CTRPluginFramework
             return;
         settings.UseGameHidMemory = true;
         ToggleTouchscreenForceOn();
-        //System::OnAbort = CrashHandler::OnAbort;
-        //Process::exceptionCallback = CrashHandler::ExceptionCallback;
-        //Process::ThrowOldExceptionOnCallbackException = true;
-        //CrashHandler::ReserveMemory();
+        System::OnAbort = CrashHandler::OnAbort;
+        Process::exceptionCallback = CrashHandler::ExceptionCallback;
+        Process::ThrowOldExceptionOnCallbackException = true;
+        CrashHandler::ReserveMemory();
 
-        if (!Directory::IsExists(PLUGIN_FOLDER))
-            Directory::Create(PLUGIN_FOLDER);
+        if (!fslib::initialize()) abort();
+
+        if (!fslib::directoryExists(path_from_string(PLUGIN_FOLDER)))
+            fslib::createDirectory(path_from_string(PLUGIN_FOLDER));
         if (!Debug::OpenLogFile(LOG_FILE))
             OSD::Notify(Utils::Format("Failed to open log file '%s'", LOG_FILE));
         Debug::LogMessage(Utils::Format("LunaCore version: %d.%d.%d", PLG_VER_MAJ, PLG_VER_MIN, PLG_VER_PAT), false);
@@ -163,8 +166,8 @@ namespace CTRPluginFramework
         if (!Core::Utils::checkTitle())
             return 0;
 
-        if (!Directory::IsExists(PLUGIN_FOLDER"/layouts"))
-            Directory::Create(PLUGIN_FOLDER"/layouts");
+        if (!fslib::directoryExists(path_from_string(PLUGIN_FOLDER"/layouts")))
+            fslib::createDirectory(path_from_string(PLUGIN_FOLDER"/layouts"));
 
         bool loadMenuLayout = Config::GetBoolValue(G_config, "custom_game_menu_layout", true);
 
@@ -176,7 +179,7 @@ namespace CTRPluginFramework
             Debug::LogMessage("Failed to save configs", true);
 
         if (loadMenuLayout && patchEnabled) {
-            if (File::Exists(PLUGIN_FOLDER"/layouts/menu_layout.json") && LoadGameMenuLayout(PLUGIN_FOLDER"/layouts/menu_layout.json"))
+            if (fslib::fileExists(path_from_string(PLUGIN_FOLDER"/layouts/menu_layout.json")) && LoadGameMenuLayout(PLUGIN_FOLDER"/layouts/menu_layout.json"))
                 PatchGameMenuLayoutFunction();
             else
                 PatchMenuCustomLayoutDefault();

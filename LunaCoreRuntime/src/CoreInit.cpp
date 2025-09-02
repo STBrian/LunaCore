@@ -37,11 +37,6 @@ void Core::InitCore() {
             return;
     std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
 
-    if (!fslib::initialize()) {
-        Core::Debug::LogError("Failed to initialize fslib");
-        Core::Debug::LogRaw(STRING_CLASS(fslib::getErrorString()) + "\n");
-    }
-
     if (!fslib::openExtData(u"extdata", static_cast<uint32_t>(titleID >> 8 & 0x00FFFFFF))) {
         Core::Debug::LogError("Failed to open extdata");
         Core::Debug::LogRaw(STRING_CLASS(fslib::getErrorString()) + "\n");

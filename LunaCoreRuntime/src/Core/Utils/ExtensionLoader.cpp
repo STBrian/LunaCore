@@ -20,7 +20,7 @@ static int l_loadExtension(lua_State* L) {
     extfile.Read(buffer, size);
     extfile.Close();
     Core::Debug::LogMessage(CTRPF::Utils::Format("Extension loaded at: %08X", buffer), true);
-    return reinterpret_cast<int(*)(lua_State*, u32)>(buffer)(L, size);
+    return reinterpret_cast<int(*)(lua_State*, Core::SharedFunctions*)>(buffer + 0x10)(L, &SharedFunctions_obj);
 }
 
 namespace Core {

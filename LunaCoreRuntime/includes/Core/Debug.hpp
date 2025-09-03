@@ -27,11 +27,19 @@ namespace Core {
 
         void LogMessage(const STRING_CLASS& msg, bool showOnScreen);
 
+        void LogMessage(const char* msg, bool showOnScreen);
+
         void LogError(const STRING_CLASS& msg);
+
+        void LogError(const char* msg);
 
         void Message(const STRING_CLASS& msg);
 
+        void Message(const char* msg);
+
         void Error(const STRING_CLASS& msg);
+
+        void Error(const char* msg);
     }
 
     namespace Module {

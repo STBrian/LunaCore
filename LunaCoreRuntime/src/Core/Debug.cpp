@@ -46,26 +46,38 @@ static void DebugWriteLog(const STRING_CLASS& msg)
     }
 }
 
-void Core::Debug::LogMessage(const STRING_CLASS& msg, bool showOnScreen)
-{
+void Core::Debug::LogMessage(const STRING_CLASS& msg, bool showOnScreen) {
     if (showOnScreen)
         CTRPF::OSD::Notify(msg);
     DebugWriteLog(msg);
 }
 
-void Core::Debug::LogError(const STRING_CLASS& msg)
-{
+void Core::Debug::LogMessage(const char* msg, bool showOnScreen) {
+    LogMessage(std::string(msg), showOnScreen);
+}
+
+void Core::Debug::LogError(const STRING_CLASS& msg) {
     Core::Debug::Error(msg);
     DebugWriteLog("[ERROR] " + msg);
 }
 
-void Core::Debug::Message(const STRING_CLASS& msg)
-{
+void Core::Debug::LogError(const char* msg) {
+    LogError(std::string(msg));
+}
+
+void Core::Debug::Message(const STRING_CLASS& msg) {
     CTRPF::OSD::Notify(msg);
 }
 
-void Core::Debug::Error(const STRING_CLASS& msg)
-{
+void Core::Debug::Message(const char* msg) {
+    CTRPF::OSD::Notify(msg);
+}
+
+void Core::Debug::Error(const STRING_CLASS& msg) {
+    CTRPF::OSD::Notify(msg, CTRPF::Color::Red, CTRPF::Color::Black);
+}
+
+void Core::Debug::Error(const char* msg) {
     CTRPF::OSD::Notify(msg, CTRPF::Color::Red, CTRPF::Color::Black);
 }
 

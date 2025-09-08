@@ -54,4 +54,13 @@ Core::SharedFunctions::SharedFunctions() {
     this->debug->LogError = Core::Debug::LogError;
     this->debug->Message = Core::Debug::Message;
     this->debug->Error = Core::Debug::Error;
+
+    this->fslib = new struct fslib_s;
+    this->fslib->fopen = Filesystem::fopen;
+    this->fslib->fclose = Filesystem::fclose;
+    this->fslib->fseek = Filesystem::fseek;
+    this->fslib->ftell = Filesystem::ftell;
+    this->fslib->rewind = Filesystem::rewind;
+    this->fslib->fwrite = Filesystem::fwrite;
+    this->fslib->fread = Filesystem::fread;
 }

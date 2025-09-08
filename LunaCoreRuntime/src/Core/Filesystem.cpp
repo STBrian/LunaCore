@@ -12,12 +12,6 @@
 
 namespace CTRPF = CTRPluginFramework;
 
-typedef struct {
-    fslib::File *filePtr;
-    int mode;
-    size_t size;
-} FilesystemFile;
-
 fslib::Path path_from_string(const STRING_CLASS& str) {
     std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter;
     return converter.from_bytes(str);
@@ -26,6 +20,60 @@ fslib::Path path_from_string(const STRING_CLASS& str) {
 STRING_CLASS path_to_string(const std::u16string &path) {
     std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter;
     return STRING_CLASS(converter.to_bytes(path));
+}
+
+namespace Filesystem {
+    FilesystemFile* fopen(const char* filename, const char* mode) {
+        FilesystemFile* fileStruct = new FilesystemFile;
+        if (mode == "w")
+            fileStruct->mode = FS_OPEN_WRITE|FS_OPEN_CREATE;
+        else if (mode == "r")
+            fileStruct->mode = FS_OPEN_READ;
+        else if (mode == "a")
+            fileStruct->mode = FS_OPEN_APPEND;
+        else if (mode == "rw" || mode == "wr" || mode == "r+" || mode == "w+")
+            fileStruct->mode = FS_OPEN_WRITE|FS_OPEN_READ;
+        else {
+            delete fileStruct;
+            return NULL;
+        }
+        fileStruct->filePtr = new fslib::File(path_from_string(filename), fileStruct->mode);
+        
+        if (!fileStruct->filePtr->isOpen()) {
+            delete fileStruct;
+            return NULL;
+        } else {
+            fileStruct->size = fileStruct->filePtr->getSize();
+        }
+    }
+
+    void fclose(FilesystemFile* file) {
+        file->filePtr->close();
+        delete file;
+    }
+
+    size_t fseek(FilesystemFile* file, long off, int ori) {
+        file->filePtr->seek(off, ori);
+        return file->filePtr->tell();
+    }
+
+    size_t ftell(FilesystemFile* file) {
+        return file->filePtr->tell();
+    }
+
+    void rewind(FilesystemFile* file) {
+        file->filePtr->seek(0, SEEK_SET);
+    }
+
+    size_t fwrite(const void* buffer, size_t size, size_t n, FilesystemFile* file) {
+        ssize_t result = file->filePtr->write(buffer, size * n);
+        return result == -1 ? 0 : result;
+    }
+
+    size_t fread(void* buffer, size_t size, size_t n, FilesystemFile* file) {
+        ssize_t result = file->filePtr->read(buffer, size * n);
+        return result == -1 ? 0 : result;
+    }
 }
 
 // ----------------------------------------------------------------------------

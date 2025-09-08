@@ -65,22 +65,40 @@ inline const char* luaL_checkstring(lua_State* L, int narg) {
     return g_pfuncs->luaL->checklstring(L, narg, NULL);
 }
 
-void Core_Filesystem_open(lua_State* L, const char* filename, const char* mode) {
-    lua_getglobal(L, "Core");
-    lua_getfield(L, -1, "Filesystem");
-    lua_remove(L, -2);
-    lua_getfield(L, -1, "open");
-    lua_remove(L, -2);
-
-    lua_pushstring(L, filename);
-    lua_pushstring(L, mode);
-
-    lua_pcall(L, 2, 0, 0);
+inline void* lua_newuserdata(lua_State* L, size_t s) {
+    return g_pfuncs->lua->newuserdata(L, s);
 }
+
+typedef struct {
+    BlangIndex* indexes;
+    BlangIndex** newIndexes;
+    char* data;
+    char** newData;
+    int added;
+} BlangHandler;
+
+typedef struct {
+    u32 hash;
+    u32 position;
+} BlangIndex;
 
 int l_blangParser_open(lua_State* L) {
     const char* filename = luaL_checkstring(L, 1);
-    g_pfuncs->debug->LogMessage("Hi from LunaCoreExtension", true);
+    FilesystemFile* file = g_pfuncs->fslib->fopen(filename, "r");
+    if (file == NULL)
+        return 0;
+    u32 idxlength;
+    g_pfuncs->fslib->fread(&idxlength, sizeof(u32), 1, file);
+    BlangIndex* indexes = (BlangIndex*)g_pfuncs->cstdlib->malloc(sizeof(BlangIndex) * idxlength);
+    if (indexes == NULL) {
+        g_pfuncs->fslib->fclose(file);
+        return 0;
+    }
+    if (g_pfuncs->fslib->fread(indexes, sizeof(BlangIndex), idxlength, file) < idxlength * sizeof(BlangIndex)) {
+        g_pfuncs->fslib->fclose(file);
+        g_pfuncs->cstdlib->free(indexes);
+        return 0;
+    }
     return 0;
 }
 

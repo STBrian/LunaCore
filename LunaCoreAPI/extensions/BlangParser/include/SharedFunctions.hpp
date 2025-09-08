@@ -2,6 +2,7 @@
 
 #ifndef __LCEX__
 #include "lua_common.h"
+#include "Core/Filesystem.hpp"
 #else
 #include <stddef.h>
 #define LUA_REGISTRYINDEX	(-10000)
@@ -16,6 +17,7 @@ typedef struct luaL_Reg {
   const char *name;
   lua_CFunction func;
 } luaL_Reg;
+typedef struct FilesystemFile FilesystemFile;
 #endif
 
 // To ensure that extensions for old versions work in new versions without
@@ -84,6 +86,17 @@ namespace Core {
             void (*Error)(const char*);
         };
         struct debug_s* debug;
+
+        struct fslib_s {
+            FilesystemFile *(*fopen)(const char*, const char*);
+            void (*fclose)(FilesystemFile*);
+            size_t (*fseek)(FilesystemFile*, long, int);
+            size_t (*ftell)(FilesystemFile*);
+            void (*rewind)(FilesystemFile*);
+            size_t (*fwrite)(const void*, size_t, size_t, FilesystemFile*);
+            size_t (*fread)(void*, size_t, size_t, FilesystemFile*);
+        };
+        struct fslib_s* fslib;
 
         SharedFunctions();
     };

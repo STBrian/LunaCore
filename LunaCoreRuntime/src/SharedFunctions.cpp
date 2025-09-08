@@ -25,6 +25,8 @@ Core::SharedFunctions::SharedFunctions() {
     this->lua->setfield = lua_setfield;
     this->lua->getfield = lua_getfield;
 
+    this->lua->remove = lua_remove;
+
     this->lua->createtable = lua_createtable;
     this->lua->newuserdata = lua_newuserdata;
 
@@ -37,6 +39,8 @@ Core::SharedFunctions::SharedFunctions() {
     this->lua->pushlstring = lua_pushlstring;
     this->lua->pushfstring = lua_pushfstring;
     this->lua->pushcclosure = lua_pushcclosure;
+
+    this->lua->tolstring = lua_tolstring;
 
     this->luaL = new luaL_s;
     this->luaL->checknumber = luaL_checknumber;

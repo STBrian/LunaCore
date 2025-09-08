@@ -1,0 +1,28 @@
+{
+    "configurations": [
+        {
+            "name": "3DS",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${DEVKITPRO_HOME}/portlibs/3ds/include",
+                "${DEVKITPRO_HOME}/libctru/include",
+                "${DEVKITPRO_HOME}/libctrpf/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "__LCEX__",
+                "UNICODE",
+                "_UNICODE",
+                "LC_TARGET_VERSION_MAJOR = 0",
+                "LC_TARGET_VERSION_MINOR = 13",
+                "LC_TARGET_VERSION_PATCH = 0"
+            ],
+            "windowsSdkVersion": "10.0.22621.0",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-arm",
+            "compilerPath": "${DEVKITPRO_HOME}/devkitARM/bin/arm-none-eabi-gcc"
+        }
+    ],
+    "version": 4
+}

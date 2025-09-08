@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "*.unistore": "jsonc",
+        "lauxlib.h": "c"
+    }
+}

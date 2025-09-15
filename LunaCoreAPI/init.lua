@@ -26,5 +26,3 @@ dofile(modpath .. "/src/items.lua")
 dofile(modpath .. "/src/itemGroups.lua")
 
 Core.Debug.log("Loaded LunaCoreAPI", false);
-
-CoreAPI.test = Core.loadExtension(modpath .. "/src/Example.lcex")

@@ -13,35 +13,55 @@ function blang_parser_funcs.newParser(file)
     return blang_parser(file)
 end
 
+---comment
+---@param file FilesystemFile
 function blang_parser:new(file)
     self.parsed = false
+    self.error = nil
     if not file:isOpen() then
         return
     end
-    local file_data = file:read("*all")
-    if not file_data then
-        return
-    end
-    local length = struct.unpack("<I", string.sub(file_data, 1, 4))
-    local idx = 5
-    local stringDataPos = idx + length * 4 * 2 + 4
+
+    local intSize = 4
+    file:seek(0, "set")
+    local length = struct.unpack("<I", file:read(intSize))
+    local file_data = file:read(length * intSize * 2)
     local indexData = {}
-    for i = 0, length - 1 do
-        local hashName = struct.unpack("<I", file_data:sub(idx + 4 * 2 * i, idx + 4 * 2 * i + 3))
-        local texPos = struct.unpack("<I", file_data:sub(idx + 4 * 2 * i + 4, idx + 4 * 2 * i + 4 + 3))
-        table.insert(indexData, {hashName, texPos})
-    end
-    local data = {}
-    for index, value in ipairs(indexData) do
-        local finalPos = 0
-        if index < #indexData then
-            finalPos = stringDataPos + indexData[index + 1][2] - 2
-        else
-            finalPos = #file_data - 1
+    if file_data == nil then
+        self.error = "Failed to read index data"
+        return
+    else
+        for i = 0, length - 1 do
+            local hashName = struct.unpack("<I", file_data:sub(((intSize * 2 * i) + 1), ((intSize * 2 * i + 3) + 1)))
+            local texPos = struct.unpack("<I", file_data:sub(((intSize * 2 * i) + intSize + 1), (((intSize * 2 * i) + intSize + 3) + 1)))
+            table.insert(indexData, {hashName, texPos})
         end
-        data[value[1]] = string.sub(file_data, stringDataPos + value[2], finalPos)
     end
+
+    file_data = nil
+    collectgarbage("collect")
+
+    length = struct.unpack("<I", file:read(intSize))
+    file_data = file:read(length)
+    local data = {}
+    if file_data == nil then
+        self.error = "Failed to read text data"
+        return
+    else
+        for index, value in ipairs(indexData) do
+            local finalPos = 0
+            if index < #indexData then
+                finalPos = indexData[index + 1][2] - 2
+            else
+                finalPos = #file_data - 1
+            end
+            data[value[1]] = string.sub(file_data, value[2] + 1, finalPos + 1)
+        end
+    end
+
     self.data = data
+    indexData = nil
+    collectgarbage("collect")
     self.parsed = true
 end
 
@@ -50,6 +70,14 @@ end
 ---@return boolean
 function blang_parser:containsText(textId)
     return self.data[CoreAPI.Utils.String.hash(textId:lower())] ~= nil
+end
+
+--- Compares strings
+---@param textId string
+---@param s string
+---@return boolean
+function blang_parser:areEqual(textId, s)
+    return self.data[CoreAPI.Utils.String.hash(textId:lower())] == s
 end
 
 --- Adds a text
@@ -85,6 +113,7 @@ function blang_parser:dumpFile(file)
     indexData = nil
     collectgarbage("collect")
 
+    -- Avoid copy all texts
     local stringData = {}
     for _, key in ipairs(keys) do
         table.insert(stringData, self.data[key])

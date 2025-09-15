@@ -18,6 +18,10 @@ local function containsInvalidChars(s)
     end
 end
 
+local OnGameRegisterCreativeItems = Game.Event.OnGameCreativeItemsRegister or Game.Event.OnGameRegisterCreativeItems
+local OnGameRegisterItems = Game.Event.OnGameItemsRegister or Game.Event.OnGameRegisterItems
+local OnGameRegisterItemsTextures = Game.Event.OnGameItemsRegisterTexture or Game.Event.OnGameRegisterItemsTextures
+
 local itemsGlobals = {
     initialized = false,
     registry = {},
@@ -38,6 +42,10 @@ function CoreAPI.Items.newItemRegistry(modname)
     end
     if containsInvalidChars(modname) then
         error("'modname' contains invalid characters")
+    end
+    local modPath = Core.getModpath(modname)
+    if modPath == nil then
+        error("Modname not registered")
     end
     return itemRegistry(modname)
 end
@@ -81,7 +89,7 @@ end
 ---Registers an item and sets other properties including its texture
 ---@param nameId string
 ---@param definition table
-function itemRegistry:registerItem(nameId, definition)
+function itemRegistry:registerItem(nameId, itemId, definition)
     if type(nameId) ~= "string" then
         error("'nameId' must be a string")
     end
@@ -102,7 +110,7 @@ function itemRegistry:registerItem(nameId, definition)
     if itemsGlobals.registry[itemDefinition.nameId] ~= nil then
         error("Item '" .. itemDefinition.nameId "' is already registered")
     end
-    itemDefinition.itemId = 254
+    itemDefinition.itemId = itemId
     if type(definition.group) == "table" and definition.group.is ~= nil and definition.group:is(CoreAPI.ItemGroups.ItemGroupIdentifier) then
         itemDefinition.group = definition.group
     elseif type(definition.group) == "number" then
@@ -194,7 +202,7 @@ function itemRegistry:registerItems()
         end
     end
 
-    Game.Event.OnGameRegisterItems:Connect(function ()
+    OnGameRegisterItems:Connect(function ()
         for _, definition in ipairs(self.definitions) do
             local regItem = Game.Items.registerItem(definition.name, definition.itemId)
             if regItem ~= nil then
@@ -205,14 +213,14 @@ function itemRegistry:registerItems()
             end
         end
     end)
-    Game.Event.OnGameRegisterItemsTextures:Connect(function ()
+    OnGameRegisterItemsTextures:Connect(function ()
         for _, definition in ipairs(self.definitions) do
             if definition.item ~= nil then
                 definition.item:setTexture(definition.name, 0)
             end
         end
     end)
-    Game.Event.OnGameCreativeItemsRegister:Connect(function ()
+    OnGameRegisterCreativeItems:Connect(function ()
         for _, definition in ipairs(self.definitions) do
             if definition.group ~= nil and definition.group:is(CoreAPI.ItemGroups.ItemGroupIdentifier) and definition.item ~= nil then
                 Game.Items.registerCreativeItem(definition.item, definition.group.id, definition.group:getCreativePosition())
@@ -223,7 +231,7 @@ end
 
 --- Modify every locale file
 for _, localeName in pairs(CoreAPI.Languages) do
-    Game.Event.OnGameRegisterItems:Connect(function ()
+    OnGameRegisterItems:Connect(function ()
         local count = 0
         for _ in pairs(itemsGlobals.registry) do
             count = count + 1
@@ -246,7 +254,7 @@ for _, localeName in pairs(CoreAPI.Languages) do
                     for _, definition in pairs(itemsGlobals.registry) do
                         local itemName = definition.locales[localeName] or definition.locales["en_US"]
                         if itemName ~= nil then
-                            if not localeParser:containsText("item." .. definition.name .. ".name") then
+                            if not (localeParser:containsText("item."..definition.name..".name") and localeParser:areEqual("item."..definition.name..".name", itemName)) then
                                 localeParser:addText("item." .. definition.name .. ".name", itemName)
                                 changed = true
                             end
@@ -254,24 +262,26 @@ for _, localeName in pairs(CoreAPI.Languages) do
                     end
                     if changed then
                         localeParser:dumpFile(localeFile)
+                        collectgarbage("collect")
                     end
                 end
                 localeFile:close()
             end
         end
+        collectgarbage("collect")
     end)
 end
 
-Game.Event.OnGameRegisterItems:Connect(function ()
+OnGameRegisterItems:Connect(function ()
     Core.Debug.log("[Info] CoreAPI: Register items", false)
     uvs_packer = nil
     uvs_rebuilder = nil
     atlas_handler = nil
 end)
-Game.Event.OnGameRegisterItemsTextures:Connect(function ()
+OnGameRegisterItemsTextures:Connect(function ()
     Core.Debug.log("[Info] CoreAPI: Register items texture", false)
 end)
-Game.Event.OnGameRegisterCreativeItems:Connect(function ()
+OnGameRegisterCreativeItems:Connect(function ()
     Core.Debug.log("[Info] CoreAPI: Register creative items", false)
 end)
 

@@ -12,8 +12,8 @@ class CustomMutex
         ~CustomMutex() {}
 
         void lock() {
-            //while (this->locked.load())
-                //svcSleepThread(1000000);
+            while (this->locked.load())
+                svcSleepThread(1000000);
             this->locked.store(true);
         }
 

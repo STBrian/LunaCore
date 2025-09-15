@@ -22,7 +22,7 @@ namespace Core {
                 TCPServer(int port);
                 ~TCPServer();
 
-                STRING_CLASS getHostName();
+                std::string getHostName();
 
                 bool waitConnection(WaitConnectionCallback callback = nullptr);
 

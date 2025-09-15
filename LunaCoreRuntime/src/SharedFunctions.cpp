@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "Core/Debug.hpp"
+#include "Core/Filesystem.hpp"
 
 Core::SharedFunctions::SharedFunctions() {
     this->cstdlib = new struct cstdlib_s;

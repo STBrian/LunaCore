@@ -12,14 +12,14 @@
 
 namespace CTRPF = CTRPluginFramework;
 
-fslib::Path path_from_string(const STRING_CLASS& str) {
+fslib::Path path_from_string(const std::string& str) {
     std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter;
     return converter.from_bytes(str);
 }
 
-STRING_CLASS path_to_string(const std::u16string &path) {
+std::string path_to_string(const std::u16string &path) {
     std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter;
-    return STRING_CLASS(converter.to_bytes(path));
+    return std::string(converter.to_bytes(path));
 }
 
 namespace Filesystem {
@@ -45,6 +45,7 @@ namespace Filesystem {
         } else {
             fileStruct->size = fileStruct->filePtr->getSize();
         }
+        return fileStruct;
     }
 
     void fclose(FilesystemFile* file) {
@@ -94,7 +95,7 @@ namespace Filesystem {
 */
 static int l_Filesystem_open(lua_State *L) {
     const char* filepath = luaL_checkstring(L, 1);
-    STRING_CLASS filemode(luaL_checkstring(L, 2));
+    std::string filemode(luaL_checkstring(L, 2));
 
     bool success = false;
     FilesystemFile* fileStruct = (FilesystemFile*)lua_newuserdata(L, sizeof(FilesystemFile));
@@ -195,7 +196,7 @@ static int l_Filesystem_File_read(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
     size_t bytes = 0;
     if (lua_type(L, 2) == LUA_TSTRING) {
-        STRING_CLASS readAmount(lua_tostring(L, 2));
+        std::string readAmount(lua_tostring(L, 2));
         if (readAmount == "*all" || readAmount == "*a") {
             bytes = std::string::npos;
         } else
@@ -215,7 +216,7 @@ static int l_Filesystem_File_read(lua_State *L) {
     }
     char *fileContent = new char[bytes];
     size_t bytesRead = fileStruct->filePtr->read(fileContent, bytes);
-    if (bytesRead == -1)    
+    if (bytesRead == -1 || bytes != bytesRead)
         lua_pushnil(L);
     else
         lua_pushlstring(L, fileContent, bytesRead);
@@ -280,7 +281,7 @@ static int l_Filesystem_File_flush(lua_State *L) {
 */
 static int l_Filesystem_File_seek(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
-    STRING_CLASS whence = "cur";
+    std::string whence = "cur";
     size_t offset = 0;
     if (lua_gettop(L) > 1)
         offset = (size_t)luaL_checknumber(L, 2);

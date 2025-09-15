@@ -38,7 +38,7 @@ void Core::AsyncHandlerCallback()
     {
         if (lua_pcall(L, 0, 0, 0))
         {
-            Core::Debug::LogError("Core::Async::handler error: " + STRING_CLASS(lua_tostring(L, -1)));
+            Core::Debug::LogError("Core::Async::handler error: " + std::string(lua_tostring(L, -1)));
             //lua_pop(L, 1);
         }
     }
@@ -108,7 +108,7 @@ static int l_Async_tick(lua_State *L)
             lua_pushstring(L, errMsg);
 
             if (lua_pcall(L, 2, 1, 0)) {
-                Core::Debug::LogError("Core::Async::tick error: " + STRING_CLASS(lua_tostring(L, -1)));
+                Core::Debug::LogError("Core::Async::tick error: " + std::string(lua_tostring(L, -1)));
                 lua_pop(L, 1);
             } else {
                 std::string traceback(lua_tostring(L, -1));
@@ -186,7 +186,7 @@ bool Core::RegisterAsyncModule(lua_State *L)
     )";
     if (luaL_dostring(L, luaCode))
     {
-        Core::Debug::LogError("Core::Async::load error: " + STRING_CLASS(lua_tostring(L, -1)));
+        Core::Debug::LogError("Core::Async::load error: " + std::string(lua_tostring(L, -1)));
         lua_pop(L, 1);
         return false;
     }

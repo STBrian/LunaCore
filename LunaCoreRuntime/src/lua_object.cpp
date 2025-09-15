@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-std::unordered_map<STRING_CLASS, std::unordered_map<STRING_CLASS, LuaObject::ValueMetadata>> LuaObject::objsLayouts;
+std::unordered_map<std::string, std::unordered_map<std::string, LuaObject::ValueMetadata>> LuaObject::objsLayouts;
 
 void LuaObject::RegisterNewObject(lua_State* L, const char* name, const LuaObjectField* fields) {
     luaL_newmetatable(L, name);
@@ -52,7 +52,7 @@ int LuaObject::l_index(lua_State* L) {
         lua_pop(L, 1);
         return 0;
     }
-    STRING_CLASS objName(lua_tostring(L, -1));
+    std::string objName(lua_tostring(L, -1));
     lua_pop(L, 1);
     if (!objsLayouts.contains(objName))
         return 0;
@@ -60,7 +60,7 @@ int LuaObject::l_index(lua_State* L) {
     void* objOffset = *(void**)lua_touserdata(L, 1);
     if (lua_type(L, 2) != LUA_TSTRING)
         return 0;
-    STRING_CLASS key(lua_tostring(L, 2));
+    std::string key(lua_tostring(L, 2));
     if (!objsLayouts[objName].contains(key))
         return 0;
 
@@ -103,7 +103,7 @@ int LuaObject::l_newindex(lua_State* L) {
         lua_pop(L, 1);
         return 0;
     }
-    STRING_CLASS objName(lua_tostring(L, -1));
+    std::string objName(lua_tostring(L, -1));
     lua_pop(L, 1);
     if (!objsLayouts.contains(objName))
         return 0;
@@ -111,7 +111,7 @@ int LuaObject::l_newindex(lua_State* L) {
     void* objOffset = *(void**)lua_touserdata(L, 1);
     if (lua_type(L, 2) != LUA_TSTRING)
         return 0;
-    STRING_CLASS key(lua_tostring(L, 2));
+    std::string key(lua_tostring(L, 2));
     if (!objsLayouts[objName].contains(key))
         return 0;
 

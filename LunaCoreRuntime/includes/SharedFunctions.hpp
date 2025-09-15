@@ -2,7 +2,7 @@
 
 #ifndef __LCEX__
 #include "lua_common.h"
-#include "Core/Filesystem.hpp"
+#include "Core/FilesystemFile.hpp"
 #else
 #include <stddef.h>
 #define LUA_REGISTRYINDEX	(-10000)

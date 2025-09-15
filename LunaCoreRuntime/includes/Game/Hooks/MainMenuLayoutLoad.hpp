@@ -4,7 +4,7 @@
 
 void PatchGameMenuLayoutFunction();
 
-bool LoadGameMenuLayout(const STRING_CLASS &filepath);
+bool LoadGameMenuLayout(const std::string &filepath);
 
 void PatchMenuCustomLayoutDefault();
 

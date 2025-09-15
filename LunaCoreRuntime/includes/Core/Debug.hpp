@@ -9,7 +9,7 @@
 #define ASSERT(cond) \
     do { \
         if (!(cond)) { \
-            Core::Debug::LogError(STRING_CLASS("ASSERT failed: ") + #cond + "(" + __FILE__ + ": " + std::to_string(__LINE__) + ")"); \
+            Core::Debug::LogError(std::string("ASSERT failed: ") + #cond + "(" + __FILE__ + ": " + std::to_string(__LINE__) + ")"); \
             abort(); \
         } \
     } while (0)
@@ -19,25 +19,25 @@ namespace Core {
     namespace Debug {
         extern const char *tab;
         
-        bool OpenLogFile(const STRING_CLASS& filepath);
+        bool OpenLogFile(const std::string& filepath);
 
         void CloseLogFile();
 
-        void LogRaw(const STRING_CLASS& msg);
+        void LogRaw(const std::string& msg);
 
-        void LogMessage(const STRING_CLASS& msg, bool showOnScreen);
+        void LogMessage(const std::string& msg, bool showOnScreen);
 
         void LogMessage(const char* msg, bool showOnScreen);
 
-        void LogError(const STRING_CLASS& msg);
+        void LogError(const std::string& msg);
 
         void LogError(const char* msg);
 
-        void Message(const STRING_CLASS& msg);
+        void Message(const std::string& msg);
 
         void Message(const char* msg);
 
-        void Error(const STRING_CLASS& msg);
+        void Error(const std::string& msg);
 
         void Error(const char* msg);
     }

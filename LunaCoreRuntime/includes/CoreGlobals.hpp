@@ -1,13 +1,5 @@
 #pragma once
 
-#ifdef USE_CUSTOM_STRING
-#include "string_utils.h"
-#define STRING_CLASS SString
-#else
-#include <string>
-#define STRING_CLASS std::string
-#endif
-
 #include <unordered_map>
 #include "types.h"
 
@@ -24,5 +16,5 @@ extern bool patchEnabled;
 extern int loadedScripts;
 extern int loadedMods;
 
-extern std::unordered_map<STRING_CLASS, STRING_CLASS> G_config;
-extern std::unordered_map<STRING_CLASS, STRING_CLASS> modPaths;
+extern std::unordered_map<std::string, std::string> G_config;
+extern std::unordered_map<std::string, std::string> modPaths;

@@ -9,7 +9,7 @@
 namespace CTRPF = CTRPluginFramework;
 using Item = Game::Item;
 
-Item* Core::Items::SearchItemByName(const STRING_CLASS& name) {
+Item* Core::Items::SearchItemByName(const std::string& name) {
     short i = 1;
     while (i <= Item::MAX_ITEMS) {
         if (Item::mItems[i] != nullptr) {

@@ -144,7 +144,7 @@ void InitMenu(PluginMenu &menu)
     devFolder->Append(new MenuEntry("Load script from network", nullptr, [](MenuEntry *entry) {
         initSockets();
         Core::Network::TCPServer tcp(5432);
-        STRING_CLASS host = tcp.getHostName();
+        std::string host = tcp.getHostName();
         const Screen& topScreen = OSD::GetTopScreen();
         topScreen.DrawSysfont("Connect to host: "+host+":5432", 40, 185, Color::White);
         topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
@@ -198,7 +198,7 @@ void InitMenu(PluginMenu &menu)
             return;
         }
 
-        if (Lua_Global_Mut.try_lock() && Core::LoadBuffer(buffer, size, ("net:/" + STRING_CLASS(namebuf)).c_str())) {
+        if (Lua_Global_Mut.try_lock() && Core::LoadBuffer(buffer, size, ("net:/" + std::string(namebuf)).c_str())) {
             MessageBox("Script loaded")();
             if (MessageBox("Do you want to save this script to the sd card?", DialogType::DialogYesNo)()) {
                 if (!Directory::IsExists(PLUGIN_FOLDER "/scripts/"))

@@ -64,7 +64,7 @@ typedef void (*code2Func)(int *);
 typedef struct {
     int x = 0, y = 0, width = 0, height = 0;
     int iconU = 0, iconV = 0, iconW = 0, iconH = 0;
-    STRING_CLASS text;
+    std::string text;
     bool bigIcon = false;
 } MenuBtnData;
 
@@ -191,7 +191,7 @@ void SetMainMenuLayoutLoadCallback() {
     CTRPF::Process::Write32(0x8ab4a4 + BASE_OFF, (u32)MainMenuLayoutLoadCallback); // Patch only reference to CreateMenuButtons
 }
 
-static void LoadButtonData(json &btnJData, MenuBtnData &btnData, const STRING_CLASS& btnName) {
+static void LoadButtonData(json &btnJData, MenuBtnData &btnData, const std::string& btnName) {
     json& j = btnJData[btnName];
     if (j.contains("x") && j["x"].is_number())
         btnData.x = j.value("x", 0);
@@ -217,8 +217,8 @@ static void LoadButtonData(json &btnJData, MenuBtnData &btnData, const STRING_CL
     }
 }
 
-bool LoadGameMenuLayout(const STRING_CLASS& filepath) {
-    STRING_CLASS fileCont = Core::Utils::LoadFile(filepath);
+bool LoadGameMenuLayout(const std::string& filepath) {
+    std::string fileCont = Core::Utils::LoadFile(filepath);
     if (!fileCont.empty()) 
     {
         json j = json::parse(std::string(fileCont), nullptr, false);
@@ -267,7 +267,7 @@ static bool ReplaceStringWithPointer(u32 offset, u32 insAddr, u32 strAddr, u32 p
     return CTRPF::Process::Write32(strAddr + offset, ptrAddr); // Write pointer to offset
 }
 
-static bool ReplaceConstString(u32 offset, u32 insAddr, u32 strAddr, u8 reg, const STRING_CLASS& text) {
+static bool ReplaceConstString(u32 offset, u32 insAddr, u32 strAddr, u8 reg, const std::string& text) {
     char *textPtr = (char*)GameCalloc(text.size() + 1); // Allocate string space in game memory
     if (textPtr == NULL) return false;
     if (!CTRPF::Process::WriteString((u32)textPtr, text.c_str(), text.size() + 1)) return false; // Copy string

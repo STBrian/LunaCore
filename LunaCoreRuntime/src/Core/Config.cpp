@@ -7,8 +7,8 @@
 
 namespace CTRPF = CTRPluginFramework;
 
-std::unordered_map<STRING_CLASS, STRING_CLASS> Core::Config::LoadConfig(const STRING_CLASS &filepath) {
-    std::unordered_map<STRING_CLASS, STRING_CLASS> config;
+std::unordered_map<std::string, std::string> Core::Config::LoadConfig(const std::string &filepath) {
+    std::unordered_map<std::string, std::string> config;
     if (!CTRPF::File::Exists(filepath)) {
         Core::Debug::LogMessage("Config file not found. Using defaults", false);
         return config;
@@ -39,7 +39,7 @@ std::unordered_map<STRING_CLASS, STRING_CLASS> Core::Config::LoadConfig(const ST
     return config;
 }
 
-bool Core::Config::SaveConfig(const STRING_CLASS &filePath, std::unordered_map<STRING_CLASS, STRING_CLASS> &config) {
+bool Core::Config::SaveConfig(const std::string &filePath, std::unordered_map<std::string, std::string> &config) {
     CTRPF::File configFile;
     CTRPF::File::Open(configFile, filePath, CTRPF::File::WRITE);
     if (!configFile.IsOpen()) {
@@ -59,7 +59,7 @@ bool Core::Config::SaveConfig(const STRING_CLASS &filePath, std::unordered_map<S
     return true;
 }
 
-bool Core::Config::GetBoolValue(std::unordered_map<STRING_CLASS, STRING_CLASS>& config, const STRING_CLASS& field, bool def) {
+bool Core::Config::GetBoolValue(std::unordered_map<std::string, std::string>& config, const std::string& field, bool def) {
     bool value = false;
     if (config.find(field) != config.end()) {
         if (config[field] == "true")

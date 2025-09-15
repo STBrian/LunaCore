@@ -34,12 +34,12 @@ namespace Core {
             server_fd = -1;
         }
 
-        STRING_CLASS TCPServer::getHostName() {
+        std::string TCPServer::getHostName() {
             struct in_addr host_id;
             host_id.s_addr = gethostid();
             if (host_id.s_addr == INADDR_NONE)
                 return "";
-            return STRING_CLASS(inet_ntoa(host_id));
+            return std::string(inet_ntoa(host_id));
         }
 
         bool TCPServer::waitConnection(WaitConnectionCallback callback) {

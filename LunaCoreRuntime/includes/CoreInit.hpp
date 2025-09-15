@@ -10,7 +10,7 @@ namespace Core {
 
     bool LoadBuffer(const char *buffer, size_t size, const char* name);
 
-    bool LoadScript(const STRING_CLASS& fp);
+    bool LoadScript(const std::string& fp);
 
     void PreloadScripts();
 

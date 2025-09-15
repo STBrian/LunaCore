@@ -14,7 +14,7 @@ namespace Core {
     namespace Items {
         using Item = Game::Item;
         
-        Item *SearchItemByName(const STRING_CLASS& name);
+        Item *SearchItemByName(const std::string& name);
 
         Item *SearchItemByID(u16 id);
 

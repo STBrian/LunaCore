@@ -10,15 +10,15 @@ namespace Core {
     namespace Utils {
         bool checkTitle();
 
-        void getRegion(STRING_CLASS &reg);
+        void getRegion(std::string &reg);
 
         bool checkCompatibility();
 
-        STRING_CLASS formatTime(time_t time);
+        std::string formatTime(time_t time);
 
         std::string strip(const std::string& str);
 
-        STRING_CLASS LoadFile(const STRING_CLASS& filepath);
+        std::string LoadFile(const std::string& filepath);
 
         inline bool startsWith(const std::string& str, const std::string& prefix) {
             return str.compare(0, prefix.size(), prefix) == 0;

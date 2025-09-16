@@ -63,6 +63,11 @@ function uvs_packer:new(uvs, tileSize)
     self.lastY = 0
 end
 
+
+function uvs_packer:contains(nameId)
+    return self.uvs[CoreAPI.Utils.String.hash(nameId)] ~= nil or self.uvs[nameId] ~= nil
+end
+
 function uvs_packer:addUV(nameId, textureName)
     if type(nameId) ~= "string" then
         error("'nameId' must be a string")
@@ -70,7 +75,7 @@ function uvs_packer:addUV(nameId, textureName)
     if containsInvalidChars(nameId) then
         error("'nameId' contains invalid characters")
     end
-    if self.uvs[CoreAPI.Utils.String.hash(nameId)] ~= nil or self.uvs[nameId] ~= nil then
+    if self:contains(nameId) then
         return true
     end
     if self.freeSpace[1] == nil then

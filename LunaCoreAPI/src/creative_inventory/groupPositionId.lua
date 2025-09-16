@@ -1,9 +1,9 @@
----@class ItemGroupID
-local itemGroupIdentifier = CoreAPI.Utils.Classic:extend()
+---@class CreativeGroupPositionID
+local creativePositionIdentifier = CoreAPI.Utils.Classic:extend()
 
-function itemGroupIdentifier:new(id, position)
+function creativePositionIdentifier:new(id, position)
     self.id = id
-    if type(position) == "table" and position.is ~= nil and position:is(CoreAPI.ItemGroups.GroupRelativeItemPosition) then
+    if CoreAPI.Utils.isinstance(position, CoreAPI.ItemGroups.Creative.RelativePosition) then
         self.relativePosition = position
     elseif type(position) == "number" then
         self.position = position
@@ -12,7 +12,7 @@ function itemGroupIdentifier:new(id, position)
     end
 end
 
-function itemGroupIdentifier:getCreativePosition()
+function creativePositionIdentifier:getCreativePosition()
     if type(self.relativePosition) ~= "table" then
         return self.position
     end
@@ -31,4 +31,4 @@ function itemGroupIdentifier:getCreativePosition()
     return position
 end
 
-return itemGroupIdentifier
+return creativePositionIdentifier

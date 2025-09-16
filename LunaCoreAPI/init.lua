@@ -14,6 +14,23 @@ CoreAPI.Utils.Classic = dofile(modpath .. "/src/utils/classic.lua")
 ---@type BitOpClass
 CoreAPI.Utils.Bitop = dofile(modpath .. "/src/utils/bitop/funcs.lua")
 
+--- Returns if the object is from an instance or type
+---@param t any
+---@param o string|table
+---@return boolean
+function CoreAPI.Utils.isinstance(t, o)
+    if type(o) == "table" then
+        if type(t) == "table" then
+            if t.is ~= nil and o.is ~= nil then
+                return t:is(o)
+            end
+            return false
+        end
+        return false
+    end
+    return type(t) == o
+end
+
 CoreAPI.ResourcePacks = {}
 CoreAPI.ResourcePacks.vanilla = {hash = 0x79954554, res = 16}
 

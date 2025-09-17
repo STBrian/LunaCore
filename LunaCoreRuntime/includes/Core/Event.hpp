@@ -9,6 +9,8 @@ namespace Core {
     void EventHandlerCallback();
 
     namespace Event {
+        void NewEvent(lua_State* L, const char* eventName);
+        
         void TriggerEvent(lua_State* L, const std::string& eventName, unsigned int nargs = 0);
     }
 

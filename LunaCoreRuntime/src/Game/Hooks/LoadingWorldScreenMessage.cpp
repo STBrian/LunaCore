@@ -29,7 +29,7 @@ void LoadingWorldScreenMessageCallback(int *ptr1, int *ptr2) {
         if (!eventJoinTriggered) {
             Core::CrashHandler::game_state = Core::CrashHandler::GAME_WORLD;
             std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
-            Core::Event::TriggerEvent(Lua_global, "OnPlayerJoinWorld");
+            Core::Event::TriggerEvent(Lua_global, "Game.World.OnWorldJoin");
             eventJoinTriggered = true;
         }
     }
@@ -50,7 +50,7 @@ void LeaveLevelPromptCallback(int *ptr1, int param2, int param3, u32 param4) {
     if (eventJoinTriggered) {
         Core::CrashHandler::game_state = Core::CrashHandler::GAME_MENU;
         std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
-        Core::Event::TriggerEvent(Lua_global, "OnPlayerLeaveWorld");
+        Core::Event::TriggerEvent(Lua_global, "Game.World.OnWorldLeave");
         eventJoinTriggered = false;
     }
 

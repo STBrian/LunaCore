@@ -4,6 +4,8 @@
 #include "string_hash.hpp"
 #include "lua_object.hpp"
 
+#include "Core/Event.hpp"
+
 #include "Game/Minecraft.hpp"
 
 namespace CTRPF = CTRPluginFramework;
@@ -178,7 +180,20 @@ static const LuaObjectField GameItemFields[] = {
 bool Core::Module::RegisterItemsModule(lua_State *L) {
     LuaObject::RegisterNewObject(L, "GameItem", GameItemFields);
     lua_getglobal(L, "Game");
-    luaC_register_field(L, items_functions, "Items");
+    lua_newtable(L); // Items
+
+    //$@@@Game.Items.OnRegisterItems: EventClass
+    Core::Event::NewEvent(L, "OnRegisterItems");
+
+    //$@@@Game.Items.OnRegisterItemsTextures: EventClass
+    Core::Event::NewEvent(L, "OnRegisterItemsTextures");
+
+    //$@@@Game.Items.OnRegisterCreativeItems: EventClass
+    Core::Event::NewEvent(L, "OnRegisterCreativeItems");
+
+    luaL_register(L, NULL, items_functions);
+
+    lua_setfield(L, -2, "Items");
     lua_pop(L, 1);
     return true;
 }

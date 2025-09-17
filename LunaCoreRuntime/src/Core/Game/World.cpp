@@ -3,6 +3,7 @@
 #include <CTRPluginFramework.hpp>
 
 #include "Core/Utils/GameState.hpp"
+#include "Core/Event.hpp"
 #include "string_hash.hpp"
 
 #include "Game/Minecraft.hpp"
@@ -105,7 +106,14 @@ bool Core::Module::RegisterWorldModule(lua_State *L)
     lua_pop(L, 1);
 
     lua_getglobal(L, "Game");
-    lua_newtable(L);
+    lua_newtable(L); // World
+
+    //$@@@Game.World.OnWorldJoin: EventClass
+    Core::Event::NewEvent(L, "OnWorldJoin");
+
+    //$@@@Game.World.OnWorldLeave: EventClass
+    Core::Event::NewEvent(L, "OnWorldLeave");
+
     luaC_setmetatable(L, "WorldMetatable");
     lua_setfield(L, -2, "World");
     lua_pop(L, 1);

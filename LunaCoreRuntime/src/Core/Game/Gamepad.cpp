@@ -3,10 +3,14 @@
 #include <3ds.h>
 #include <CTRPluginFramework.hpp>
 
+#include "Core/Event.hpp"
+
 namespace CTRPF = CTRPluginFramework;
 
 // ----------------------------------------------------------------------------
 
+//!include LunaCoreRuntime/src/Modules.cpp
+//!include LunaCoreRuntime/src/Core/Event.cpp
 //$Game.Gamepad
 //@KeyCode: integer
 
@@ -94,7 +98,17 @@ bool Core::Module::RegisterGamepadModule(lua_State *L)
 {
     lua_getglobal(L, "Game");
     lua_newtable(L); // Gamepad
+
     luaL_register(L, NULL, gamepad_functions);
+
+    //$@@@Game.Gamepad.OnKeyPressed: EventClass
+    Core::Event::NewEvent(L, "OnKeyPressed");
+
+    //$@@@Game.Gamepad.OnKeyDown: EventClass
+    Core::Event::NewEvent(L, "OnKeyDown");
+
+    //$@@@Game.Gamepad.OnKeyReleased: EventClass
+    Core::Event::NewEvent(L, "OnKeyReleased");
 
     //$Game.Gamepad.KeyCodes
     lua_newtable(L);

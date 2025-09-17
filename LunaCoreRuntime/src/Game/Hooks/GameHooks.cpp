@@ -107,7 +107,7 @@ static void RegisterItemsHook(CoreHookContext* ctx) {
     {
         std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
         GameState.LoadingItems.store(true);
-        Core::Event::TriggerEvent(Lua_global, "OnGameRegisterItems");
+        Core::Event::TriggerEvent(Lua_global, "Game.Items.OnRegisterItems");
         GameState.LoadingItems.store(false);
     }
 
@@ -132,7 +132,7 @@ static void RegisterItemsTexturesHook(CoreHookContext* ctx) {
 
     {
         std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
-        Core::Event::TriggerEvent(Lua_global, "OnGameRegisterItemsTextures");
+        Core::Event::TriggerEvent(Lua_global, "Game.Items.OnRegisterItemsTextures");
     }
 
     GameState.SettingItemsTextures.store(false);
@@ -155,7 +155,7 @@ static void RegisterCreativeItemsHook(CoreHookContext* ctx) {
 
     {
         std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
-        Core::Event::TriggerEvent(Lua_global, "OnGameRegisterCreativeItems");
+        Core::Event::TriggerEvent(Lua_global, "Game.Items.OnRegisterCreativeItems");
     }
 
     GameState.LoadingCreativeItems.store(false);
@@ -179,7 +179,7 @@ static void EntitySpawnStartHook(CoreHookContext *ctx) {
     if (ctx->r2 != 0) {
         std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
         LuaObject::NewObject(Lua_global, "GameSpawnCoords", reinterpret_cast<void*>(ctx->r2)); // Pass the reference
-        Core::Event::TriggerEvent(Lua_global, "OnGameEntitySpawnStart", 1);
+        Core::Event::TriggerEvent(Lua_global, "Core.Event.OnGameEntitySpawnStart", 1);
     }
 
     hookReturnOverwrite(ctx, (u32)EntitySpawnStartOverwriteReturn);
@@ -205,7 +205,7 @@ static void EntitySpawnFinishedHook(CoreHookContext *ctx) {
         std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
         Game::Entity* entity = reinterpret_cast<Game::Entity*>(ctx->r0);
         LuaObject::NewObject(Lua_global, "GameEntity", entity);
-        Core::Event::TriggerEvent(Lua_global, "OnGameEntitySpawn", 1);
+        Core::Event::TriggerEvent(Lua_global, "Core.Event.OnGameEntitySpawn", 1);
     }
 
     hookReturnOverwrite(ctx, (u32)EntitySpawnFinishedOverwriteReturn);

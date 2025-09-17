@@ -13,92 +13,31 @@ function Core.getModpath(modname) end
 ---@return string
 function Core.getTitleId() end
 
-Core.Debug = {}
+Core.Event = {}
 
----Displays a notification on screen
----@param msg string
-function Core.Debug.message(msg) end
+---@class EventClass
+local EventClass = {}
 
----Appends the message to log file. Optionally shows the message on screen
----@param msg string
----@param showOnScreen boolean
-function Core.Debug.log(msg, showOnScreen) end
+---Adds a function to call when this events fires. It also returns the function
+---@param func function
+---@return function
+function EventClass:Connect(func) end
 
----Appends the error message to log file and shows it on screen
----@param msg string
-function Core.Debug.logerror(msg) end
+---Removes a listener previously connected to this event
+---@param func function
+function EventClass:Disconnect(func) end
 
----Show error on screen
----@param msg string
-function Core.Debug.error(msg) end
+---Fire this event
+function EventClass:Trigger() end
 
-Core.Filesystem = {}
+---@class BaseEvent: EventClass
+Core.Event.BaseEvent = {}
 
----@class FilesystemFile
-local FilesystemFile = {}
+---@class OnGameEntitySpawnStart: EventClass
+Core.Event.OnGameEntitySpawnStart = {}
 
----Opens a file. Returns nil if the file wasn't opened with an error message. Use sdmc:/ for sd card or extdata:/ for game extdata
----@param fp string
----@param mode string
----@return FilesystemFile?
----@return string?
-function Core.Filesystem.open(fp, mode) end
-
----Checks if the file exists
----@param fp string
----@return boolean
-function Core.Filesystem.fileExists(fp) end
-
----Checks if the directory exists
----@param path string
----@return boolean
-function Core.Filesystem.directoryExists(path) end
-
----Returns a table with all the elements in a directory
----@param path string
----@return table
-function Core.Filesystem.getDirectoryElements(path) end
-
----Creates a directory and returns if success
----@param path string
----@return boolean
-function Core.Filesystem.createDirectory(path) end
-
----Reads the specified amount of bytes to read, or use "*all" to read all file and returns the data in a string or nil if error
----@param bytes any
----@return string?
-function FilesystemFile:read(bytes) end
-
----Writes all data to file of the specified amount of bytes if provided. Returns true is success, false otherwise
----@param data string
----@param bytes integer?
----@return boolean
-function FilesystemFile:write(data, bytes) end
-
----Returns the actual position in the file
----@return integer
-function FilesystemFile:tell() end
-
----Flushes all file data in write buffer
----@return boolean
-function FilesystemFile:flush() end
-
----Sets the position in file and returns the new position or nil if error
----@param offset integer
----@param whence string?
----@return integer
-function FilesystemFile:seek(offset, whence) end
-
----Checks if the file is open
----@return boolean
-function FilesystemFile:isOpen() end
-
----Checks if the file is on end of file
----@return boolean
-function FilesystemFile:isEOF() end
-
----Closes the file
-function FilesystemFile:close() end
+---@class OnGameEntitySpawn: EventClass
+Core.Event.OnGameEntitySpawn = {}
 
 Game.Gamepad = {}
 
@@ -127,6 +66,15 @@ function Game.Gamepad.pressButton(keycode) end
 ---@return number
 ---@return number
 function Game.Gamepad.getTouch() end
+
+---@class OnKeyPressed: EventClass
+Game.Gamepad.OnKeyPressed = {}
+
+---@class OnKeyDown: EventClass
+Game.Gamepad.OnKeyDown = {}
+
+---@class OnKeyReleased: EventClass
+Game.Gamepad.OnKeyReleased = {}
 
 Game.Gamepad.KeyCodes = {}
 
@@ -315,6 +263,32 @@ Game.World.Thunderstorm = false
 
 Game.World.CloudsHeight = 0.0
 
+---@class OnWorldJoin: EventClass
+Game.World.OnWorldJoin = {}
+
+---@class OnWorldLeave: EventClass
+Game.World.OnWorldLeave = {}
+
+---@class GameEntity
+local GameEntity = {}
+
+---@class GameSpawnCoords
+local GameSpawnCoords = {}
+
+GameEntity.X = 0.0
+
+GameEntity.Y = 0.0
+
+GameEntity.Z = 0.0
+
+GameEntity.EntityID = 0
+
+GameSpawnCoords.X = 0.0
+
+GameSpawnCoords.Y = 0.0
+
+GameSpawnCoords.Z = 0.0
+
 Game.Items = {}
 
 ---@class GameItem
@@ -362,76 +336,14 @@ GameItem.NameID = ""
 
 GameItem.DescriptionID = ""
 
----@class GameEntity
-local GameEntity = {}
+---@class OnRegisterItems: EventClass
+Game.Items.OnRegisterItems = {}
 
----@class GameSpawnCoords
-local GameSpawnCoords = {}
+---@class OnRegisterItemsTextures: EventClass
+Game.Items.OnRegisterItemsTextures = {}
 
-GameEntity.X = 0.0
-
-GameEntity.Y = 0.0
-
-GameEntity.Z = 0.0
-
-GameEntity.EntityID = 0
-
-GameSpawnCoords.X = 0.0
-
-GameSpawnCoords.Y = 0.0
-
-GameSpawnCoords.Z = 0.0
-
-Core.Graphics = {}
-
----Stops the game and allows to draw on screen. Until Core.Graphics.close is called the function will be executed every frame
----Other events and async tasks will continue running
----@param func function
-function Core.Graphics.open(func) end
-
----Resumes the game, the callback function will no longer be called and draw functions will not work
-function Core.Graphics.close() end
-
----Returns if Graphics are open
-function Core.Graphics.isOpen() end
-
----Draws a rect on screen. Only can be used when Core.Graphics.open was called
----@param x integer
----@param y integer
----@param width integer
----@param height integer
----@param color integer
-function Core.Graphics.drawRect(x, y, width, height, color) end
-
----Draws a solid rect on screen. Only can be used when Core.Graphics.open was called
----@param x integer
----@param y integer
----@param width integer
----@param height integer
----@param color integer
-function Core.Graphics.drawRectFill(x, y, width, height, color) end
-
----Draws a text on screen. Only can be used when Core.Graphics.open was called
----@param text string
----@param x integer
----@param y integer
----@param color integer
-function Core.Graphics.drawText(text, x, y, color) end
-
----Returns a color with the r, g, b values
----@param r integer
----@param g integer
----@param b integer
----@return integer
-function Core.Graphics.colorRGB(r, g, b) end
-
----Returns a color with the r, g, b, a values
----@param r integer
----@param g integer
----@param b integer
----@param a integer
----@return integer
-function Core.Graphics.colorRGBA(r, g, b, a) end
+---@class OnRegisterCreativeItems: EventClass
+Game.Items.OnRegisterCreativeItems = {}
 
 Core.Keyboard = {}
 
@@ -542,50 +454,140 @@ function Async.create(func) end
 ---@return boolean
 function Async.wait(seconds) end
 
-Game.Event = {}
+Core.Graphics = {}
 
----@class EventClass
-local EventClass = {}
-
----Adds a function to call when this events fires
+---Stops the game and allows to draw on screen. Until Core.Graphics.close is called the function will be executed every frame
+---Other events and async tasks will continue running
 ---@param func function
-function EventClass:Connect(func) end
+function Core.Graphics.open(func) end
 
----Fire this event
-function EventClass:Trigger() end
+---Resumes the game, the callback function will no longer be called and draw functions will not work
+function Core.Graphics.close() end
 
----@class BaseEvent: EventClass
-Game.Event.BaseEvent = {}
+---Returns if Graphics are open
+function Core.Graphics.isOpen() end
 
----@class OnGameLoad: EventClass
-Game.Event.OnGameLoad = {}
+---Draws a rect on screen. Only can be used when Core.Graphics.open was called
+---@param x integer
+---@param y integer
+---@param width integer
+---@param height integer
+---@param color integer
+function Core.Graphics.drawRect(x, y, width, height, color) end
 
----@class OnGameRegisterItems: EventClass
-Game.Event.OnGameRegisterItems = {}
+---Draws a solid rect on screen. Only can be used when Core.Graphics.open was called
+---@param x integer
+---@param y integer
+---@param width integer
+---@param height integer
+---@param color integer
+function Core.Graphics.drawRectFill(x, y, width, height, color) end
 
----@class OnGameRegisterItemsTextures: EventClass
-Game.Event.OnGameRegisterItemsTextures = {}
+---Draws a text on screen. Only can be used when Core.Graphics.open was called
+---@param text string
+---@param x integer
+---@param y integer
+---@param color integer
+function Core.Graphics.drawText(text, x, y, color) end
 
----@class OnGameRegisterCreativeItems: EventClass
-Game.Event.OnGameRegisterCreativeItems = {}
+---Returns a color with the r, g, b values
+---@param r integer
+---@param g integer
+---@param b integer
+---@return integer
+function Core.Graphics.colorRGB(r, g, b) end
 
----@class OnGameEntitySpawnStart: EventClass
-Game.Event.OnGameEntitySpawnStart = {}
+---Returns a color with the r, g, b, a values
+---@param r integer
+---@param g integer
+---@param b integer
+---@param a integer
+---@return integer
+function Core.Graphics.colorRGBA(r, g, b, a) end
 
----@class OnGameEntitySpawn: EventClass
-Game.Event.OnGameEntitySpawn = {}
+Core.Debug = {}
 
----@class OnKeyPressed: EventClass
-Game.Event.OnKeyPressed = {}
+---Displays a notification on screen
+---@param msg string
+function Core.Debug.message(msg) end
 
----@class OnKeyDown: EventClass
-Game.Event.OnKeyDown = {}
+---Appends the message to log file. Optionally shows the message on screen
+---@param msg string
+---@param showOnScreen boolean
+function Core.Debug.log(msg, showOnScreen) end
 
----@class OnKeyReleased: EventClass
-Game.Event.OnKeyReleased = {}
+---Appends the error message to log file and shows it on screen
+---@param msg string
+function Core.Debug.logerror(msg) end
 
----@class OnPlayerJoinWorld: EventClass
-Game.Event.OnPlayerJoinWorld = {}
+---Show error on screen
+---@param msg string
+function Core.Debug.error(msg) end
 
----@class OnPlayerLeaveWorld: EventClass
-Game.Event.OnPlayerLeaveWorld = {}
+Core.Filesystem = {}
+
+---@class FilesystemFile
+local FilesystemFile = {}
+
+---Opens a file. Returns nil if the file wasn't opened with an error message. Use sdmc:/ for sd card or extdata:/ for game extdata
+---@param fp string
+---@param mode string
+---@return FilesystemFile?
+---@return string?
+function Core.Filesystem.open(fp, mode) end
+
+---Checks if the file exists
+---@param fp string
+---@return boolean
+function Core.Filesystem.fileExists(fp) end
+
+---Checks if the directory exists
+---@param path string
+---@return boolean
+function Core.Filesystem.directoryExists(path) end
+
+---Returns a table with all the elements in a directory
+---@param path string
+---@return table
+function Core.Filesystem.getDirectoryElements(path) end
+
+---Creates a directory and returns if success
+---@param path string
+---@return boolean
+function Core.Filesystem.createDirectory(path) end
+
+---Reads the specified amount of bytes to read, or use "*all" to read all file and returns the data in a string or nil if error
+---@param bytes any
+---@return string?
+function FilesystemFile:read(bytes) end
+
+---Writes all data to file of the specified amount of bytes if provided. Returns true is success, false otherwise
+---@param data string
+---@param bytes integer?
+---@return boolean
+function FilesystemFile:write(data, bytes) end
+
+---Returns the actual position in the file
+---@return integer
+function FilesystemFile:tell() end
+
+---Flushes all file data in write buffer
+---@return boolean
+function FilesystemFile:flush() end
+
+---Sets the position in file and returns the new position or nil if error
+---@param offset integer
+---@param whence string?
+---@return integer
+function FilesystemFile:seek(offset, whence) end
+
+---Checks if the file is open
+---@return boolean
+function FilesystemFile:isOpen() end
+
+---Checks if the file is on end of file
+---@return boolean
+function FilesystemFile:isEOF() end
+
+---Closes the file
+function FilesystemFile:close() end

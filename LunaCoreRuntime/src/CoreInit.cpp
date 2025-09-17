@@ -73,8 +73,6 @@ void Core::InitCore() {
         CrashHandler::core_state = CrashHandler::CORE_LOADING_SCRIPTS;
         Core::PreloadScripts(); // Executes the scripts under the scripts folder
     }
-    
-    Event::TriggerEvent(Lua_global, "OnGameLoad");
 }
 
 void TimeoutLoadHook(lua_State *L, lua_Debug *ar)

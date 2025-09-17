@@ -34,7 +34,6 @@ namespace Core {
         Core::Module::RegisterLocalPlayerModule(L);
         Core::Module::RegisterItemsModule(L);
         Core::Module::RegisterEntityModule(L);
-        Core::Module::RegisterEventModule(L);
 
         const char *lua_Code = R"(
             local realGame = readOnlyTable(Game, "Game")
@@ -102,6 +101,7 @@ namespace Core {
         lua_setfield(L, -2, "getTitleId");
         lua_setglobal(L, "Core");
         Core::Module::RegisterDebugModule(L);
+        Core::Module::RegisterEventModule(L);
         Core::Module::RegisterSystemModule(L);
         Core::Module::RegisterKeyboardModule(L);
         Core::Module::RegisterFilesystemModule(L);

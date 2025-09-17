@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <vector>
 
 #include <CTRPluginFramework.hpp>
 
@@ -36,15 +37,33 @@ void TimeoutEventHook(lua_State *L, lua_Debug *ar)
         luaL_error(L, "Event listener exceeded execution time (5000 ms)");
 }
 
+void Core::Event::NewEvent(lua_State* L, const char* eventName) {
+    core_newevent(L, eventName);
+}
+
 void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsigned int nargs) {
     int baseIdx = lua_gettop(L) - nargs;
     int argsIdx = baseIdx + 1;
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_EVENT;
-    lua_getglobal(L, "Game");
-    lua_getfield(L, -1, "Event");
-    lua_getfield(L, -1, eventName.c_str());
-    if (lua_type(L, -1) == LUA_TNIL) {
-        Core::Debug::LogError(CTRPF::Utils::Format("Core internal error: Tried to trigger unknown event '%s'", eventName.c_str()));
+
+    std::vector<std::string> path;
+    size_t start = 0;
+    size_t pos = 0;
+
+    while ((pos = eventName.find('.', start)) != std::string::npos) {
+        path.push_back(eventName.substr(start, pos - start));
+        start = pos + 1;
+    }
+    path.push_back(eventName.substr(start));
+
+    lua_getglobal(L, path[0].c_str());
+    for (int i = 1; i < path.size(); i++) {
+        if (lua_istable(L, -1))
+            lua_getfield(L, -1, path[i].c_str());
+    }
+
+    if (!lua_istable(L, -1)) {
+        Core::Debug::LogError(CTRPF::Utils::Format("Core internal error: Tried to trigger event '%s' with parent of type '%s", eventName.c_str(), luaL_typename(L, -1)));
         lua_settop(L, baseIdx);
         return;
     }
@@ -56,13 +75,11 @@ void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsig
         for (int i = 0; i < nargs; i++)
             lua_pushvalue(L, argsIdx + i);
         if (lua_pcall(L, 1 + nargs, 0, 0))
-            Core::Debug::LogError("Game.Event." + eventName + " error: " + std::string(lua_tostring(L, -1)));
-            //lua_pop(L, 1);
+            Core::Debug::LogError(eventName + " error: " + std::string(lua_tostring(L, -1)));
     }
     else
-        Core::Debug::LogError("Game.Event." + eventName + ":Trigger error. Unexpected type");
-        //lua_pop(L, 1);
-    //lua_pop(L, 3);
+        Core::Debug::LogError(eventName + ":Trigger error. Unexpected type");
+
     lua_settop(L, baseIdx);
 }
 
@@ -77,17 +94,17 @@ void Core::EventHandlerCallback()
     u32 releasedKeys = CTRPF::Controller::GetKeysReleased();
     if (pressedKeys > 0) {
         lua_pushnumber(L, pressedKeys);
-        Core::Event::TriggerEvent(L, "OnKeyPressed", 1);
+        Core::Event::TriggerEvent(L, "Game.Gamepad.OnKeyPressed", 1);
     }
 
     if (downKeys > 0) {
         lua_pushnumber(L, downKeys);
-        Core::Event::TriggerEvent(L, "OnKeyDown", 1);
+        Core::Event::TriggerEvent(L, "Game.Gamepad.OnKeyDown", 1);
     }
 
     if (releasedKeys > 0) {
         lua_pushnumber(L, releasedKeys);
-        Core::Event::TriggerEvent(L, "OnKeyReleased", 1);
+        Core::Event::TriggerEvent(L, "Game.Gamepad.OnKeyReleased", 1);
     }
 
     /*static float lastSlider = 0;
@@ -100,15 +117,16 @@ void Core::EventHandlerCallback()
 
 // ----------------------------------------------------------------------------
 
-//$Game.Event
+//$Core.Event
 
 // ----------------------------------------------------------------------------
 
 //@@EventClass
 
 /*
-- Adds a function to call when this events fires
+- Adds a function to call when this events fires. It also returns the function
 ## func: function
+## return: function
 ### EventClass:Connect
 */
 static int l_Event_BaseEvent_Connect(lua_State *L)
@@ -129,8 +147,15 @@ static int l_Event_BaseEvent_Connect(lua_State *L)
     lua_rawseti(L, -2, index);
     
     lua_pop(L, 1);
-    return 0;
+    lua_pushvalue(L, 2);
+    return 1;
 }
+
+/*
+- Removes a listener previously connected to this event
+## func: function
+### EventClass:Disconnect
+*/
 
 /*
 - Fire this event
@@ -201,10 +226,10 @@ static int l_Event_BaseEvent_Trigger(lua_State *L)
 
 bool Core::Module::RegisterEventModule(lua_State *L)
 {
-    lua_getglobal(L, "Game");
-    lua_newtable(L); // Game.Event
+    lua_getglobal(L, "Core");
+    lua_newtable(L); // Core.Event
 
-    //$@@@Game.Event.BaseEvent: EventClass
+    //$@@@Core.Event.BaseEvent: EventClass
     lua_newtable(L);
     lua_pushcfunction(L, l_Event_BaseEvent_Connect);
     lua_setfield(L, -2, "Connect");
@@ -221,52 +246,33 @@ bool Core::Module::RegisterEventModule(lua_State *L)
     int metatableIdx = lua_gettop(L);
     lua_pushcfunction(L, luaC_invalid_newindex);
     lua_setfield(L, -2, "__newindex");
-    lua_getglobal(L,"Game");
+    lua_getglobal(L,"Core");
     lua_getfield(L, -1, "Event");
     lua_getfield(L, -1, "BaseEvent");
     lua_setfield(L, metatableIdx, "__index");
     lua_pop(L, 3);
     
-    lua_getglobal(L, "Game");
+    lua_getglobal(L, "Core");
     lua_getfield(L, -1, "Event");
-
-    //$@@@Game.Event.OnGameLoad: EventClass
-    core_newevent(L, "OnGameLoad");
-    
-    //$@@@Game.Event.OnGameRegisterItems: EventClass
-    core_newevent(L, "OnGameRegisterItems");
-
-    //$@@@Game.Event.OnGameRegisterItemsTextures: EventClass
-    core_newevent(L, "OnGameRegisterItemsTextures");
-
-    //$@@@Game.Event.OnGameRegisterCreativeItems: EventClass
-    core_newevent(L, "OnGameRegisterCreativeItems");
   
-    //$@@@Game.Event.OnGameEntitySpawnStart: EventClass
+    //$@@@Core.Event.OnGameEntitySpawnStart: EventClass
     core_newevent(L, "OnGameEntitySpawnStart");
   
-    //$@@@Game.Event.OnGameEntitySpawn: EventClass
+    //$@@@Core.Event.OnGameEntitySpawn: EventClass
     core_newevent(L, "OnGameEntitySpawn");
-
-    //$@@@Game.Event.OnKeyPressed: EventClass
-    core_newevent(L, "OnKeyPressed");
-
-    //$@@@Game.Event.OnKeyDown: EventClass
-    core_newevent(L, "OnKeyDown");
-
-    //$@@@Game.Event.OnKeyReleased: EventClass
-    core_newevent(L, "OnKeyReleased");
-
-    //$@@@Game.Event.OnPlayerJoinWorld: EventClass
-    core_newevent(L, "OnPlayerJoinWorld");
-
-    //$@@@Game.Event.OnPlayerLeaveWorld: EventClass
-    core_newevent(L, "OnPlayerLeaveWorld");
 
     lua_pop(L, 2);
 
     const char *lua_Code = R"(
-        Game.Event.BaseEvent = readOnlyTable(Game.Event.BaseEvent, "BaseEvent")
+        function Core.Event.BaseEvent:Disconnect(f)
+            for i, v in ipairs(self.listeners) do
+                if v == f then
+                    table.remove(self.listeners, i)
+                end
+            end
+        end
+
+        Core.Event.BaseEvent = readOnlyTable(Core.Event.BaseEvent, "BaseEvent")
     )";
     if (luaL_dostring(L, lua_Code))
     {

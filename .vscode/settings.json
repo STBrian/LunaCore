@@ -106,6 +106,7 @@
         "typeindex": "cpp"
     },
     "Lua.workspace.library": [
-        "./api_docs.lua"
+        "./api_docs.lua",
+        "~/Documentos/LunaCoreAPI"
     ]
 }

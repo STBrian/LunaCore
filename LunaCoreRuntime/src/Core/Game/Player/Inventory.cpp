@@ -51,11 +51,10 @@ static int l_Inventory_Slots_index(lua_State *L) {
         if (key == hash("hand"))
             index = Minecraft::GetHeldSlotNumber();
     }
-    if (index != 0 && Minecraft::GetSlotAddress(index) == 0)
-        index = 0;
-    if (index >= 1 && index <= 36) {
+    InventorySlot* ptr = (InventorySlot*)Minecraft::GetSlotAddress(index);
+    if (ptr) {
         InventorySlot** invSlot_ptr = (InventorySlot**)lua_newuserdata(L, sizeof(void*));
-        *invSlot_ptr = (InventorySlot*)Minecraft::GetSlotAddress(index);
+        *invSlot_ptr = ptr;
         luaC_setmetatable(L, "InventorySlot");
         return 1;
     }
@@ -75,7 +74,7 @@ static int l_Inventory_Slot_class_index(lua_State *L)
             lua_pushcfunction(L, l_InventorySlot_isEmpty);
             break;
         case hash("Item"): {
-            if (slotData->itemData != nullptr)
+            if (slotData->itemData)
                 LuaObject::NewObject(L, "GameItem", slotData->itemData);
             else 
                 lua_pushnil(L);

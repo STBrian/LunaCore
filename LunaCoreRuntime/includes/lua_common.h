@@ -63,6 +63,7 @@ static inline void* luaC_funccheckudata(lua_State *L, int narg, const char* unam
     return nullptr;
 }
 
+// The msg must be a formatted string with two %s, the first is the detected type and the second is uname
 static inline void* luaC_checkudata(lua_State *L, int narg, const char* uname, const char* msg) {
     if (lua_type(L, narg) == LUA_TUSERDATA) {
         if (luaL_getmetafield(L, narg, "__name") == LUA_TNIL)

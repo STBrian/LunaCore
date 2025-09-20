@@ -95,6 +95,8 @@ namespace Core {
     */
     bool RegisterCoreModule(lua_State *L) {
         lua_newtable(L);
+        lua_pushfstring(L, "LunaCore %d.%d.%d", PLG_VER_MAJ, PLG_VER_MIN, PLG_VER_PAT);
+        lua_setfield(L, -2, "_VERSION");
         lua_pushcfunction(L, l_Core_getModpath);
         lua_setfield(L, -2, "getModpath");
         lua_pushcfunction(L, l_Core_getTitleId);

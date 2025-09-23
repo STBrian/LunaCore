@@ -1,6 +1,7 @@
 #include "Core/Memory.hpp"
 
 #include <string>
+#include <cstdlib>
 
 #include <CTRPluginFramework.hpp>
 
@@ -29,6 +30,24 @@ static int l_Memory_readU32(lua_State *L) {
 }
 
 /*
+- Reads a signed integer of 32 bits from memory
+## offset: integer
+## return: integer?
+### Core.Memory.readS32
+*/
+static int l_Memory_readS32(lua_State *L) {
+    u32 offset = (u32)luaL_checknumber(L, 1);
+    u32 value = 0;
+    if (!CTRPF::Process::Read32(offset, value))
+        lua_pushnil(L);
+    else {
+        s32 nvalue = *(s32*)&value;
+        lua_pushnumber(L, value);
+    }
+    return 1;
+}
+
+/*
 - Reads an unsigned integer of 16 bits from memory
 ## offset: integer
 ## return: integer?
@@ -45,6 +64,24 @@ static int l_Memory_readU16(lua_State *L) {
 }
 
 /*
+- Reads a signed integer of 16 bits from memory
+## offset: integer
+## return: integer?
+### Core.Memory.readS16
+*/
+static int l_Memory_readS16(lua_State *L) {
+    u32 offset = (u32)luaL_checknumber(L, 1);
+    u16 value = 0;
+    if (!CTRPF::Process::Read16(offset, value))
+        lua_pushnil(L);
+    else {
+        s16 nvalue = *(s16*)&value;
+        lua_pushnumber(L, value);
+    }
+    return 1;
+}
+
+/*
 - Reads an unsigned integer of 8 bits from memory
 ## offset: integer
 ## return: integer?
@@ -57,6 +94,24 @@ static int l_Memory_readU8(lua_State *L) {
         lua_pushnil(L);
     else
         lua_pushnumber(L, value);
+    return 1;
+}
+
+/*
+- Reads a signed integer of 8 bits from memory
+## offset: integer
+## return: integer?
+### Core.Memory.readS8
+*/
+static int l_Memory_readS8(lua_State *L) {
+    u32 offset = (u32)luaL_checknumber(L, 1);
+    u8 value = 0;
+    if (!CTRPF::Process::Read8(offset, value))
+        lua_pushnil(L);
+    else {
+        s8 nvalue = *(s8*)&value;
+        lua_pushnumber(L, value);
+    }
     return 1;
 }
 
@@ -125,6 +180,21 @@ static int l_Memory_writeU32(lua_State *L) {
 }
 
 /*
+- Writes a signed integer of 32 bits to memory offset
+## offset: integer
+## value: integer
+## return: boolean
+### Core.Memory.writeS32
+*/
+static int l_Memory_writeS32(lua_State *L) {
+    u32 offset = (u32)luaL_checknumber(L, 1);
+    s32 value = (s32)luaL_checknumber(L, 2);
+    u32 nvalue = *(u32*)&value;
+    lua_pushboolean(L, CTRPF::Process::Write32(offset, nvalue));
+    return 1;
+}
+
+/*
 - Writes an unsigned integer of 16 bits to memory offset
 ## offset: integer
 ## value: integer
@@ -139,6 +209,21 @@ static int l_Memory_writeU16(lua_State *L) {
 }
 
 /*
+- Writes a signed integer of 16 bits to memory offset
+## offset: integer
+## value: integer
+## return: boolean
+### Core.Memory.writeS16
+*/
+static int l_Memory_writeS16(lua_State *L) {
+    u32 offset = (u32)luaL_checknumber(L, 1);
+    s16 value = (s16)luaL_checknumber(L, 2);
+    u16 nvalue = *(u16*)&value;
+    lua_pushboolean(L, CTRPF::Process::Write16(offset, nvalue));
+    return 1;
+}
+
+/*
 - Writes an unsigned integer of 8 bits to memory offset
 ## offset: integer
 ## value: integer
@@ -149,6 +234,21 @@ static int l_Memory_writeU8(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
     u8 value = (u8)luaL_checknumber(L, 2);
     lua_pushboolean(L, CTRPF::Process::Write8(offset, value));
+    return 1;
+}
+
+/*
+- Writes a signed integer of 8 bits to memory offset
+## offset: integer
+## value: integer
+## return: boolean
+### Core.Memory.writeS8
+*/
+static int l_Memory_writeS8(lua_State *L) {
+    u32 offset = (u32)luaL_checknumber(L, 1);
+    s8 value = (s8)luaL_checknumber(L, 2);
+    u8 nvalue = *(u8*)&value;
+    lua_pushboolean(L, CTRPF::Process::Write8(offset, nvalue));
     return 1;
 }
 
@@ -196,18 +296,54 @@ static int l_Memory_writeString(lua_State *L) {
     return 1;
 }
 
+/*
+- Allocates memory and returns the start offset
+## size: integer
+## return: integer?
+### Core.Memory.malloc
+*/
+static int l_Memory_malloc(lua_State *L) {
+    size_t size = (size_t)luaL_checknumber(L, 1);
+    void* ptr = malloc(size);
+    if (ptr) 
+        lua_pushnumber(L, (u32)ptr);
+    else 
+        lua_pushnil(L);
+    return 1;
+}
+
+/*
+- Free memory allocated with malloc
+## offset: integer
+### Core.Memory.free
+*/
+static int l_Memory_free(lua_State *L) {
+    void* offset = (void*)(u32)luaL_checknumber(L, 1);
+    if (offset) 
+        free(offset);
+    return 0;
+}
+
 // ----------------------------------------------------------------------------
 
 static const luaL_Reg memory_functions[] = {
+    {"malloc", l_Memory_malloc},
+    {"free", l_Memory_free},
     {"readU32", l_Memory_readU32},
+    {"readS32", l_Memory_readS32},
     {"readU16", l_Memory_readU16},
+    {"readS16", l_Memory_readS16},
     {"readU8", l_Memory_readU8},
+    {"readS8", l_Memory_readS8},
     {"readFloat", l_Memory_readFloat},
     {"readDouble", l_Memory_readDouble},
     {"readString", l_Memory_readString},
     {"writeU32", l_Memory_writeU32},
+    {"writeS32", l_Memory_writeS32},
     {"writeU16", l_Memory_writeU16},
+    {"writeS16", l_Memory_writeS16},
     {"writeU8", l_Memory_writeU8},
+    {"writeS8", l_Memory_writeS8},
     {"writeFloat", l_Memory_writeFloat},
     {"writeDouble", l_Memory_writeDouble},
     {"writeString", l_Memory_writeString},

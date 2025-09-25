@@ -25,7 +25,7 @@ namespace Game {
         class Tier {
             int miningLevel;
             int durability;
-            int unknown;
+            float miningEfficiency;
             int damageBonus;
             int enchantability;
 

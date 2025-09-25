@@ -41,8 +41,7 @@ static int l_Memory_readS32(lua_State *L) {
     if (!CTRPF::Process::Read32(offset, value))
         lua_pushnil(L);
     else {
-        s32 nvalue = *(s32*)&value;
-        lua_pushnumber(L, value);
+        lua_pushnumber(L, (s32)value);
     }
     return 1;
 }
@@ -75,8 +74,7 @@ static int l_Memory_readS16(lua_State *L) {
     if (!CTRPF::Process::Read16(offset, value))
         lua_pushnil(L);
     else {
-        s16 nvalue = *(s16*)&value;
-        lua_pushnumber(L, value);
+        lua_pushnumber(L, (s16)value);
     }
     return 1;
 }
@@ -109,8 +107,7 @@ static int l_Memory_readS8(lua_State *L) {
     if (!CTRPF::Process::Read8(offset, value))
         lua_pushnil(L);
     else {
-        s8 nvalue = *(s8*)&value;
-        lua_pushnumber(L, value);
+        lua_pushnumber(L, (s8)value);
     }
     return 1;
 }
@@ -166,6 +163,13 @@ static int l_Memory_readString(lua_State *L) {
 }
 
 /*
+- Writes a signed integer of 32 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
+## offset: integer
+## value: integer
+## return: boolean
+### Core.Memory.writeS32
+*/
+/*
 - Writes an unsigned integer of 32 bits to memory offset
 ## offset: integer
 ## value: integer
@@ -174,26 +178,18 @@ static int l_Memory_readString(lua_State *L) {
 */
 static int l_Memory_writeU32(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
-    u32 value = (u32)luaL_checknumber(L, 2);
-    lua_pushboolean(L, CTRPF::Process::Write32(offset, value));
+    s32 value = (s32)luaL_checknumber(L, 2);
+    lua_pushboolean(L, CTRPF::Process::Write32(offset, (u32)value));
     return 1;
 }
 
 /*
-- Writes a signed integer of 32 bits to memory offset
+- Writes a signed integer of 16 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
 ## offset: integer
 ## value: integer
 ## return: boolean
-### Core.Memory.writeS32
+### Core.Memory.writeS16
 */
-static int l_Memory_writeS32(lua_State *L) {
-    u32 offset = (u32)luaL_checknumber(L, 1);
-    s32 value = (s32)luaL_checknumber(L, 2);
-    u32 nvalue = *(u32*)&value;
-    lua_pushboolean(L, CTRPF::Process::Write32(offset, nvalue));
-    return 1;
-}
-
 /*
 - Writes an unsigned integer of 16 bits to memory offset
 ## offset: integer
@@ -203,26 +199,18 @@ static int l_Memory_writeS32(lua_State *L) {
 */
 static int l_Memory_writeU16(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
-    u16 value = (u16)luaL_checknumber(L, 2);
-    lua_pushboolean(L, CTRPF::Process::Write16(offset, value));
+    s16 value = (s16)luaL_checknumber(L, 2);
+    lua_pushboolean(L, CTRPF::Process::Write16(offset, (u16)value));
     return 1;
 }
 
 /*
-- Writes a signed integer of 16 bits to memory offset
+- Writes a signed integer of 8 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
 ## offset: integer
 ## value: integer
 ## return: boolean
-### Core.Memory.writeS16
+### Core.Memory.writeS8
 */
-static int l_Memory_writeS16(lua_State *L) {
-    u32 offset = (u32)luaL_checknumber(L, 1);
-    s16 value = (s16)luaL_checknumber(L, 2);
-    u16 nvalue = *(u16*)&value;
-    lua_pushboolean(L, CTRPF::Process::Write16(offset, nvalue));
-    return 1;
-}
-
 /*
 - Writes an unsigned integer of 8 bits to memory offset
 ## offset: integer
@@ -232,23 +220,8 @@ static int l_Memory_writeS16(lua_State *L) {
 */
 static int l_Memory_writeU8(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
-    u8 value = (u8)luaL_checknumber(L, 2);
-    lua_pushboolean(L, CTRPF::Process::Write8(offset, value));
-    return 1;
-}
-
-/*
-- Writes a signed integer of 8 bits to memory offset
-## offset: integer
-## value: integer
-## return: boolean
-### Core.Memory.writeS8
-*/
-static int l_Memory_writeS8(lua_State *L) {
-    u32 offset = (u32)luaL_checknumber(L, 1);
     s8 value = (s8)luaL_checknumber(L, 2);
-    u8 nvalue = *(u8*)&value;
-    lua_pushboolean(L, CTRPF::Process::Write8(offset, nvalue));
+    lua_pushboolean(L, CTRPF::Process::Write8(offset, (u8)value));
     return 1;
 }
 
@@ -339,11 +312,11 @@ static const luaL_Reg memory_functions[] = {
     {"readDouble", l_Memory_readDouble},
     {"readString", l_Memory_readString},
     {"writeU32", l_Memory_writeU32},
-    {"writeS32", l_Memory_writeS32},
+    {"writeS32", l_Memory_writeU32},  // Works the same for signed
     {"writeU16", l_Memory_writeU16},
-    {"writeS16", l_Memory_writeS16},
+    {"writeS16", l_Memory_writeU16},  // Works the same for signed
     {"writeU8", l_Memory_writeU8},
-    {"writeS8", l_Memory_writeS8},
+    {"writeS8", l_Memory_writeU8}, // Works the same for signed
     {"writeFloat", l_Memory_writeFloat},
     {"writeDouble", l_Memory_writeDouble},
     {"writeString", l_Memory_writeString},

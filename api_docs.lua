@@ -564,17 +564,23 @@ function Core.Memory.readDouble(offset) end
 ---@return string?
 function Core.Memory.readString(offset, size) end
 
+---Writes a signed integer of 32 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeS32(offset, value) end
+
 ---Writes an unsigned integer of 32 bits to memory offset
 ---@param offset integer
 ---@param value integer
 ---@return boolean
 function Core.Memory.writeU32(offset, value) end
 
----Writes a signed integer of 32 bits to memory offset
+---Writes a signed integer of 16 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
 ---@param offset integer
 ---@param value integer
 ---@return boolean
-function Core.Memory.writeS32(offset, value) end
+function Core.Memory.writeS16(offset, value) end
 
 ---Writes an unsigned integer of 16 bits to memory offset
 ---@param offset integer
@@ -582,23 +588,17 @@ function Core.Memory.writeS32(offset, value) end
 ---@return boolean
 function Core.Memory.writeU16(offset, value) end
 
----Writes a signed integer of 16 bits to memory offset
+---Writes a signed integer of 8 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
 ---@param offset integer
 ---@param value integer
 ---@return boolean
-function Core.Memory.writeS16(offset, value) end
+function Core.Memory.writeS8(offset, value) end
 
 ---Writes an unsigned integer of 8 bits to memory offset
 ---@param offset integer
 ---@param value integer
 ---@return boolean
 function Core.Memory.writeU8(offset, value) end
-
----Writes a signed integer of 8 bits to memory offset
----@param offset integer
----@param value integer
----@return boolean
-function Core.Memory.writeS8(offset, value) end
 
 ---Writes a float to memory offset
 ---@param offset integer

@@ -120,7 +120,7 @@ void Core::LoadModules(lua_State *L)
     
     Core::RegisterAsyncModule(L);
     Core::RegisterCoreModule(L);
-    Core::RegisterExtensionLoader(L);
+    //Core::RegisterExtensionLoader(L); not ready for release yet
     Core::RegisterGameModule(L);
 
     Core::UnregisterUtilsModule(L);

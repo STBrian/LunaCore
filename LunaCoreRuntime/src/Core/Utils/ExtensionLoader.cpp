@@ -24,11 +24,11 @@ static int l_loadExtension(lua_State* L) {
 }
 
 namespace Core {
-    bool RegisterExtensionLoader(lua_State* L) { /* Not ready yet for release
+    bool RegisterExtensionLoader(lua_State* L) {
         lua_getglobal(L, "Core");
         lua_pushcfunction(L, l_loadExtension);
         lua_setfield(L, -2, "loadExtension");
-        lua_pop(L, 1); */
+        lua_pop(L, 1);
         return true;
     }
 }

@@ -1,8 +1,10 @@
-Core.Debug.log("Init testMod", false)
+-- This template assumes it is used in conjunction with LunaCoreAPI
+
+local LOGGER = CoreAPI.Utils.Logger.newLogger("testMod")
 
 local testModReg = CoreAPI.Items.newItemRegistry("testMod") -- This must be the same as the mod name in mod.json
 
-testModReg:registerItem("copper_ingot", 254, {
+local COPPER_INGOT = testModReg:registerItem("copper_ingot", 254, {
     texture = "items/copper_ingot.3dst", -- This will search the texture in the folder assets/textures
     group = {CoreAPI.ItemGroups.FOOD_MINERALS, CoreAPI.ItemGroups.Creative.beforeItem("iron_ingot")},
     locales = {
@@ -11,7 +13,7 @@ testModReg:registerItem("copper_ingot", 254, {
     }
 })
 
-testModReg:registerItem("copper_ingot2", 253, {
+local COPPER_INGOT2 = testModReg:registerItem("copper_ingot2", 253, {
     texture = "items/copper_ingot.3dst",
     --group = {CoreAPI.ItemGroups.FOOD_MINERALS, CoreAPI.ItemGroups.Creative.afterItem("testmod:copper_ingot")},
     stackSize = 32,
@@ -21,7 +23,7 @@ testModReg:registerItem("copper_ingot2", 253, {
     }
 })
 
-testModReg:registerItem("amethyst_shard", 252, {
+local AMETHYST_SHARD = testModReg:registerItem("amethyst_shard", 252, {
     texture = "items/amethyst_shard.3dst",
     group = {CoreAPI.ItemGroups.FOOD_MINERALS, CoreAPI.ItemGroups.Creative.afterItem("iron_nugget")},
     locales = {
@@ -30,5 +32,6 @@ testModReg:registerItem("amethyst_shard", 252, {
     }
 })
 
+LOGGER:info(tostring(AMETHYST_SHARD ~= nil))
 
-testModReg:registerItems()
+testModReg:buildResources()

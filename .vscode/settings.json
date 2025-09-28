@@ -107,6 +107,6 @@
     },
     "Lua.workspace.library": [
         "./api_docs.lua",
-        "~/Documentos/LunaCoreAPI"
+        "${workspaceFolder}/../LunaCoreAPI"
     ]
 }

@@ -256,10 +256,10 @@ bool Core::Module::RegisterEventModule(lua_State *L)
     lua_getfield(L, -1, "Event");
   
     //$@@@Core.Event.OnGameEntitySpawnStart: EventClass
-    core_newevent(L, "OnGameEntitySpawnStart");
+    //core_newevent(L, "OnGameEntitySpawnStart");
   
     //$@@@Core.Event.OnGameEntitySpawn: EventClass
-    core_newevent(L, "OnGameEntitySpawn");
+    //core_newevent(L, "OnGameEntitySpawn");
 
     lua_pop(L, 2);
 

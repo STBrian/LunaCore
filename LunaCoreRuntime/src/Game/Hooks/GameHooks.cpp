@@ -217,7 +217,7 @@ void hookSomeFunctions() {
     hookFunction(0x0056c2a0, (u32)RegisterItemsHook);
     hookFunction(0x0056de70, (u32)RegisterItemsTexturesHook);
     hookFunction(0x00578358, (u32)RegisterCreativeItemsHook);
-    hookFunction(0x004df688, (u32)EntitySpawnStartHook);
-    // hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
+    //hookFunction(0x004df688, (u32)EntitySpawnStartHook);
+    //hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
     Core::CrashHandler::core_state = lastcState;
 }

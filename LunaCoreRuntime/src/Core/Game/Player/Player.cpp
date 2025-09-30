@@ -77,7 +77,7 @@ static const luaL_Reg player_position_methods[] =
 {
     {"get", l_Player_Position_get},
     {"set", l_Player_Position_set},
-    {"add", l_Player_Position_set},
+    {"add", l_Player_Position_add},
     {NULL, NULL}
 };
 
@@ -100,7 +100,7 @@ static int l_Player_Velocity_get(lua_State *L)
     lua_pushnumber(L, x);
     lua_pushnumber(L, y);
     lua_pushnumber(L, z);
-    return 1;
+    return 3;
 }
 
 /*
@@ -121,10 +121,32 @@ static int l_Player_Velocity_set(lua_State *L)
     return 0;
 }
 
+/*
+- Adds X, Y, Z velocity to current player velocity
+## x: number
+## y: number
+## z: number
+### Game.LocalPlayer.Velocity.add
+*/
+static int l_Player_Velocity_add(lua_State *L)
+{
+    float x2 = luaL_checknumber(L, 1);
+    float y2 = luaL_checknumber(L, 2);
+    float z2 = luaL_checknumber(L, 3);
+    float x1 = Minecraft::GetVelocityX();
+    float y1 = Minecraft::GetVelocityY();
+    float z1 = Minecraft::GetVelocityZ();
+    Minecraft::SetVelocityX(x1 + x2);
+    Minecraft::SetVelocityY(y1 + y2);
+    Minecraft::SetVelocityZ(z1 + z2);
+    return 0;
+}
+
 static const luaL_Reg player_velocity_methods[] =
 {
     {"get", l_Player_Velocity_get},
     {"set", l_Player_Velocity_set},
+    {"add", l_Player_Velocity_add},
     {NULL, NULL}
 };
 

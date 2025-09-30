@@ -36,7 +36,7 @@ static int l_Player_Position_get(lua_State *L)
     lua_pushnumber(L, x);
     lua_pushnumber(L, y);
     lua_pushnumber(L, z);
-    return 1;
+    return 3;
 }
 
 /*
@@ -55,10 +55,29 @@ static int l_Player_Position_set(lua_State *L)
     return 0;
 }
 
+/*
+- Adds X, Y, Z to current player position
+## x: number
+## y: number
+## z: number
+### Game.LocalPlayer.Position.add
+*/
+static int l_Player_Position_add(lua_State *L)
+{
+    float x2 = luaL_checknumber(L, 1);
+    float y2 = luaL_checknumber(L, 2);
+    float z2 = luaL_checknumber(L, 3);
+    float x1, y1, z1;
+    Minecraft::GetPlayerPosition(x1, y1, z1);
+    Minecraft::SetPlayerPosition(x1 + x2, y1 + y2, z1 + z2);
+    return 0;
+}
+
 static const luaL_Reg player_position_methods[] =
 {
     {"get", l_Player_Position_get},
     {"set", l_Player_Position_set},
+    {"add", l_Player_Position_set},
     {NULL, NULL}
 };
 

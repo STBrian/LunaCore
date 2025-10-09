@@ -163,7 +163,7 @@ void InitMenu(PluginMenu &menu)
             MessageBox("Failed to get filename size")();
             return;
         }
-        char *namebuf = new char[fnameSize];
+        char *namebuf = (char*)std::calloc(fnameSize, 1);
         if (!namebuf) {
             exitSockets();
             MessageBox("Memory error")();

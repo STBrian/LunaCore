@@ -34,34 +34,6 @@ namespace Core {
         Core::Module::RegisterLocalPlayerModule(L);
         Core::Module::RegisterItemsModule(L);
         Core::Module::RegisterEntityModule(L);
-
-        const char *lua_Code = R"(
-            local realGame = readOnlyTable(Game, "Game")
-            Game = nil
-
-            setmetatable(_G, {
-                __index = function(_, key)
-                    if key == "Game" then
-                        return realGame
-                    else
-                        return rawget(_G, key)
-                    end
-                end,
-                __newindex = function(tbl, key, value)
-                    if key == "Game" then
-                        error("Cannot overwrite global 'Game'", 2)
-                    else
-                        rawset(tbl, key, value)
-                    end
-                end
-            })
-        )";
-        if (luaL_dostring(L, lua_Code))
-        {
-            Core::Debug::LogError("Core::Load error: " + std::string(lua_tostring(L, -1)));
-            lua_pop(L, 1);
-            return false;
-        }
         return true;
     }
 
@@ -122,6 +94,39 @@ void Core::LoadModules(lua_State *L)
     Core::RegisterCoreModule(L);
     //Core::RegisterExtensionLoader(L); not ready for release yet
     Core::RegisterGameModule(L);
+
+    const char *lua_Code = R"(
+        local realCore = readOnlyTable(Core, "Core")
+        Core = nil
+        local realGame = readOnlyTable(Game, "Game")
+        Game = nil
+
+        setmetatable(_G, {})
+        getmetatable(_G).__index = function(_, key)
+            if key == "Game" then
+                return realGame
+            elseif key == "Core" then
+                return realCore
+            else
+                return rawget(_G, key)
+            end
+        end
+        getmetatable(_G).__newindex = function(tbl, key, value)
+            if key == "Game" then
+                error("Cannot overwrite global 'Game'", 2)
+            elseif key == "Core" then
+                error("Cannot overwrite global 'Core'", 2)
+            else
+                rawset(tbl, key, value)
+            end
+        end
+        getmetatable(_G).__metatable = "runtime protected"
+    )";
+    if (luaL_dostring(L, lua_Code))
+    {
+        Core::Debug::LogError("Core::Load error: " + std::string(lua_tostring(L, -1)));
+        lua_pop(L, 1);
+    }
 
     Core::UnregisterUtilsModule(L);
 }

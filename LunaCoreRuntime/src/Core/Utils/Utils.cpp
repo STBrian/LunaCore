@@ -94,10 +94,10 @@ bool Core::RegisterUtilsModule(lua_State *L)
 {
     const char *lua_Code = R"(
         function readOnlyTable(tbl, tblName)
-            local mt_newindex_func = function(_, key, _)
+            local mt_newindex_func = function (_, key, _)
                 error(tblName.." is read-only")
             end
-            return setmetatable({}, {__index = tbl, __newindex = mt_newindex_func})
+            return setmetatable({}, {__index = tbl, __newindex = mt_newindex_func, __metatable = "protected"})
         end
     )";
     if (luaL_dostring(L, lua_Code))

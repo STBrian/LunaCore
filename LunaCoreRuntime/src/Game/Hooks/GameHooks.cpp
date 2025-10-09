@@ -48,7 +48,7 @@ void hookReturnOverwrite(CoreHookContext *ctx, u32 returnCallback) {
     asm volatile ( // r0 contains hookCtxPtr
         "ldr sp, [r0, #0x20]\n"
         "add sp, sp, #0x10\n"
-        "ldmia sp!, {r4-r12, lr}\n"
+        "ldmia sp!, {r4-r12, lr}\n"  // Restore stack pointer
         "mov r2, r1\n"
         "ldr r1, [r0, #0x10]\n"
         "ldr r0, [r0, #0x0c]\n"
@@ -57,7 +57,7 @@ void hookReturnOverwrite(CoreHookContext *ctx, u32 returnCallback) {
 }
 
 // Hooks an ARMv7 function, length must be at least 5 instructions to hook
-// and instructions cannot be relative dependent
+// and instructions cannot be pc-relative dependent
 void hookFunction(u32 targetAddr, u32 callbackAddr) {
     const u32 asmData[] = {
         0xE92D5FFF, // stmdb sp!, {r0-r12, lr}

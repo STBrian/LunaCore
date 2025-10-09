@@ -16,6 +16,10 @@ class CustomString {
         reinterpret_cast<char**(*)(char**, const char*)>(0x2ff220|1)(&data, str.c_str());
     }
 
+    CustomString(const char* str) {
+        reinterpret_cast<char**(*)(char**, const char*)>(0x2ff220|1)(&data, str);
+    }
+
     ~CustomString() {
         reinterpret_cast<void(*)(char**)>(0x2febbc|1)(&data);
     }

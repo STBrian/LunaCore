@@ -3,7 +3,6 @@
 #include <mutex>
 #include <CTRPluginFramework.hpp>
 
-#include "Core/Utils/GameState.hpp"
 #include "Core/CrashHandler.hpp"
 #include "lua_common.h"
 
@@ -12,7 +11,6 @@
 
 namespace CTRPF = CTRPluginFramework;
 
-extern GameState_s GameState;
 bool eventJoinTriggered = false;
 
 typedef int (*MBdetectStateFunc)(int *);

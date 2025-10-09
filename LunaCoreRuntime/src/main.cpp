@@ -21,7 +21,6 @@
 #include "Core/CrashHandler.hpp"
 
 #include "Game/Hooks/GameHooks.hpp"
-#include "Core/Utils/GameState.hpp"
 #include "Game/Hooks/MainMenuLayoutLoad.hpp"
 #include "Game/Hooks/LoadingWorldScreenMessage.hpp"
 
@@ -33,7 +32,6 @@
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
 
-GameState_s GameState;
 CTRPF::PluginMenu *gmenu;
 
 namespace CTRPluginFramework

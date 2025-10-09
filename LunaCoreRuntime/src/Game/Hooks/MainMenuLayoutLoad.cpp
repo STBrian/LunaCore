@@ -12,15 +12,13 @@ using json = nlohmann::json;
 
 #include "Core/CrashHandler.hpp"
 #include "Game/game_utils/game_functions.hpp"
-#include "Core/Utils/GameState.hpp"
+#include "CoreGlobals.hpp"
 #include "Core/Debug.hpp"
 #include "Core/Utils/Utils.hpp"
 
 #define BASE_OFF 0x100000
 
 namespace CTRPF = CTRPluginFramework;
-
-extern GameState_s GameState;
 
 namespace MenuButtonID {
     typedef enum {

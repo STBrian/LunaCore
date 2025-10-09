@@ -15,7 +15,6 @@
 #include "Core/Event.hpp"
 #include "Game/world/item/Item.hpp"
 #include "Game/world/entity/Entity.hpp"
-#include "Core/Utils/GameState.hpp"
 #include "CoreGlobals.hpp"
 #include "CoreInit.hpp"
 
@@ -23,7 +22,6 @@ namespace CTRPF = CTRPluginFramework;
 
 #define BASE_OFF 0x100000
 
-extern GameState_s GameState;
 static std::vector<std::unique_ptr<CoreHookContext>> hooks;
 
 static __attribute((naked)) void hookBody() {

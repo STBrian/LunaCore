@@ -6,12 +6,10 @@
 #include "Core/Debug.hpp"
 #include "Core/Utils/Utils.hpp"
 #include "CoreGlobals.hpp"
-#include "Core/Utils/GameState.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 
 CTRPluginFramework::Clock timeoutAsynClock;
-extern GameState_s GameState;
 
 void Core::AsyncRestartClock() {
     timeoutAsynClock.Restart();

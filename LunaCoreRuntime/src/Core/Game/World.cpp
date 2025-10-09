@@ -2,15 +2,13 @@
 
 #include <CTRPluginFramework.hpp>
 
-#include "Core/Utils/GameState.hpp"
+#include "CoreGlobals.hpp"
 #include "Core/Event.hpp"
 #include "string_hash.hpp"
 
 #include "Game/Minecraft.hpp"
 
 namespace CTRPF = CTRPluginFramework;
-
-extern GameState_s GameState;
 
 enum world_offsets : u32
 {

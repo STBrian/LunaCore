@@ -11,7 +11,6 @@
 #include "Core/Game/Gamepad.hpp"
 #include "Core/Utils/Utils.hpp"
 #include "CoreGlobals.hpp"
-#include "Core/Utils/GameState.hpp"
 
 static inline void core_newevent(lua_State* L, const char* eventname) {
     lua_newtable(L);
@@ -25,7 +24,6 @@ namespace CTRPF = CTRPluginFramework;
 
 CTRPF::Clock timeoutEventClock;
 extern std::atomic<bool> graphicsIsTop;
-extern GameState_s GameState;
 
 void Core::EventRestartClock() {
     timeoutEventClock.Restart();

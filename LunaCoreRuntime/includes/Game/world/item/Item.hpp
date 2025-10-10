@@ -7,6 +7,10 @@
 #include "Game/world/item/ItemInstance.hpp"
 
 namespace Game {
+    class Item;
+    
+    static Item*(*registerItem)(const char* nameId, const short& itemId) = reinterpret_cast<Item*(*)(const char*, const short&)>(0x007cdc8c);
+
     class Item {
         public:
         //void* vtable;
@@ -64,6 +68,4 @@ namespace Game {
         virtual void unkFunc2();
         virtual void setTexture(u32 texnameHash, u32 idx);
     };
-
-    static Item*(*registerItem)(const char* nameId, const short& itemId) = reinterpret_cast<Item*(*)(const char*, const short&)>(0x007cdc8c);
 }

@@ -326,6 +326,12 @@ function Game.LocalPlayer.Position.get() end
 ---@param z number
 function Game.LocalPlayer.Position.set(x, y, z) end
 
+---Adds X, Y, Z to current player position
+---@param x number
+---@param y number
+---@param z number
+function Game.LocalPlayer.Position.add(x, y, z) end
+
 Game.LocalPlayer.Velocity = {}
 
 ---Gets local player velocity
@@ -339,6 +345,12 @@ function Game.LocalPlayer.Velocity.get() end
 ---@param y number
 ---@param z number
 function Game.LocalPlayer.Velocity.set(x, y, z) end
+
+---Adds X, Y, Z velocity to current player velocity
+---@param x number
+---@param y number
+---@param z number
+function Game.LocalPlayer.Velocity.add(x, y, z) end
 
 Game.LocalPlayer.OnGround = false
 
@@ -627,6 +639,13 @@ function Core.Memory.malloc(size) end
 ---Free memory allocated with malloc
 ---@param offset integer
 function Core.Memory.free(offset) end
+
+---Allows to call a function from memory
+---@param foffset integer
+---@param argstype string
+---@param returntype string
+---@return number
+function Core.Memory.call(foffset, argstype, returntype, ...) end
 
 Core.System = {}
 

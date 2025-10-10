@@ -3,6 +3,8 @@
 #include <string>
 #include <cstdlib>
 
+#include <ffi.h>
+
 #include <CTRPluginFramework.hpp>
 
 namespace CTRPF = CTRPluginFramework;
@@ -297,11 +299,160 @@ static int l_Memory_free(lua_State *L) {
     return 0;
 }
 
+/*
+- Allows to call a function from memory
+## foffset: integer
+## argstype: string
+## returntype: string
+## ...
+## return: number
+### Core.Memory.call
+*/
+static int l_Memory_call(lua_State *L) {
+    u32 foffset = (u32)luaL_checknumber(L, 1);
+    std::string typeStr(luaL_checkstring(L, 2));
+    std::string returnType(luaL_checkstring(L, 3));
+    u8 nargs = typeStr.length();
+    ffi_cif cif;
+    ffi_type* args[nargs];
+    void* values[nargs];
+    float floatvalues[nargs];
+    s32 intvalues[nargs];
+    u32 intresult = 0;
+    float floatresult = 0;
+    bool returnsFloat = false;
+    bool signedValue = false;
+    bool returnsValue = !returnType.empty();
+    if (returnsValue) {
+        switch (returnType[0]) {
+            case 'c': case 'b': case 'h': case 'i': case 'l':
+                signedValue = true;
+                break;
+            case 'B': case 'H': case 'I': case 'L': case '?': case 'P':
+                signedValue = false;
+                break;
+            case 'f':
+                returnsFloat = true;
+                break;
+            default:
+                return luaL_error(L, "bad return type: %c", returnType[0]);
+                break;
+        }
+    }
+    for (int i = 0; i < nargs; i++) {
+        switch (typeStr[i]) {
+            case 'c': case 'b':
+                args[i] = &ffi_type_sint8;
+                if (!lua_isnumber(L, 4 + i))
+                    return luaL_error(L, "type %d doesn't match char: %s", i, luaL_typename(L, 4 + i));
+                break;
+            case 'B':
+                args[i] = &ffi_type_uint8;
+                if (!lua_isnumber(L, 4 + i))
+                    return luaL_error(L, "type %d doesn't match unsigned char: %s", i, luaL_typename(L, 4 + i));
+                break;
+            case '?':
+                args[i] = &ffi_type_uint8;
+                if (!lua_isboolean(L, 4 + i))
+                    return luaL_error(L, "type %d doesn't match boolean: %s", i, luaL_typename(L, 4 + i));
+                break;
+            case 'h':
+                args[i] = &ffi_type_sint16;
+                if (!lua_isnumber(L, 4 + i))
+                    return luaL_error(L, "type %d doesn't match short: %s", i, luaL_typename(L, 4 + i));
+                break;
+            case 'H':
+                args[i] = &ffi_type_uint16;
+                if (!lua_isnumber(L, 4 + i))
+                    return luaL_error(L, "type %d doesn't match unsigned short: %s", i, luaL_typename(L, 4 + i));
+                break;
+            case 'i': case 'l':
+                args[i] = &ffi_type_sint32;
+                if (!lua_isnumber(L, 4 + i))
+                    return luaL_error(L, "type %d doesn't match int: %s", i, luaL_typename(L, 4 + i));
+                break;
+            case 'I': case 'L':
+                args[i] = &ffi_type_uint32;
+                if (!lua_isnumber(L, 4 + i))
+                    return luaL_error(L, "type %d doesn't match unsigned int: %s", i, luaL_typename(L, 4 + i));
+                break;
+            case 'f':
+                args[i] = &ffi_type_float;
+                if (!lua_isnumber(L, 4 + i))
+                    return luaL_error(L, "type %d doesn't match float: %s", i, luaL_typename(L, 4 + i));
+                break;
+            case 's': 
+                args[i] = &ffi_type_pointer;
+                if (!lua_isstring(L, 4 + i))
+                    return luaL_error(L, "type %d doesn't match string: %s", i, luaL_typename(L, 4 + i));
+                break;
+            case 'P':
+                args[i] = &ffi_type_pointer;
+                if (!lua_isnumber(L, 4 + i) && !lua_isuserdata(L, 4 + i))
+                    return luaL_error(L, "type %d doesn't match pointer: %s", i, luaL_typename(L, 4 + i));
+                break;
+            default:
+                return luaL_error(L, "bad type: %c", typeStr[i]);
+                break;
+        }
+    }
+    for (int i = 0; i < nargs; i++) {
+        switch (typeStr[i]) {
+            case 'c': case 'b': case 'B': case 'h': case 'H': case 'i': case 'I': case 'l': case 'L':
+                intvalues[i] = (s32)lua_tonumber(L, 4 + i);
+                values[i] = &intvalues[i];
+                break;
+            case '?':
+                intvalues[i] = (bool)lua_toboolean(L, 4 + i);
+                values[i] = &intvalues[i];
+                break;
+            case 'f':
+                floatvalues[i] = (float)lua_tonumber(L, 4 + i);
+                values[i] = &floatvalues[i];
+                break;
+            case 's':
+                intvalues[i] = (s32)(void*)lua_tostring(L, 4 + i);
+                values[i] = &intvalues[i];
+                break;
+            case 'P': {
+                if (lua_isnumber(L, 4 + i))
+                    intvalues[i] = (s32)lua_tonumber(L, 4 + i);
+                else
+                    intvalues[i] = (u32)lua_touserdata(L, 4 + i);
+                values[i] = &intvalues[i];
+                break;
+            }
+        }
+    }
+    if (returnsValue) {
+        if (returnsFloat) {
+            ffi_prep_cif(&cif, FFI_DEFAULT_ABI, nargs, &ffi_type_float, args);
+            ffi_call(&cif, FFI_FN((void*)foffset), &floatresult, values);
+            lua_pushnumber(L, floatresult);
+            return 1;
+        } else {
+            ffi_prep_cif(&cif, FFI_DEFAULT_ABI, nargs, &ffi_type_sint32, args);
+            ffi_call(&cif, FFI_FN((void*)foffset), &intresult, values);
+            if (signedValue)
+                lua_pushnumber(L, (s32)intresult);
+            else
+                lua_pushnumber(L, (u32)intresult);
+            return 1;
+        }
+    }
+    else {
+        ffi_prep_cif(&cif, FFI_DEFAULT_ABI, nargs, &ffi_type_void, args);
+        ffi_call(&cif, FFI_FN((void*)foffset), nullptr, values);
+        return 0;
+    }
+}
+
 // ----------------------------------------------------------------------------
 
 static const luaL_Reg memory_functions[] = {
     {"malloc", l_Memory_malloc},
     {"free", l_Memory_free},
+    {"call", l_Memory_call},
     {"readU32", l_Memory_readU32},
     {"readS32", l_Memory_readS32},
     {"readU16", l_Memory_readU16},

@@ -111,7 +111,9 @@ def process_lines(path: str, lines: list, segpos: int):
             for entry in desc:
                 DOCS_FILE.write(f"---{entry}\n")
             for arg in args:
-                if arg["name"] == "return":
+                if arg["name"] == "...":
+                    continue
+                elif arg["name"] == "return":
                     DOCS_FILE.write(f"---@return {arg["type"]}\n")
                 else:
                     DOCS_FILE.write(f"---@param {arg["name"]} {arg["type"]}\n")
@@ -129,16 +131,19 @@ def process_lines(path: str, lines: list, segpos: int):
             args.clear()
         elif doc_line.startswith("##") and len(doc_line) > 2:
             # Function args
-            splitted = doc_line[2:].split(":")
-            argName = splitted[0].strip()
-            argType = splitted[1].strip()
-            optional = False
-            if argType.endswith("?"):
-                optional = True
-                argType = argType[:-1]
-            if not argType in DEF_CLASSES:
-                raise Exception(f"Undefined type '{argType}': '{doc_line}' on {path} at line {segpos + j}")
-            args.append({"name": argName, "type": argType if not optional else f"{argType}?"})
+            if doc_line[2:].strip() == "...":
+                args.append({"name": "..."})
+            else:
+                splitted = doc_line[2:].split(":")
+                argName = splitted[0].strip()
+                argType = splitted[1].strip()
+                optional = False
+                if argType.endswith("?"):
+                    optional = True
+                    argType = argType[:-1]
+                if not argType in DEF_CLASSES:
+                    raise Exception(f"Undefined type '{argType}': '{doc_line}' on {path} at line {segpos + j}")
+                args.append({"name": argName, "type": argType if not optional else f"{argType}?"})
 
         elif doc_line.startswith("@@") and len(doc_line) > 2:
             # Custom class definition

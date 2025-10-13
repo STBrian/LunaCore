@@ -143,21 +143,6 @@ namespace CTRPluginFramework
         lua_close(Lua_global);
     }
 
-    bool DrawMonitors(const Screen &screen)
-    {
-        static int luaMemoryUsage = 0;
-        if (screen.IsTop) {
-            if (Lua_Global_Mut.try_lock()) {
-                int memusgkb = lua_gc(Lua_global, LUA_GCCOUNT, 0);
-                int memusgb = lua_gc(Lua_global, LUA_GCCOUNTB, 0);
-                luaMemoryUsage = memusgkb * 1024 + memusgb;
-                Lua_Global_Mut.unlock();
-            }
-            screen.Draw("Lua memory: "+std::to_string(luaMemoryUsage), 5, 5, Color::Black, Color(0, 0, 0, 0));
-        }
-        return false;
-    }
-
     int main()
     {
         CrashHandler::plg_state = CrashHandler::PLUGIN_MAIN;
@@ -192,7 +177,6 @@ namespace CTRPluginFramework
         gmenu->SynchronizeWithFrame(true);
         gmenu->ShowWelcomeMessage(false);
 
-        OSD::Run(DrawMonitors);
         gmenu->Callback(Core::EventHandlerCallback);
         gmenu->Callback(Core::AsyncHandlerCallback);
 

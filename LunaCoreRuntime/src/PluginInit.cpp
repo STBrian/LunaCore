@@ -41,6 +41,20 @@ bool CancelOperationCallback() {
     return true;
 }
 
+bool DrawMonitors(const Screen &screen) {
+    static int luaMemoryUsage = 0;
+    if (screen.IsTop) {
+        if (Lua_Global_Mut.try_lock()) {
+            int memusgkb = lua_gc(Lua_global, LUA_GCCOUNT, 0);
+            int memusgb = lua_gc(Lua_global, LUA_GCCOUNTB, 0);
+            luaMemoryUsage = memusgkb * 1024 + memusgb;
+            Lua_Global_Mut.unlock();
+        }
+        screen.Draw("Lua memory: "+std::to_string(luaMemoryUsage), 5, 5, Color::Black, Color(0, 0, 0, 0));
+    }
+    return false;
+}
+
 void InitMenu(PluginMenu &menu)
 {
     // Create your entries here, or elsewhere
@@ -140,6 +154,15 @@ void InitMenu(PluginMenu &menu)
             if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
                 Core::Debug::LogMessage("Failed to save configs", true);
         }
+    }));
+    optionsFolder->Append(new MenuEntry("Show Lua memory usage", nullptr, [](MenuEntry *entry)
+    {
+        static bool enabled = false;
+        if (!enabled)
+            OSD::Run(DrawMonitors);
+        else
+            OSD::Stop(DrawMonitors);
+            
     }));
     devFolder->Append(new MenuEntry("Load script from network", nullptr, [](MenuEntry *entry) {
         initSockets();

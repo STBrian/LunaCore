@@ -30,11 +30,11 @@ Item *Core::Items::SearchItemByID(u16 id) {
 }
 
 void* Core::Items::GetRenderIDByItemID(u16 id) {
-    if (id <= Item::MAX_ITEMS) {
+    /*if (id <= Item::MAX_ITEMS) {
         if (Item::renderTable[id] != nullptr) {
             return Item::renderTable[id];
         }
-    }
+    }*/
     return nullptr;
 }
 

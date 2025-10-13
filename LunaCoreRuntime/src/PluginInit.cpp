@@ -162,7 +162,7 @@ void InitMenu(PluginMenu &menu)
             OSD::Run(DrawMonitors);
         else
             OSD::Stop(DrawMonitors);
-            
+        enabled = !enabled;
     }));
     devFolder->Append(new MenuEntry("Load script from network", nullptr, [](MenuEntry *entry) {
         initSockets();

@@ -9,9 +9,10 @@ namespace Game {
         public:
 
         typedef struct {
-            Item* item1;
-            Item* item2;
+            Item* item = nullptr;
+            void* block = nullptr;
             ItemInstance ins;
+            char id;
         } TestRecipeStruct;
 
         typedef struct {
@@ -45,40 +46,52 @@ namespace Game {
                 " #",
                 " #"},
             };
-            short material_id[5]; // Imagine the ids are here
-            Item* tool_items[20]; // Imagine the items are here
-            // Here another function is called but idk what it does
-            int i = 0;
-            do {
-                int j = 0;
-                short curMaterial = material_id[i];
-                Item* materialItem = Item::mItems[curMaterial];
-                do {
+            short material_ids[5] = {
+                *(unsigned char*)(*(int*)0x00a34740 + 4), // Prob wood block
+                *(unsigned char*)(*(int*)0x00a3473c + 4), // Prob cobblestone block
+                Item::mIronIngot->itemId,
+                Item::mDiamond->itemId,
+                Item::mGoldIngot->itemId
+            };
+            Item* tool_items[20] = {
+
+            }; // Imagine the items are here
+            void** unknownArray;
+            reinterpret_cast<void**(*)(void**&, void*, int)>(unknownArray, (void*)0x00989038, 80);
+            for (int i = 0; i < 5; i++) { // materials
+                short materialId = material_ids[i];
+                for (int j = 0; j < 4; j++) { // recipes
                     Item* curTool = tool_items[j * 5 + i];
-                    if (curMaterial < 256) { // block
-                        TestRecipeStruct stest;
-                        // stest.item1 = stick_item 
-                        stest.item2 = nullptr;
-                        stest.ins.field15 = '#';
-                        AnotherTestStruct stest2;
+                    if (materialId < 256) { // block
+                        TestRecipeStruct stick, material;
+                        stick.item = Item::mStick;
+                        stick.id = '#';
+                        material.block = Item::mBlocks[materialId];
+                        material.id = 'X';
+                        AnotherTestStruct vec;
                         // [int, int, int]*, [Item*, int]
-                        reinterpret_cast<void(*)(AnotherTestStruct*, TestRecipeStruct*)>(0x008ff20c)(&stest2, &stest);
-                        reinterpret_cast<void(*)(TestRecipeStruct*)>(0x00638c28)(&stest);
-                        stest.item1 = nullptr;
-                        stest.item2 = materialItem;
-                        stest.ins = ItemInstance();
-                        reinterpret_cast<void(*)(AnotherTestStruct*, TestRecipeStruct*)>(0x008ff20c)(&stest2, &stest);
-                        reinterpret_cast<void(*)(TestRecipeStruct*)>(0x00638c28)(&stest);
+                        reinterpret_cast<void(*)(AnotherTestStruct&, TestRecipeStruct&)>(0x008ff20c)(vec, stick);
+                        reinterpret_cast<void(*)(TestRecipeStruct&)>(0x00638c28)(stick);
+                        reinterpret_cast<void(*)(AnotherTestStruct&, TestRecipeStruct&)>(0x008ff20c)(vec, material);
+                        reinterpret_cast<void(*)(TestRecipeStruct&)>(0x00638c28)(material);
                         ItemInstance targetTool(curTool);
-                        reinterpret_cast<void(*)(void*, ItemInstance*, ItemRecipe*, AnotherTestStruct*, int, TestRecipeStruct*)>(0x0063684c)(ptr1, &targetTool, &recipes[j], &stest2, 2, &stest);
-                        int a = stest2.a;
-                        int b = stest2.b;
+                        void* unknownValue = unknownArray[j * 5 + i];
+                        reinterpret_cast<void(*)(void*, ItemInstance&, ItemRecipe&, AnotherTestStruct&, int, void*)>(0x0063684c)(ptr1, targetTool, recipes[j], vec, 2, unknownValue);
+                        for (void** unk1 = (void**)targetTool.field12; unk1 != (void**)targetTool.field13; unk1++) {
+                        }
+                        reinterpret_cast<void(*)(void*)>(0x001007d0)((void*)targetTool.field12);
+                        for (void** unk1 = (void**)targetTool.field9; unk1 != (void**)targetTool.field10; unk1++) {
+                        }
+                        reinterpret_cast<void(*)(void*)>(0x001007d0)((void*)targetTool.field9);
+                        if ((void*)targetTool.field4 != nullptr) {
+                            (*reinterpret_cast<void(**)(void)>(*(int*)targetTool.field4 + 4))();
+                        }
                     } else { // item
                         AnotherTestStruct stest2;
                         TestRecipeStruct stest;
                     }
-                } while (j < 4);
-            } while (i < 5);
+                }
+            }
         }
     };
 }

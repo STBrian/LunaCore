@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include <mutex>
+
 #include "CoreGlobals.hpp"
 #include "Core/Event.hpp"
 #include "Core/Async.hpp"
@@ -25,6 +27,24 @@ void Core::GraphicsOpen(GraphicsFrameCallback frameCallback, GraphicsExitCallbac
     graphicsFrameCallback = frameCallback;
     graphicsExitCallback = exitCallback;
     gmenu->Callback(Core::GraphicsHandlerMainloop); // Better add it as Callback to avoid script exahustion
+}
+
+bool Core::GraphicsHandlerCallback(const CTRPF::Screen& screen) {
+    if (graphicsOpen)
+        return false;
+
+    //CTRPF::Process::Pause();
+    //if (CTRPF::OSD::TryLock())
+        //return false;
+    graphicsOpen = true;
+
+    std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
+    currentScreen = &screen;
+    lua_pushstring(Lua_global, screen.IsTop ? "top" : "bottom");
+    Event::TriggerEvent(Lua_global, "Core.Graphics.OnNewFrame", 1);
+    graphicsOpen = false;
+    //CTRPF::Process::Play();
+    return false;
 }
 
 void Core::GraphicsHandlerMainloop() {
@@ -232,8 +252,19 @@ static int l_Graphics_drawText(lua_State *L)
     }
 
     currentScreen->DrawSysfont(text, x, y, color);
-    
     return 0;
+}
+
+/*
+- Returns the pixel width of the string
+## text: string
+## return: integer
+### Core.Graphics.getTextWidth
+*/
+static int l_Graphics_getTextWidth(lua_State *L) {
+    const char* text = luaL_checkstring(L, 1);
+    lua_pushnumber(L, CTRPF::OSD::GetTextWidth(true, text));
+    return 1;
 }
 
 /*
@@ -284,6 +315,7 @@ static const luaL_Reg graphics_functions[] =
     {"drawRectFill", l_Graphics_drawRectFill},
     {"colorRGB", l_Graphics_colorRGB},
     {"colorRGBA", l_Graphics_colorRGBA},
+    {"getTextWidth", l_Graphics_getTextWidth},
     {NULL, NULL}
 };
 
@@ -293,6 +325,9 @@ bool Core::Module::RegisterGraphicsModule(lua_State *L)
 {
     lua_getglobal(L, "Core");
     luaC_register_field(L, graphics_functions, "Graphics");
+    lua_getfield(L, -1, "Graphics");
+    //$@@@Core.Graphics.OnNewFrame: EventClass
+    Event::NewEvent(L, "OnNewFrame");
     lua_pop(L, 1);
     return true;
 }

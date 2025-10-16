@@ -10,6 +10,8 @@ namespace Core {
     
     void GraphicsOpen(GraphicsFrameCallback frameCallback, GraphicsExitCallback exitCallback);
 
+    bool GraphicsHandlerCallback(const CTRPluginFramework::Screen& screen);
+
     void GraphicsHandlerMainloop();
 
     namespace Module {

@@ -491,6 +491,11 @@ function Core.Graphics.drawRectFill(x, y, width, height, color) end
 ---@param color integer
 function Core.Graphics.drawText(text, x, y, color) end
 
+---Returns the pixel width of the string
+---@param text string
+---@return integer
+function Core.Graphics.getTextWidth(text) end
+
 ---Returns a color with the r, g, b values
 ---@param r integer
 ---@param g integer
@@ -505,6 +510,9 @@ function Core.Graphics.colorRGB(r, g, b) end
 ---@param a integer
 ---@return integer
 function Core.Graphics.colorRGBA(r, g, b, a) end
+
+---@class OnNewFrame: EventClass
+Core.Graphics.OnNewFrame = {}
 
 Core.Keyboard = {}
 

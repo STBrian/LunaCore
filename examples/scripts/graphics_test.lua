@@ -14,7 +14,8 @@ Core.Graphics.OnNewFrame:Connect(function (screen)
         drawTextLeft("Sprinting: "..tostring(Game.LocalPlayer.Sprinting), 400 - 10, 35, black)
         drawTextLeft("Jumping: "..tostring(Game.LocalPlayer.Jumping), 400 - 10, 45, black)
         drawTextLeft("OnGround: "..tostring(Game.LocalPlayer.OnGround), 400 - 10, 55, black)
-        --drawTextLeft("Jumping: "..Game.LocalPlayer.S, 400 - 10, 70, black)
+        drawTextLeft("Dimension: "..tostring(Game.LocalPlayer.Dimension), 400 - 10, 65, black)
+        drawTextLeft("Hunger: "..tostring(Game.LocalPlayer.CurrentHunger), 400 - 10, 75, black)
     end
 end)
 

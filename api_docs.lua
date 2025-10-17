@@ -398,6 +398,8 @@ Game.LocalPlayer.ReachDistance = 0.0
 
 Game.LocalPlayer.SprintDelay = 0.0
 
+Game.LocalPlayer.Dimension = 0
+
 Game.LocalPlayer.Camera = {}
 
 Game.LocalPlayer.Camera.FOV = 0.0

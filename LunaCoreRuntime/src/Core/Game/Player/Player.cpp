@@ -176,6 +176,7 @@ static const luaL_Reg player_velocity_methods[] =
 =Game.LocalPlayer.Gamemode = 0
 =Game.LocalPlayer.ReachDistance = 0.0
 =Game.LocalPlayer.SprintDelay = 0.0
+=Game.LocalPlayer.Dimension = 0
 */
 static int l_LocalPlayer_index(lua_State *L)
 {
@@ -184,6 +185,8 @@ static int l_LocalPlayer_index(lua_State *L)
 
     uint32_t key = hash(lua_tostring(L, 2));
     bool valid_key = true;
+
+    Core::Player* ply = *Core::Player::PlayerInstance;
 
     switch (key) {
         case hash("OnGround"):
@@ -238,7 +241,23 @@ static int l_LocalPlayer_index(lua_State *L)
             lua_pushnumber(L, Minecraft::GetMaxHP());
             break;
         case hash("CurrentHunger"):
-            lua_pushnumber(L, Minecraft::GetCurrentHunger());
+            //lua_pushnumber(L, Minecraft::GetCurrentHunger());
+            {
+                float retVal = 0.0f;
+                u32 baseAddr = Minecraft::GetBaseAddress(Minecraft::Base::Status);
+                if (baseAddr) {
+                    u32 ptr = *(u32*)(baseAddr + 4 * 3);
+                    u32 offset = ptr + 0xd0;
+                    if (offset % 4 == 0 && offset > 0x100000) {
+                        u32 ptrHungerBar;
+                        CTRPF::Process::Read32(offset, ptrHungerBar);
+                        u32 ptrHunger = ptrHungerBar + 0x60;
+                        if (ptrHunger % 4 == 0 && ptrHunger > 0x100000)
+                            CTRPF::Process::ReadFloat(ptrHunger, retVal);
+                    }
+                }
+                lua_pushnumber(L, retVal);
+            }
             break;
         case hash("MaxHunger"):
             lua_pushnumber(L, Minecraft::GetMaxHunger());
@@ -261,15 +280,18 @@ static int l_LocalPlayer_index(lua_State *L)
         case hash("SprintDelay"):
             lua_pushnumber(L, Minecraft::GetSprintDelayTime());
             break;
+        case hash("Dimension"):
+            if (!ply)
+                lua_pushnumber(L, 0);
+            else
+                lua_pushnumber(L, ply->dimId);
+            break;
         default:
             valid_key = false;
             break;
     }
     
-    if (valid_key)
-        return 1;
-    else
-        return 0;
+    return valid_key;
 }
 
 static int l_LocalPlayer_newindex(lua_State *L)

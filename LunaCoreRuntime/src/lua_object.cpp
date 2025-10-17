@@ -18,7 +18,7 @@ void LuaObject::RegisterNewObject(lua_State* L, const char* name, const LuaObjec
 
     objsLayouts[name] = {};
     for (const LuaObjectField* f = fields; f->key != NULL; f++)
-        objsLayouts[name][f->key] = {f->offset, f->type, f->access};
+        objsLayouts[name][f->key] = {f->offset, f->type, f->access, f->flags, f->objtype};
 }
 
 void* LuaObject::CheckObject(lua_State* L, int narg, const char* objtype) {
@@ -64,7 +64,11 @@ int LuaObject::l_index(lua_State* L) {
     if (!objsLayouts[objName].contains(key))
         return 0;
 
-    void* dataOff = (void*)((u32)objOffset + objsLayouts[objName][key].offset);
+    u32 offset = objsLayouts[objName][key].offset;
+    const char* objtype = objsLayouts[objName][key].objtype;
+    void* dataOff = (void*)((u32)objOffset + offset);
+    if (objsLayouts[objName][key].flags & OBJF_FLAG_ABS)
+        dataOff = (void*)offset;
 
     switch (objsLayouts[objName][key].type) {
         case OBJF_TYPE_CHAR:
@@ -85,8 +89,17 @@ int LuaObject::l_index(lua_State* L) {
         case OBJF_TYPE_STRING:
             lua_pushstring(L, *(char**)dataOff);
             break;
-        case OBJF_TYPE_METHOD:
-            lua_pushcfunction(L, (lua_CFunction)objsLayouts[objName][key].offset);
+        case OBJF_TYPE_METHOD: case OBJF_TYPE_FUNCTION:
+            lua_pushcfunction(L, (lua_CFunction)offset);
+            break;
+        case OBJF_TYPE_OBJECT:
+            LuaObject::NewObject(L, objtype, dataOff);
+            break;
+        case OBJF_TYPE_OBJECT_POINTER:
+            if (*(void**)dataOff) {
+                LuaObject::NewObject(L, objtype, *(void**)dataOff);
+            } else
+                lua_pushnil(L);
             break;
         default:
             lua_pushnil(L);
@@ -115,9 +128,12 @@ int LuaObject::l_newindex(lua_State* L) {
     if (!objsLayouts[objName].contains(key))
         return 0;
 
-    void* dataOff = (void*)((u32)objOffset + objsLayouts[objName][key].offset);
+    u32 offset = objsLayouts[objName][key].offset;
+    void* dataOff = (void*)((u32)objOffset + offset);
     if (objsLayouts[objName][key].access != OBJF_ACCESS_ALL)
         return luaL_error(L, "unable to assign value to read-only field %s", key.c_str());
+    if (objsLayouts[objName][key].flags & OBJF_FLAG_ABS)
+        dataOff = (void*)offset;
 
     switch (objsLayouts[objName][key].type) {
         case OBJF_TYPE_CHAR:
@@ -150,6 +166,12 @@ int LuaObject::l_newindex(lua_State* L) {
             break;
         case OBJF_TYPE_METHOD:
             return luaL_error(L, "unable to assign value to constant %s data type", "method");
+            break;
+        case OBJF_TYPE_FUNCTION:
+            return luaL_error(L, "unable to assign value to constant %s data type", "function");
+            break;
+        case OBJF_TYPE_OBJECT: case OBJF_TYPE_OBJECT_POINTER:
+            return luaL_error(L, "unable to assign value to constant %s data type", "object");
             break;
         default:
             return luaL_error(L, "unable to assign value to invalid field %s", key.c_str());

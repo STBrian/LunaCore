@@ -14,6 +14,9 @@ typedef enum {
     OBJF_TYPE_DOUBLE,
     OBJF_TYPE_STRING,
     OBJF_TYPE_METHOD,
+    OBJF_TYPE_FUNCTION,
+    OBJF_TYPE_OBJECT,
+    OBJF_TYPE_OBJECT_POINTER,
     OBJF_TYPE_NIL,
 } LuaValueType;
 
@@ -22,11 +25,18 @@ typedef enum {
     OBJF_ACCESS_ALL,
 } LuaFieldAccess;
 
+typedef enum {
+    OBJF_FLAG_EMPTY = 0,
+    OBJF_FLAG_ABS = 1
+} LuaFieldFlag;
+
 typedef struct {
     const char* key;
-    LuaValueType type;
-    u32 offset;
+    LuaValueType type = OBJF_TYPE_NIL;
+    u32 offset = 0;
     LuaFieldAccess access = OBJF_ACCESS_ALL;
+    LuaFieldFlag flags = OBJF_FLAG_EMPTY;
+    const char* objtype = NULL;
 } LuaObjectField;
 
 class LuaObject {
@@ -35,6 +45,8 @@ class LuaObject {
         u32 offset;
         LuaValueType type;
         LuaFieldAccess access;
+        LuaFieldFlag flags;
+        const char* objtype;
     } ValueMetadata;
     
     static std::unordered_map<std::string, std::unordered_map<std::string, ValueMetadata>> objsLayouts;

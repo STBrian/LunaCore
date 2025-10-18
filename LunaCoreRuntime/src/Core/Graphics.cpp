@@ -30,20 +30,15 @@ void Core::GraphicsOpen(GraphicsFrameCallback frameCallback, GraphicsExitCallbac
 }
 
 bool Core::GraphicsHandlerCallback(const CTRPF::Screen& screen) {
-    if (graphicsOpen)
+    if (graphicsOpen || !Lua_Global_Mut.try_lock())
         return false;
 
-    //CTRPF::Process::Pause();
-    //if (CTRPF::OSD::TryLock())
-        //return false;
     graphicsOpen = true;
-
-    std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
     currentScreen = &screen;
     lua_pushstring(Lua_global, screen.IsTop ? "top" : "bottom");
     Event::TriggerEvent(Lua_global, "Core.Graphics.OnNewFrame", 1);
     graphicsOpen = false;
-    //CTRPF::Process::Play();
+    Lua_Global_Mut.unlock();
     return false;
 }
 

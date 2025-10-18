@@ -35,9 +35,18 @@ namespace Core {
         u8 gamemode; // 0x196c
         char padding8[0x1a28 - 0x196c - sizeof(u8)];
         u8 sprintDelay; // 0x1a28
-        char padding9[0x28b8 - 0x1a28 - sizeof(u8)];
+        char padding9[0x1ce0 - 0x1a28 - sizeof(u8)];
 
+        static inline u32 sizeofPlayer = 0x1ce0;
         static inline Player** PlayerInstance = reinterpret_cast<Player**>(0x918958);
+        static Player* getPlayerInstance() {
+            Player* plyPtr = *PlayerInstance;
+            if (plyPtr) {
+                if (*(u32*)((u32)plyPtr - 0xc) != sizeofPlayer)
+                    plyPtr = nullptr;
+            }
+            return plyPtr;
+        }
 
         void setPosition(float x, float y, float z) {
             this->coords1.x = x;

@@ -18,13 +18,15 @@ static u32 getHungerBarOffset() {
     u32 hungerBarOffset = 0;
     u32 baseAddr = Minecraft::GetBaseAddress(Minecraft::Base::Status);
     if (baseAddr) {
-        u32 ptr = *(u32*)(baseAddr + 4 * 3);
-        u32 offset = ptr + 0xd0;
-        if (offset % 4 == 0 && offset > 0x30000000) {
-            u32 ptrHungerBar;
-            CTRPF::Process::Read32(offset, ptrHungerBar);
-            if (ptrHungerBar % 4 == 0 && ptrHungerBar > 0x30000000)
-                hungerBarOffset = ptrHungerBar;
+        if (*(u32*)(baseAddr - 0xc) == 0xc8) {
+            u32 ptr = *(u32*)(baseAddr + 4 * 3);
+            u32 offset = ptr + 0xd0;
+            if (offset % 4 == 0 && offset > 0x30000000) {
+                u32 ptrHungerBar;
+                CTRPF::Process::Read32(offset, ptrHungerBar);
+                if (ptrHungerBar % 4 == 0 && ptrHungerBar > 0x30000000)
+                    hungerBarOffset = ptrHungerBar;
+            }
         }
     }
     return hungerBarOffset;
@@ -202,7 +204,7 @@ static int l_LocalPlayer_index(lua_State *L)
     uint32_t key = hash(lua_tostring(L, 2));
     bool valid_key = true;
 
-    Core::Player* ply = *Core::Player::PlayerInstance;
+    Core::Player* ply = Core::Player::getPlayerInstance();
 
     switch (key) {
         case hash("OnGround"):

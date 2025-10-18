@@ -14,6 +14,22 @@ enum player_offsets : u32 {
     playerSwimSpeed = 0x100000 + 0x3EA090,
 };
 
+static u32 getHungerBarOffset() {
+    u32 hungerBarOffset = 0;
+    u32 baseAddr = Minecraft::GetBaseAddress(Minecraft::Base::Status);
+    if (baseAddr) {
+        u32 ptr = *(u32*)(baseAddr + 4 * 3);
+        u32 offset = ptr + 0xd0;
+        if (offset % 4 == 0 && offset > 0x30000000) {
+            u32 ptrHungerBar;
+            CTRPF::Process::Read32(offset, ptrHungerBar);
+            if (ptrHungerBar % 4 == 0 && ptrHungerBar > 0x30000000)
+                hungerBarOffset = ptrHungerBar;
+        }
+    }
+    return hungerBarOffset;
+}
+
 // ----------------------------------------------------------------------------
 
 //$Game.LocalPlayer
@@ -243,39 +259,15 @@ static int l_LocalPlayer_index(lua_State *L)
         case hash("CurrentHunger"):
             //lua_pushnumber(L, Minecraft::GetCurrentHunger());
             {
-                float retVal = 0.0f;
-                u32 baseAddr = Minecraft::GetBaseAddress(Minecraft::Base::Status);
-                if (baseAddr) {
-                    u32 ptr = *(u32*)(baseAddr + 4 * 3);
-                    u32 offset = ptr + 0xd0;
-                    if (offset % 4 == 0 && offset > 0x100000) {
-                        u32 ptrHungerBar;
-                        CTRPF::Process::Read32(offset, ptrHungerBar);
-                        u32 ptrHunger = ptrHungerBar + 0x60;
-                        if (ptrHunger % 4 == 0 && ptrHunger > 0x100000)
-                            CTRPF::Process::ReadFloat(ptrHunger, retVal);
-                    }
-                }
-                lua_pushnumber(L, retVal);
+                u32 ptrHungerBar = getHungerBarOffset();
+                lua_pushnumber(L, ptrHungerBar ? *(float*)(ptrHungerBar + 0x60) : 0.0f);
             }
             break;
         case hash("MaxHunger"):
             //lua_pushnumber(L, Minecraft::GetMaxHunger());
             {
-                float retVal = 0.0f;
-                u32 baseAddr = Minecraft::GetBaseAddress(Minecraft::Base::Status);
-                if (baseAddr) {
-                    u32 ptr = *(u32*)(baseAddr + 4 * 3);
-                    u32 offset = ptr + 0xd0;
-                    if (offset % 4 == 0 && offset > 0x100000) {
-                        u32 ptrHungerBar;
-                        CTRPF::Process::Read32(offset, ptrHungerBar);
-                        u32 ptrHunger = ptrHungerBar + 0x5c;
-                        if (ptrHunger % 4 == 0 && ptrHunger > 0x100000)
-                            CTRPF::Process::ReadFloat(ptrHunger, retVal);
-                    }
-                }
-                lua_pushnumber(L, retVal);
+                u32 ptrHungerBar = getHungerBarOffset();
+                lua_pushnumber(L, ptrHungerBar ? *(float*)(ptrHungerBar + 0x5c) : 0.0f);
             }
             break;
         case hash("CurrentLevel"):
@@ -370,37 +362,17 @@ static int l_LocalPlayer_newindex(lua_State *L)
         case hash("CurrentHunger"):
             //Minecraft::SetCurrentHunger(luaL_checknumber(L, 3));
             {
-                u32 baseAddr = Minecraft::GetBaseAddress(Minecraft::Base::Status);
-                if (baseAddr) {
-                    u32 ptr = *(u32*)(baseAddr + 4 * 3);
-                    u32 offset = ptr + 0xd0;
-                    if (offset % 4 == 0 && offset > 0x100000) {
-                        u32 ptrHungerBar;
-                        CTRPF::Process::Read32(offset, ptrHungerBar);
-                        u32 ptrHunger = ptrHungerBar + 0x60;
-                        if (ptrHunger % 4 == 0 && ptrHunger > 0x100000) {
-                            CTRPF::Process::WriteFloat(ptrHunger, luaL_checknumber(L, 3));
-                        }
-                    }
-                }
+                u32 ptrHungerBar = getHungerBarOffset();
+                if (ptrHungerBar)
+                    *(float*)(ptrHungerBar + 0x60) = luaL_checknumber(L, 3);
             }
             break;
         case hash("MaxHunger"):
             //Minecraft::SetMaxHunger(luaL_checknumber(L, 3));
             {
-                u32 baseAddr = Minecraft::GetBaseAddress(Minecraft::Base::Status);
-                if (baseAddr) {
-                    u32 ptr = *(u32*)(baseAddr + 4 * 3);
-                    u32 offset = ptr + 0xd0;
-                    if (offset % 4 == 0 && offset > 0x100000) {
-                        u32 ptrHungerBar;
-                        CTRPF::Process::Read32(offset, ptrHungerBar);
-                        u32 ptrHunger = ptrHungerBar + 0x5c;
-                        if (ptrHunger % 4 == 0 && ptrHunger > 0x100000) {
-                            CTRPF::Process::WriteFloat(ptrHunger, luaL_checknumber(L, 3));
-                        }
-                    }
-                }
+                u32 ptrHungerBar = getHungerBarOffset();
+                if (ptrHungerBar)
+                    *(float*)(ptrHungerBar + 0x5c) = luaL_checknumber(L, 3);
             }
             break;
         case hash("CurrentLevel"):

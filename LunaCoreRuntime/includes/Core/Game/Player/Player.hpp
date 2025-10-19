@@ -42,7 +42,7 @@ namespace Core {
         static Player* getPlayerInstance() {
             Player* plyPtr = *PlayerInstance;
             if (plyPtr) {
-                if (*(u32*)((u32)plyPtr - 0xc) != sizeofPlayer)
+                if (*((u32*)plyPtr - 4) != 0x5544 || *((u32*)plyPtr - 3) != sizeofPlayer)
                     plyPtr = nullptr;
             }
             return plyPtr;

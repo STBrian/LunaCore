@@ -9,6 +9,7 @@ end
 Core.Graphics.OnNewFrame:Connect(function (screen)
     if screen == "top" then
         drawTextLeft("Hunger: "..tostring(Game.LocalPlayer.CurrentHunger), 400 - 10, 75, black)
+        drawTextLeft("FOV: "..tostring(Game.LocalPlayer.Camera.FOV), 400 - 10, 85, black)
     end
 end)
 

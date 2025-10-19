@@ -13,6 +13,19 @@ enum player_camera_offsets : u32 {
     playerCameraFOV2 = 0x341F313C,
 };
 
+static float* getCameraFOVPtr() {
+    u32* gPtr = *(u32**)0xa32694; // Hard work to get this path
+    if (gPtr) {
+        u32* ptr1 = *(u32**)gPtr;
+        if (ptr1) {
+            u32 ptr2 = *(ptr1 + 2);
+            if (ptr2)
+                return (float*)(ptr2 + 0x118);
+        }
+    }
+    return NULL;
+}
+
 // ----------------------------------------------------------------------------
 
 //!include LunaCoreRuntime/src/Core/Game/Player/Player.cpp
@@ -36,9 +49,9 @@ static int l_Camera_index(lua_State *L)
 
     switch (key) {
         case hash("FOV"): {
-            float fov;
-            CTRPF::Process::ReadFloat(player_camera_offsets::playerCameraFOV2, fov);
-            lua_pushnumber(L, fov);
+            float* fov = getCameraFOVPtr();
+            if (fov)
+                lua_pushnumber(L, *fov);
             break;
         }
         case hash("Yaw"):
@@ -67,10 +80,13 @@ static int l_Camera_newindex(lua_State *L)
     bool valid_key = true;
 
     switch (key) {
-        case hash("FOV"):
-            CTRPF::Process::WriteFloat(player_camera_offsets::playerCameraFOV2, luaL_checknumber(L, 3));
+        case hash("FOV"): {
+            float* fov = getCameraFOVPtr();
+            if (fov)
+                *fov = luaL_checknumber(L, 3);
             CTRPF::Process::WriteFloat(player_camera_offsets::itemCameraFOV, lua_tonumber(L, 3));
             break;
+        }
         case hash("Yaw"):
             Minecraft::SetYaw(luaL_checknumber(L, 3));
             break;

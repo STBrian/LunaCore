@@ -5,6 +5,17 @@ Is the result of merging different community contributions into a single project
 
 The plugin runs alongside the game thanks to Luma3DS plugin loader and is built using CTRPluginFramework which provides the essentials to work together with the game. The script engine uses Lua 5.1 as scripting language, an easy language to use with a lot of possibilities. It was also chosen because of its easy implementation in embedded systems, for its powerful C API and for being lightweight.
 
+## How to install
+Download the latest LunaCore.3gx file from the releases section and move the file to the folder "/luma/plugins/\<TitleId>/" of your sdcard.
+
+Make sure to use the latest version of Luma3DS and that the Plugin Loader is enabled in the Rosalina Menu.
+
+| Region | Title ID |
+| --- | --- |
+| USA | 00040000001B8700 |
+| EU | 000400000017CA00 |
+| JP | 000400000017FD00 |
+
 ## Credits
 LunaCore wouldn't be possible without the contributions made to the Minecraft: New Nintendo 3DS Edition community and homebrew libraries. Credits to the authors and sources that are part of LunaCore are shown below.
 
@@ -18,7 +29,6 @@ LunaCore wouldn't be possible without the contributions made to the Minecraft: N
 | CloudsHeight | Game.World | [Minecraft-3DS-Community/GamePatches](https://github.com/Minecraft-3DS-Community/GamePatches) |
 | Raining, Thunderstorm | Game.World | `Minecraft Class v1.1` by `Discord: @rairai6895` |
 | Items offsets | Game.Items | `Minecraft Class v1.1` by `Discord: @rairai6895` |
-| File handlers | Core.Filesystem | [FsLib](https://github.com/J-D-K/FsLib) |
 
 ### Special thanks
 - `Discord: @rairai6895` - Made `Minecraft Class v1.1` (you can join [Asterium Discord](https://discord.gg/MXFfpyEk) server for more information)
@@ -26,3 +36,5 @@ LunaCore wouldn't be possible without the contributions made to the Minecraft: N
 - [CTRPluginFramework](https://gitlab.com/thepixellizeross/ctrpluginframework) - Plugin essentials
 - [Luma3DS](https:/github.com/LumaTeam/Luma3DS) - Plugin loader
 - [devkitPro](https://github.com/devkitPro) - ctrulib and development environment
+- [FsLib](https://github.com/J-D-K/FsLib) - Used for file handlers
+- [libffi](https://github.com/libffi/libffi) - Used as interface to define c functions calls from Core API

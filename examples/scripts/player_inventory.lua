@@ -4,7 +4,7 @@ local Debug = Core.Debug
 local World = Game.World
 
 -- Tells what item is holding the player in hand
-Game.Event.OnKeyPressed:Connect(function ()
+Game.Gamepad.OnKeyPressed:Connect(function ()
     if Gamepad.isDown(Gamepad.KeyCodes.DPADDOWN) and World.Loaded then -- World.Loaded ensure that the slot won't be nil
         local handSlot = localPlayer.Inventory.Slots["hand"]
         if not handSlot:isEmpty() then -- handSlot will be nil when player isn't loaded
@@ -16,7 +16,7 @@ Game.Event.OnKeyPressed:Connect(function ()
 end)
 
 -- Tells what item is in slot 1 of the inventory
-Game.Event.OnKeyPressed:Connect(function ()
+Game.Gamepad.OnKeyPressed:Connect(function ()
     if Gamepad.isDown(Gamepad.KeyCodes.DPADDOWN) and World.Loaded then -- World.Loaded ensure that the slot won't be nil
         local slot = localPlayer.Inventory.Slots[1] -- Slots 1 to 36
         if not slot:isEmpty() then
@@ -28,7 +28,7 @@ Game.Event.OnKeyPressed:Connect(function ()
 end)
 
 -- Tells how many items are in slot 1
-Game.Event.OnKeyPressed:Connect(function ()
+Game.Gamepad.OnKeyPressed:Connect(function ()
     if Gamepad.isDown(Gamepad.KeyCodes.DPADDOWN) and World.Loaded then -- World.Loaded ensure that the slot won't be nil
         local slot = localPlayer.Inventory.Slots[1] -- Slots 1 to 36
         if not slot:isEmpty() then
@@ -40,7 +40,7 @@ Game.Event.OnKeyPressed:Connect(function ()
 end)
 
 -- Tells the variation of the item in slot 1
-Game.Event.OnKeyPressed:Connect(function ()
+Game.Gamepad.OnKeyPressed:Connect(function ()
     if Gamepad.isDown(Gamepad.KeyCodes.DPADDOWN) and World.Loaded then -- World.Loaded ensure that the slot won't be nil
         local slot = localPlayer.Inventory.Slots[1] -- Slots 1 to 36
         if not slot:isEmpty() then

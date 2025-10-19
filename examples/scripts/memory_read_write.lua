@@ -4,7 +4,7 @@ local keys = gamepad.KeyCodes
 local debug = Core.Debug
 local viewBobbingSensibilityOffset = 0x2CF2A0+0x100000
 
-Game.Event.OnKeyPressed:Connect(function ()
+Game.Gamepad.OnKeyPressed:Connect(function ()
     if gamepad.isPressed(keys.Y) then
         local viewBobbingSensibility = memory.readFloat(viewBobbingSensibilityOffset)
         if viewBobbingSensibility ~= nil then

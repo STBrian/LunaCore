@@ -3,11 +3,11 @@ local Debug = Core.Debug
 local lastWorldLoaded = World.Loaded
 
 -- Method 1
-Game.Event.OnPlayerJoinWorld:Connect(function ()
+Game.World.OnWorldJoin:Connect(function ()
     Debug.message("Player joined a world")
 end)
 
-Game.Event.OnPlayerLeaveWorld:Connect(function ()
+Game.World.OnWorldLeave:Connect(function ()
     Debug.message("Player leaved a world")
 end)
 

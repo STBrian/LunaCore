@@ -104,7 +104,7 @@ end
 -- You need to call open function to be able to draw on screen
 -- The game will frezee and that allows to avoid artifacts on screen
 -- Every other events and async task will continue execution
-Game.Event.OnKeyReleased:Connect(function ()
+Game.Gamepad.OnKeyReleased:Connect(function ()
     if gamepad.isReleased(console.openKey) and Game.World.Loaded then
         if not Core.Graphics.isOpen() then
             console.firstframe = true

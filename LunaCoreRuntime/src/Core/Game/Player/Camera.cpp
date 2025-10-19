@@ -9,18 +9,16 @@ namespace CTRPF = CTRPluginFramework;
 
 enum player_camera_offsets : u32 {
     itemCameraFOV = 0x100000 + 0x2CEE80,
-    playerCameraFOV1 = 0x341F30F8, // Can change address
-    playerCameraFOV2 = 0x341F313C,
 };
 
 static float* getCameraFOVPtr() {
-    u32* gPtr = *(u32**)0xa32694; // Hard work to get this path
-    if (gPtr) {
-        u32* ptr1 = *(u32**)gPtr;
-        if (ptr1) {
+    u32* gPtr = *reinterpret_cast<u32**>(0xa32694); // Hard work to get this path
+    if (gPtr && *(gPtr - 4) == 0x5544) {
+        u32* ptr1 = *reinterpret_cast<u32**>(gPtr);
+        if (ptr1 && *(ptr1 - 4) == 0x5544) {
             u32 ptr2 = *(ptr1 + 2);
-            if (ptr2)
-                return (float*)(ptr2 + 0x118);
+            if (ptr2 && *((u32*)ptr2 - 4) == 0x5544)
+                return reinterpret_cast<float*>(ptr2 + 0x118);
         }
     }
     return NULL;
@@ -50,8 +48,7 @@ static int l_Camera_index(lua_State *L)
     switch (key) {
         case hash("FOV"): {
             float* fov = getCameraFOVPtr();
-            if (fov)
-                lua_pushnumber(L, *fov);
+            lua_pushnumber(L, fov ? *fov : 0.0f);
             break;
         }
         case hash("Yaw"):
@@ -84,7 +81,7 @@ static int l_Camera_newindex(lua_State *L)
             float* fov = getCameraFOVPtr();
             if (fov)
                 *fov = luaL_checknumber(L, 3);
-            CTRPF::Process::WriteFloat(player_camera_offsets::itemCameraFOV, lua_tonumber(L, 3));
+            *reinterpret_cast<float*>(player_camera_offsets::itemCameraFOV) = lua_tonumber(L, 3);
             break;
         }
         case hash("Yaw"):

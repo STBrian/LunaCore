@@ -142,10 +142,12 @@ namespace Core {
                 Core::Debug::LogRaw(CTRPF::Utils::Format("\tR6: %08X\tR7: %08X\n", regs->r[6], regs->r[7]));
                 Core::Debug::LogRaw(CTRPF::Utils::Format("\tR8: %08X\tR9: %08X\n", regs->r[8], regs->r[9]));
             }
-            u32 errorCode = (1 << core_state | 1 << (8 + plg_state) | 1 << (12 + game_state) | possibleOOM << 15 | luaEnvBusy << 16);
+            u32 errorCode = (core_state << 28 | plg_state << 24 | game_state << 20 | possibleOOM << 19 | luaEnvBusy << 18);
             const char* reasonMsg = "Unknown";
             if (possibleOOM)
-                reasonMsg = "Out of memory. Lua memory was bigger than 2 MB";
+                reasonMsg = "Out of memory. Lua memory usage was bigger than 2 MB";
+            else if (regs->pc == 0x00114A98)
+                reasonMsg = "Crash forced by game";
             else if (luaEnvBusy)
                 reasonMsg = "Core lua runtime error";
             else if (plg_state == PluginState::PLUGIN_PATCHPROCESS)

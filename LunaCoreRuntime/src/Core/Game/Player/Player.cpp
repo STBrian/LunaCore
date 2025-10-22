@@ -193,6 +193,7 @@ static const luaL_Reg player_velocity_methods[] =
 =Game.LocalPlayer.ReachDistance = 0.0
 =Game.LocalPlayer.SprintDelay = 0.0
 =Game.LocalPlayer.Dimension = 0
+=Game.LocalPlayer.Loaded = false
 */
 static int l_LocalPlayer_index(lua_State *L)
 {
@@ -285,10 +286,10 @@ static int l_LocalPlayer_index(lua_State *L)
             lua_pushnumber(L, Minecraft::GetSprintDelayTime());
             break;
         case hash("Dimension"):
-            if (!ply)
-                lua_pushnumber(L, 0);
-            else
-                lua_pushnumber(L, ply->dimId);
+            lua_pushnumber(L, ply ? ply->dimId : 0);
+            break;
+        case hash("Loaded"):
+            lua_pushboolean(L, ply != NULL);
             break;
         default:
             valid_key = false;

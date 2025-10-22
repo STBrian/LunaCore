@@ -38,3 +38,4 @@ LunaCore wouldn't be possible without the contributions made to the Minecraft: N
 - [devkitPro](https://github.com/devkitPro) - ctrulib and development environment
 - [FsLib](https://github.com/J-D-K/FsLib) - Used for file handlers
 - [libffi](https://github.com/libffi/libffi) - Used as interface to define c functions calls from Core API
+- Lua - Scripting language (5.1)

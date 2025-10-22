@@ -108,7 +108,7 @@ namespace Core {
         "Two guys are walking, and the game falls",
         "  (O_O\"\\)  ",
         "I'm sorry :(",
-        "We learn from our mistakes"
+        "You didn't expect this!"
     };
 
     CTRPF::Process::ExceptionCallbackState CrashHandler::ExceptionCallback(ERRF_ExceptionInfo *excep, CpuRegisters *regs) {
@@ -129,7 +129,7 @@ namespace Core {
             }
             {
                 Core::Debug::LogError("[CRITICAL] Game crashed due to an unhandled error");
-                u8 rnd = CTRPF::Utils::Random(0, (sizeof(errorMsg) / sizeof(errorMsg[0])) - 1);
+                u8 rnd = (svcGetSystemTick() & 0xF00) >> 8;
                 Core::Debug::LogRaw(CTRPF::Utils::Format("\t\"%s\"\n", errorMsg[rnd]));
                 Core::Debug::LogRaw(CTRPF::Utils::Format("\t\tPlugin state: %s\n", getPluginStateString(Core::CrashHandler::plg_state)));
                 Core::Debug::LogRaw(CTRPF::Utils::Format("\t\tLast Core state: %s\n", getCoreStateString(Core::CrashHandler::core_state)));
@@ -149,7 +149,7 @@ namespace Core {
             else if (regs->pc == 0x00114A98)
                 reasonMsg = "Crash forced by game";
             else if (luaEnvBusy)
-                reasonMsg = "Core lua runtime error";
+                reasonMsg = "Core runtime error";
             else if (plg_state == PluginState::PLUGIN_PATCHPROCESS)
                 reasonMsg = "Core internal error during startup";
             else if (plg_state == PluginState::PLUGIN_MAIN)
@@ -168,11 +168,13 @@ namespace Core {
             topScreen.DrawRect(20, 20, 360, 200, CTRPF::Color::Black, true);
             const char *titleMsg = "Oops.. Game crashed!";
             const char *tipMsg = "See the log file for more details about the crash";
-            const char *tipMsg2 = "Press A button to exit or B to continue";
+            const char *tipMsg2 = "Press A to exit or B to continue";
             if (abort)
                 titleMsg = "Oh no... Game abort!";
             if (possibleOOM)
                 titleMsg = "Looks like we ran out of memory!";
+            if (regs->pc == 0x00114A98)
+                titleMsg = "Game crashed! The game wanted to say something"
             topScreen.DrawSysfont(titleMsg, 25, 25, CTRPF::Color::Red);
             topScreen.DrawSysfont(tipMsg, 25, 40, CTRPF::Color::White);
             topScreen.DrawSysfont(tipMsg2, 25, 55, CTRPF::Color::White);

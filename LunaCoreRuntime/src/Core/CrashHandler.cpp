@@ -174,7 +174,7 @@ namespace Core {
             if (possibleOOM)
                 titleMsg = "Looks like we ran out of memory!";
             if (regs->pc == 0x00114A98)
-                titleMsg = "Game crashed! The game wanted to say something"
+                titleMsg = "Game crashed! The game wanted to say something";
             topScreen.DrawSysfont(titleMsg, 25, 25, CTRPF::Color::Red);
             topScreen.DrawSysfont(tipMsg, 25, 40, CTRPF::Color::White);
             topScreen.DrawSysfont(tipMsg2, 25, 55, CTRPF::Color::White);

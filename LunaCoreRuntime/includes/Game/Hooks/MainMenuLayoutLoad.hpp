@@ -6,6 +6,4 @@ void PatchGameMenuLayoutFunction();
 
 bool LoadGameMenuLayout(const std::string &filepath);
 
-void PatchMenuCustomLayoutDefault();
-
 void SetMainMenuLayoutLoadCallback();

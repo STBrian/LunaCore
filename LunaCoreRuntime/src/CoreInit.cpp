@@ -25,7 +25,7 @@
 #define IS_VJPN_COMP(id, version) ((id) == 0x000400000017FD00LL && (version) == 9424) // 1.9.19 JPN
 #define IS_TARGET_ID(id) ((id) == 0x00040000001B8700LL || (id) == 0x000400000017CA00LL || (id) == 0x000400000017FD00LL)
 
-using json = nlohmann::json;
+using json = nlohmann::ordered_json;
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
 

@@ -153,6 +153,14 @@ namespace CTRPluginFramework
             fslib::createDirectory(path_from_string(PLUGIN_FOLDER"/layouts"));
 
         bool loadMenuLayout = Config::GetBoolValue(G_config, "custom_game_menu_layout", true);
+        if (loadMenuLayout && patchEnabled) {
+            if ((fslib::fileExists(path_from_string(PLUGIN_FOLDER"/layouts/menu_layout.json")) 
+                && LoadGameMenuLayout(PLUGIN_FOLDER"/layouts/menu_layout.json")) || 
+                (fslib::fileExists(path_from_string(PLUGIN_FOLDER"/LunaCore/layouts/menu_layout.json")) 
+                && LoadGameMenuLayout(PLUGIN_FOLDER"/LunaCore/layouts/menu_layout.json"))
+            )
+                PatchGameMenuLayoutFunction();
+        }
 
         CrashHandler::core_state = CrashHandler::CORE_LOADING_RUNTIME;
         Core::InitCore();
@@ -160,13 +168,6 @@ namespace CTRPluginFramework
         // Update configs
         if (!Config::SaveConfig(CONFIG_FILE, G_config))
             Debug::LogMessage("Failed to save configs", true);
-
-        if (loadMenuLayout && patchEnabled) {
-            if (fslib::fileExists(path_from_string(PLUGIN_FOLDER"/layouts/menu_layout.json")) && LoadGameMenuLayout(PLUGIN_FOLDER"/layouts/menu_layout.json"))
-                PatchGameMenuLayoutFunction();
-            else
-                PatchMenuCustomLayoutDefault();
-        }
 
         gmenu = new PluginMenu("LunaCore", PLG_VER_MAJ, PLG_VER_MIN, PLG_VER_PAT,
             "Allows to execute Lua scripts and other features", 2);

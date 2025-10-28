@@ -78,12 +78,8 @@ static std::vector<MenuButtonID::MenuButtonID> MenuBtnsOrder;
 static MenuChrtData MenuLayoutChrt;
 
 static void CreateMenuButtons(int *ptr, std::vector<btn_ctx> &btn_ctxs) {
-    GameButton *(*InitMenuButton)(GameButton*ptr1, int* ptr2, MenuButtonID::MenuButtonID submenuID, int posX, int posY, int width, int height, const char *string, int buttonType) = (GameButton*(*)(GameButton*, int*, MenuButtonID::MenuButtonID, int, int, int, int, const char *, int))(0x4d6b58+BASE_OFF);
-    void (*LinkButton)(btn_ctx *ptr1, GameButton *btnPtr) = (void(*)(btn_ctx*, GameButton*))(0x7b1bc0+BASE_OFF);
-    void (*AddButtonTexUVs)(GameButton* btnPtr, void*, int u, int v, int w, int h, int, uv_vals*, uv_vals*, int, int, int) = (void(*)(GameButton*, void*, int, int, int, int, int, uv_vals*, uv_vals*, int, int, int))(0x4d6a50+BASE_OFF);
-    void (*MaybeLinkButtonTexs)(void*, btn_ctx*) = (void(*)(void*, btn_ctx*))(0x7b1c74+BASE_OFF);
-    void (*MaybeRegisterData)(int*, void*) = (void(*)(int*, void*))(0x7f9788+BASE_OFF);
-    void (*MaybeAppendButton)(void*) = (void(*)(void*))(0x7b1074+BASE_OFF);
+    GameButton *(*InitMenuButton)(GameButton*ptr1, int* ptr2, MenuButtonID::MenuButtonID submenuID, int posX, int posY, int width, int height, const char *string, int buttonType) = (GameButton*(*)(GameButton*, int*, MenuButtonID::MenuButtonID, int, int, int, int, const char *, int))(0x5d6b58);
+    void (*AddButtonTexUVs)(GameButton* btnPtr, void*, int u, int v, int w, int h, int, uv_vals*, uv_vals*, int, int, int) = (void(*)(GameButton*, void*, int, int, int, int, int, uv_vals*, uv_vals*, int, int, int))(0x5d6a50);
 
     // Button bg uvs
     uv_vals uv1 = {0x38, 0x90, 8, 8};
@@ -96,15 +92,19 @@ static void CreateMenuButtons(int *ptr, std::vector<btn_ctx> &btn_ctxs) {
             MenuBtnData& btnData = MenuLayoutBtns[i];
             InitMenuButton(newButton, (int*)ptr[1], i, btnData.x, btnData.y, btnData.width, 
                         btnData.height, btnData.text.c_str(), btnData.bigIcon);
-            LinkButton(&btn_ctxs[i], newButton);
+            // MaybeLinkButton
+            reinterpret_cast<void(*)(btn_ctx&, GameButton*)>(0x8b1bc0)(btn_ctxs[i], newButton);
 
             AddButtonTexUVs(btn_ctxs[i].btnPtr, (void*)0xabfd74, btnData.iconU,
                         btnData.iconV, btnData.iconW, btnData.iconH,
                         0, &uv2, &uv1, 2, 2, 0);
             struct ctx_info tex_ctx;
-            MaybeLinkButtonTexs(&tex_ctx, &btn_ctxs[i]);
-            MaybeRegisterData(ptr + 7, &tex_ctx);
-            MaybeAppendButton(&tex_ctx);
+            // MaybeLinkButtonTexs
+            reinterpret_cast<void(*)(void*, btn_ctx&)>(0x8b1c74)(&tex_ctx, btn_ctxs[i]);
+            // MaybeRegisterData
+            reinterpret_cast<void(*)(int*, void*)>(0x8f9788)(ptr + 7, &tex_ctx);
+            // MaybeAppendButton
+            reinterpret_cast<void(*)(void*)>(0x8b1074)(&tex_ctx);
         }
     }   
 }
@@ -171,18 +171,12 @@ void SetMainMenuLayoutLoadCallback() {
 }
 
 static void LoadButtonData(json &j, MenuBtnData &btnData) {
-    if (j.contains("x") && j["x"].is_number())
-        btnData.x = j.value("x", 0);
-    if (j.contains("y") && j["y"].is_number())
-        btnData.y = j.value("y", 0);
-    if (j.contains("width") && j["width"].is_number())
-        btnData.width = j.value("width", 0);
-    if (j.contains("height") && j["height"].is_number())
-        btnData.height = j.value("height", 0);
-    if (j.contains("text") && j["text"].is_string())
-        btnData.text = j.value("text", "");
-    if (j.contains("bigIcon") && j["bigIcon"].is_boolean())
-        btnData.bigIcon = j.value("bigIcon", false);
+    btnData.x = j.value("x", 0);
+    btnData.y = j.value("y", 0);
+    btnData.width = j.value("width", 0);
+    btnData.height = j.value("height", 0);
+    btnData.text = j.value("text", "");
+    btnData.bigIcon = j.value("bigIcon", false);
     if (j.contains("icon") && j["icon"].is_array() && j["icon"].size() == 4) {
         json &icon = j["icon"];
         if (icon[0].is_number())

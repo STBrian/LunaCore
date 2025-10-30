@@ -6,7 +6,7 @@
 
 #include "Core/Event.hpp"
 
-#include "Game/Minecraft.hpp"
+#include "Minecraft/Minecraft.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 using Item = Game::Item;

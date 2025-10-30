@@ -6,9 +6,11 @@
 
 #include "Core/Game/Items.hpp"
 #include "string_hash.hpp"
-#include "Game/Minecraft.hpp"
-#include "Game/Inventory.hpp"
+
 #include "lua_object.hpp"
+
+#include "Minecraft/Minecraft.hpp"
+#include "Minecraft/Inventory.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 using InventorySlot = Game::Inventory::InventorySlot;

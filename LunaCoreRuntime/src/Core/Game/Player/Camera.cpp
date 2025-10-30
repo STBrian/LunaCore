@@ -2,13 +2,13 @@
 
 #include <CTRPluginFramework.hpp>
 
-#include "Game/Minecraft.hpp"
+#include "Minecraft/Minecraft.hpp"
 #include "string_hash.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 
 enum player_camera_offsets : u32 {
-    itemCameraFOV = 0x100000 + 0x2CEE80,
+    itemCameraFOV = 0x3CEE80,
 };
 
 static float* getCameraFOVPtr() {

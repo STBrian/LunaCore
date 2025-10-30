@@ -3,7 +3,7 @@
 #include "lua_common.h"
 #include "types.h"
 
-#include "Game/Inventory.hpp"
+#include "Minecraft/Inventory.hpp"
 
 namespace Core {
     class Player {

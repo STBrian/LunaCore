@@ -1,4 +1,4 @@
-#include "Game/Hooks/LoadingWorldScreenMessage.hpp"
+#include "Minecraft/Hooks/LoadingWorldScreenMessage.hpp"
 
 #include <mutex>
 #include <CTRPluginFramework.hpp>

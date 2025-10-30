@@ -1,5 +1,16 @@
 ---@diagnostic disable: missing-return, duplicate-set-field
 
+Async = {}
+
+---Adds the function to the queue that will run apart from the game until the functions ends
+---@param func function
+function Async.create(func) end
+
+---Yeilds the current task until time has passed. Always returns true
+---@param seconds number?
+---@return boolean
+function Async.wait(seconds) end
+
 Game = {}
 
 Core = {}
@@ -12,6 +23,25 @@ function Core.getModpath(modname) end
 ---Returns the title id formated in a hex string
 ---@return string
 function Core.getTitleId() end
+
+Core.Debug = {}
+
+---Displays a notification on screen
+---@param msg string
+function Core.Debug.message(msg) end
+
+---Appends the message to log file. Optionally shows the message on screen
+---@param msg string
+---@param showOnScreen boolean?
+function Core.Debug.log(msg, showOnScreen) end
+
+---Appends the error message to log file and shows it on screen
+---@param msg string
+function Core.Debug.logerror(msg) end
+
+---Show error on screen
+---@param msg string
+function Core.Debug.error(msg) end
 
 Core.Event = {}
 
@@ -39,221 +69,93 @@ Core.Event.OnGameEntitySpawnStart = {}
 ---@class OnGameEntitySpawn: EventClass
 Core.Event.OnGameEntitySpawn = {}
 
-Core.Memory = {}
+Core.Filesystem = {}
 
----Reads an unsigned integer of 32 bits from memory
----@param offset integer
----@return integer?
-function Core.Memory.readU32(offset) end
+---@class FilesystemFile
+local FilesystemFile = {}
 
----Reads a signed integer of 32 bits from memory
----@param offset integer
----@return integer?
-function Core.Memory.readS32(offset) end
-
----Reads an unsigned integer of 16 bits from memory
----@param offset integer
----@return integer?
-function Core.Memory.readU16(offset) end
-
----Reads a signed integer of 16 bits from memory
----@param offset integer
----@return integer?
-function Core.Memory.readS16(offset) end
-
----Reads an unsigned integer of 8 bits from memory
----@param offset integer
----@return integer?
-function Core.Memory.readU8(offset) end
-
----Reads a signed integer of 8 bits from memory
----@param offset integer
----@return integer?
-function Core.Memory.readS8(offset) end
-
----Reads a float from memory
----@param offset integer
----@return number?
-function Core.Memory.readFloat(offset) end
-
----Reads a double from memory
----@param offset integer
----@return number?
-function Core.Memory.readDouble(offset) end
-
----Reads a string from memory
----@param offset integer
----@param size integer
+---Opens a file. Returns nil if the file wasn't opened with an error message. Use sdmc:/ for sd card or extdata:/ for game extdata
+---@param fp string
+---@param mode string
+---@return FilesystemFile?
 ---@return string?
-function Core.Memory.readString(offset, size) end
+function Core.Filesystem.open(fp, mode) end
 
----Writes a signed integer of 32 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
----@param offset integer
----@param value integer
+---Checks if the file exists
+---@param fp string
 ---@return boolean
-function Core.Memory.writeS32(offset, value) end
+function Core.Filesystem.fileExists(fp) end
 
----Writes an unsigned integer of 32 bits to memory offset
----@param offset integer
----@param value integer
+---Checks if the directory exists
+---@param path string
 ---@return boolean
-function Core.Memory.writeU32(offset, value) end
+function Core.Filesystem.directoryExists(path) end
 
----Writes a signed integer of 16 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
----@param offset integer
----@param value integer
+---Returns a table with all the elements in a directory
+---@param path string
+---@return table
+function Core.Filesystem.getDirectoryElements(path) end
+
+---Creates a directory and returns if success
+---@param path string
 ---@return boolean
-function Core.Memory.writeS16(offset, value) end
+function Core.Filesystem.createDirectory(path) end
 
----Writes an unsigned integer of 16 bits to memory offset
----@param offset integer
----@param value integer
+---Reads the specified amount of bytes to read, or use "*all" to read all file and returns the data in a string or nil if error
+---@param bytes any
+---@return string?
+function FilesystemFile:read(bytes) end
+
+---Writes all data to file of the specified amount of bytes if provided. Returns true is success, false otherwise
+---@param data string
+---@param bytes integer?
 ---@return boolean
-function Core.Memory.writeU16(offset, value) end
+function FilesystemFile:write(data, bytes) end
 
----Writes a signed integer of 8 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
----@param offset integer
----@param value integer
+---Returns the actual position in the file
+---@return integer
+function FilesystemFile:tell() end
+
+---Flushes all file data in write buffer
 ---@return boolean
-function Core.Memory.writeS8(offset, value) end
+function FilesystemFile:flush() end
 
----Writes an unsigned integer of 8 bits to memory offset
+---Sets the position in file and returns the new position or nil if error
 ---@param offset integer
----@param value integer
+---@param whence string?
+---@return integer
+function FilesystemFile:seek(offset, whence) end
+
+---Checks if the file is open
 ---@return boolean
-function Core.Memory.writeU8(offset, value) end
+function FilesystemFile:isOpen() end
 
----Writes a float to memory offset
----@param offset integer
----@param value number
+---Checks if the file is on end of file
 ---@return boolean
-function Core.Memory.writeFloat(offset, value) end
+function FilesystemFile:isEOF() end
 
----Writes a double to memory offset
----@param offset integer
----@param value number
----@return boolean
-function Core.Memory.writeDouble(offset, value) end
+---Closes the file
+function FilesystemFile:close() end
 
----Writes a string to memory offset
----@param offset integer
----@param s string
----@param size integer
----@return boolean
-function Core.Memory.writeString(offset, s, size) end
+---@class GameEntity
+local GameEntity = {}
 
----Allocates memory and returns the start offset
----@param size integer
----@return integer?
-function Core.Memory.malloc(size) end
+---@class GameSpawnCoords
+local GameSpawnCoords = {}
 
----Free memory allocated with malloc
----@param offset integer
-function Core.Memory.free(offset) end
+GameEntity.X = 0.0
 
----Allows to call a function from memory
----@param foffset integer
----@param argstype string
----@param returntype string
----@return number
-function Core.Memory.call(foffset, argstype, returntype, ...) end
+GameEntity.Y = 0.0
 
-Core.System = {}
+GameEntity.Z = 0.0
 
----Returns UNIX time
----@return number
-function Core.System.getTime() end
+GameEntity.EntityID = 0
 
-Core.Debug = {}
+GameSpawnCoords.X = 0.0
 
----Displays a notification on screen
----@param msg string
-function Core.Debug.message(msg) end
+GameSpawnCoords.Y = 0.0
 
----Appends the message to log file. Optionally shows the message on screen
----@param msg string
----@param showOnScreen boolean
-function Core.Debug.log(msg, showOnScreen) end
-
----Appends the error message to log file and shows it on screen
----@param msg string
-function Core.Debug.logerror(msg) end
-
----Show error on screen
----@param msg string
-function Core.Debug.error(msg) end
-
-Game.World = {}
-
-Game.World.Loaded = false
-
-Game.World.Raining = false
-
-Game.World.Thunderstorm = false
-
-Game.World.CloudsHeight = 0.0
-
----@class OnWorldJoin: EventClass
-Game.World.OnWorldJoin = {}
-
----@class OnWorldLeave: EventClass
-Game.World.OnWorldLeave = {}
-
-Game.Items = {}
-
----@class GameItem
-local GameItem = {}
-
----Find an item using its ID
----@param name string
----@return GameItem?
-function Game.Items.findItemByName(name) end
-
----Find and item using its name
----@param itemID integer
----@return GameItem?
-function Game.Items.findItemByID(itemID) end
-
----Get the item position in creative using the id
----@param itemID integer
----@param groupID integer
----@return number
-function Game.Items.getCreativePosition(itemID, groupID) end
-
----Creates a new item and stores it in the game's items table. Returns the address to the item
----@param itemName string
----@param itemId integer
----@return GameItem?
-function Game.Items.registerItem(itemName, itemId) end
-
----Takes a registered item with Game.Items.registerItem, and sets its texture
----@param item GameItem
----@param textureName string
----@param textureIndex integer
-function GameItem:setTexture(item, textureName, textureIndex) end
-
----Takes a registered item with Game.Items.registerItem, and registers it in creative menu
----@param item GameItem
----@param groupId integer
----@param position integer
-function Game.Items.registerCreativeItem(item, groupId, position) end
-
-GameItem.StackSize = 64
-
-GameItem.ID = 1
-
-GameItem.NameID = ""
-
-GameItem.DescriptionID = ""
-
----@class OnRegisterItems: EventClass
-Game.Items.OnRegisterItems = {}
-
----@class OnRegisterItemsTextures: EventClass
-Game.Items.OnRegisterItemsTextures = {}
-
----@class OnRegisterCreativeItems: EventClass
-Game.Items.OnRegisterCreativeItems = {}
+GameSpawnCoords.Z = 0.0
 
 Game.Gamepad = {}
 
@@ -351,6 +253,62 @@ Game.Gamepad.KeyCodes.RIGHT = 268435472
 Game.Gamepad.KeyCodes.CPAD = 2952790016
 
 Game.Gamepad.KeyCodes.CSTICK = 184549376
+
+Game.Items = {}
+
+---@class GameItem
+local GameItem = {}
+
+---Find an item using its ID
+---@param name string
+---@return GameItem?
+function Game.Items.findItemByName(name) end
+
+---Find and item using its name
+---@param itemID integer
+---@return GameItem?
+function Game.Items.findItemByID(itemID) end
+
+---Get the item position in creative using the id
+---@param itemID integer
+---@param groupID integer
+---@return number
+function Game.Items.getCreativePosition(itemID, groupID) end
+
+---Creates a new item and stores it in the game's items table. Returns the address to the item
+---@param itemName string
+---@param itemId integer
+---@return GameItem?
+function Game.Items.registerItem(itemName, itemId) end
+
+---Takes a registered item with Game.Items.registerItem, and sets its texture
+---@param item GameItem
+---@param textureName string
+---@param textureIndex integer
+function GameItem:setTexture(item, textureName, textureIndex) end
+
+---Takes a registered item with Game.Items.registerItem, and registers it in creative menu
+---@param item GameItem
+---@param groupId integer
+---@param position integer
+function Game.Items.registerCreativeItem(item, groupId, position) end
+
+GameItem.StackSize = 64
+
+GameItem.ID = 1
+
+GameItem.NameID = ""
+
+GameItem.DescriptionID = ""
+
+---@class OnRegisterItems: EventClass
+Game.Items.OnRegisterItems = {}
+
+---@class OnRegisterItemsTextures: EventClass
+Game.Items.OnRegisterItemsTextures = {}
+
+---@class OnRegisterCreativeItems: EventClass
+Game.Items.OnRegisterCreativeItems = {}
 
 Game.LocalPlayer = {}
 
@@ -485,58 +443,21 @@ InventoryArmorSlot.ItemData = 0
 
 InventoryArmorSlot.ItemName = ""
 
----@class GameEntity
-local GameEntity = {}
+Game.World = {}
 
----@class GameSpawnCoords
-local GameSpawnCoords = {}
+Game.World.Loaded = false
 
-GameEntity.X = 0.0
+Game.World.Raining = false
 
-GameEntity.Y = 0.0
+Game.World.Thunderstorm = false
 
-GameEntity.Z = 0.0
+Game.World.CloudsHeight = 0.0
 
-GameEntity.EntityID = 0
+---@class OnWorldJoin: EventClass
+Game.World.OnWorldJoin = {}
 
-GameSpawnCoords.X = 0.0
-
-GameSpawnCoords.Y = 0.0
-
-GameSpawnCoords.Z = 0.0
-
-Async = {}
-
----Adds the function to the queue that will run apart from the game until the functions ends
----@param func function
-function Async.create(func) end
-
----Yeilds the current task until time has passed. Always returns true
----@param seconds number?
----@return boolean
-function Async.wait(seconds) end
-
-Core.Keyboard = {}
-
----Opens the keyboard and returns the user input as string
----@param message string?
----@return string?
-function Core.Keyboard.getString(message) end
-
----Opens the keyboard and returns the user input as number
----@param message string?
----@return number?
-function Core.Keyboard.getNumber(message) end
-
----Opens the keyboard and returns the user input as unsigned integer
----@param message string?
----@return integer?
-function Core.Keyboard.getInteger(message) end
-
----Opens the keyboard and returns the user input as hexadecimal
----@param message string?
----@return integer?
-function Core.Keyboard.getHex(message) end
+---@class OnWorldLeave: EventClass
+Game.World.OnWorldLeave = {}
 
 Core.Graphics = {}
 
@@ -597,70 +518,149 @@ function Core.Graphics.colorRGBA(r, g, b, a) end
 ---@class OnNewFrame: EventClass
 Core.Graphics.OnNewFrame = {}
 
-Core.Filesystem = {}
+Core.Keyboard = {}
 
----@class FilesystemFile
-local FilesystemFile = {}
-
----Opens a file. Returns nil if the file wasn't opened with an error message. Use sdmc:/ for sd card or extdata:/ for game extdata
----@param fp string
----@param mode string
----@return FilesystemFile?
+---Opens the keyboard and returns the user input as string
+---@param message string?
 ---@return string?
-function Core.Filesystem.open(fp, mode) end
+function Core.Keyboard.getString(message) end
 
----Checks if the file exists
----@param fp string
----@return boolean
-function Core.Filesystem.fileExists(fp) end
+---Opens the keyboard and returns the user input as number
+---@param message string?
+---@return number?
+function Core.Keyboard.getNumber(message) end
 
----Checks if the directory exists
----@param path string
----@return boolean
-function Core.Filesystem.directoryExists(path) end
+---Opens the keyboard and returns the user input as unsigned integer
+---@param message string?
+---@return integer?
+function Core.Keyboard.getInteger(message) end
 
----Returns a table with all the elements in a directory
----@param path string
----@return table
-function Core.Filesystem.getDirectoryElements(path) end
+---Opens the keyboard and returns the user input as hexadecimal
+---@param message string?
+---@return integer?
+function Core.Keyboard.getHex(message) end
 
----Creates a directory and returns if success
----@param path string
----@return boolean
-function Core.Filesystem.createDirectory(path) end
+Core.Memory = {}
 
----Reads the specified amount of bytes to read, or use "*all" to read all file and returns the data in a string or nil if error
----@param bytes any
----@return string?
-function FilesystemFile:read(bytes) end
-
----Writes all data to file of the specified amount of bytes if provided. Returns true is success, false otherwise
----@param data string
----@param bytes integer?
----@return boolean
-function FilesystemFile:write(data, bytes) end
-
----Returns the actual position in the file
----@return integer
-function FilesystemFile:tell() end
-
----Flushes all file data in write buffer
----@return boolean
-function FilesystemFile:flush() end
-
----Sets the position in file and returns the new position or nil if error
+---Reads an unsigned integer of 32 bits from memory
 ---@param offset integer
----@param whence string?
----@return integer
-function FilesystemFile:seek(offset, whence) end
+---@return integer?
+function Core.Memory.readU32(offset) end
 
----Checks if the file is open
+---Reads a signed integer of 32 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readS32(offset) end
+
+---Reads an unsigned integer of 16 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readU16(offset) end
+
+---Reads a signed integer of 16 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readS16(offset) end
+
+---Reads an unsigned integer of 8 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readU8(offset) end
+
+---Reads a signed integer of 8 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readS8(offset) end
+
+---Reads a float from memory
+---@param offset integer
+---@return number?
+function Core.Memory.readFloat(offset) end
+
+---Reads a double from memory
+---@param offset integer
+---@return number?
+function Core.Memory.readDouble(offset) end
+
+---Reads a string from memory
+---@param offset integer
+---@param size integer
+---@return string?
+function Core.Memory.readString(offset, size) end
+
+---Writes a signed integer of 32 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
+---@param offset integer
+---@param value integer
 ---@return boolean
-function FilesystemFile:isOpen() end
+function Core.Memory.writeS32(offset, value) end
 
----Checks if the file is on end of file
+---Writes an unsigned integer of 32 bits to memory offset
+---@param offset integer
+---@param value integer
 ---@return boolean
-function FilesystemFile:isEOF() end
+function Core.Memory.writeU32(offset, value) end
 
----Closes the file
-function FilesystemFile:close() end
+---Writes a signed integer of 16 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeS16(offset, value) end
+
+---Writes an unsigned integer of 16 bits to memory offset
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeU16(offset, value) end
+
+---Writes a signed integer of 8 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeS8(offset, value) end
+
+---Writes an unsigned integer of 8 bits to memory offset
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeU8(offset, value) end
+
+---Writes a float to memory offset
+---@param offset integer
+---@param value number
+---@return boolean
+function Core.Memory.writeFloat(offset, value) end
+
+---Writes a double to memory offset
+---@param offset integer
+---@param value number
+---@return boolean
+function Core.Memory.writeDouble(offset, value) end
+
+---Writes a string to memory offset
+---@param offset integer
+---@param s string
+---@param size integer
+---@return boolean
+function Core.Memory.writeString(offset, s, size) end
+
+---Allocates memory and returns the start offset
+---@param size integer
+---@return integer?
+function Core.Memory.malloc(size) end
+
+---Free memory allocated with malloc
+---@param offset integer
+function Core.Memory.free(offset) end
+
+---Allows to call a function from memory
+---@param foffset integer
+---@param argstype string
+---@param returntype string
+---@return number
+function Core.Memory.call(foffset, argstype, returntype, ...) end
+
+Core.System = {}
+
+---Returns UNIX time
+---@return number
+function Core.System.getTime() end

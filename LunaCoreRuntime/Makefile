@@ -17,7 +17,7 @@ PLGVERPAT	:=	1
 
 BUILD		:= 	Build
 INCLUDES	:= 	includes
-SOURCES 	:= 	src src/Core src/Core/Utils src/Game src/Core/Game src/Game/Hooks src/Core/Game/Player
+SOURCES 	:= 	src src/Core src/Core/Utils src/Minecraft src/Minecraft/Hooks src/Core/Game src/Core/Game/Player
 
 #---------------------------------------------------------------------------------
 # options for code generation

@@ -2,11 +2,8 @@
 
 #include "types.h"
 
-typedef void *(*GameMemallocFunc)(size_t size);
-#define GameMemalloc ((GameMemallocFunc)(0x11493c))
-
-typedef u32 (*GameStrlenFunc)(const char *str);
-#define GameStrlen ((GameStrlenFunc)(0x2fe990))
+#define GameMemalloc ((void*(*)(size_t))(0x11493c))
+#define GameStrlen ((size_t(*)(const char*))(0x2fe990))
 
 inline void *GameCalloc(size_t size) {
     void *dstPtr = GameMemalloc(size);
@@ -16,3 +13,5 @@ inline void *GameCalloc(size_t size) {
         *reinterpret_cast<char*>((char*)dstPtr+i) = 0;
     return dstPtr;
 }
+
+#define GameSnprintf ((size_t(*)(char*,size_t,char*,...))(0x1000c0|1))

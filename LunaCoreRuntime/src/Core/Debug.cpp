@@ -104,7 +104,7 @@ static int l_Debug_message(lua_State *L)
 /*
 - Appends the message to log file. Optionally shows the message on screen
 ## msg: string
-## showOnScreen: boolean
+## showOnScreen: boolean?
 ### Core.Debug.log
 */
 static int l_Debug_log(lua_State *L)

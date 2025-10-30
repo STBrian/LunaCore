@@ -2,7 +2,7 @@
 
 #include "lua_object.hpp"
 
-#include "Game/world/entity/Entity.hpp"
+#include "Minecraft/world/entity/Entity.hpp"
 
 using Entity = Game::Entity;
 

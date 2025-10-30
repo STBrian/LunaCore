@@ -1,4 +1,4 @@
-#include "Game/Hooks/GameHooks.hpp"
+#include "Minecraft/Hooks/GameHooks.hpp"
 
 #include <vector>
 #include <mutex>
@@ -13,10 +13,11 @@
 #include "Core/Debug.hpp"
 #include "Core/CrashHandler.hpp"
 #include "Core/Event.hpp"
-#include "Game/world/item/Item.hpp"
-#include "Game/world/entity/Entity.hpp"
 #include "CoreGlobals.hpp"
 #include "CoreInit.hpp"
+
+#include "Minecraft/world/item/Item.hpp"
+#include "Minecraft/world/entity/Entity.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 

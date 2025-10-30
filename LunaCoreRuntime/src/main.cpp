@@ -9,7 +9,6 @@
 #include <cstring>
 
 #include "lua_common.h"
-#include "Game/Minecraft.hpp"
 #include "Modules.hpp"
 #include "Core/Debug.hpp"
 #include "Core/Event.hpp"
@@ -20,9 +19,11 @@
 #include "Core/Config.hpp"
 #include "Core/CrashHandler.hpp"
 
-#include "Game/Hooks/GameHooks.hpp"
-#include "Game/Hooks/MainMenuLayoutLoad.hpp"
-#include "Game/Hooks/LoadingWorldScreenMessage.hpp"
+#include "Minecraft/Minecraft.hpp"
+#include "Minecraft/Hooks/GameHooks.hpp"
+#include "Minecraft/Hooks/MainMenuLayoutLoad.hpp"
+#include "Minecraft/Hooks/LoadingWorldScreenMessage.hpp"
+#include "Minecraft/game_utils/game_functions.hpp"
 
 #include "CoreInit.hpp"
 #include "PluginInit.hpp"

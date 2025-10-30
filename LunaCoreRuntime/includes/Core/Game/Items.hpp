@@ -4,7 +4,7 @@
 
 #include "CoreGlobals.hpp"
 #include "lua_common.h"
-#include "Game/world/item/Item.hpp"
+#include "Minecraft/world/item/Item.hpp"
 
 namespace Core {
     namespace Module {

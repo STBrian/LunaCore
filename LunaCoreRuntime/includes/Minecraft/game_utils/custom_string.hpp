@@ -4,6 +4,9 @@
 #include <string>
 #include <cstdint>
 
+// This class depends on the game implementation of memalloc
+// so you cannot try to reserve space for this class without using
+// game memalloc
 class CustomString {
     public:
     char* data;

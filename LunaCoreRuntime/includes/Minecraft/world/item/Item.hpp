@@ -2,9 +2,9 @@
 
 #include <string>
 
-#include "Game/game_utils/game_functions.hpp"
-#include "Game/game_utils/custom_string.hpp"
-#include "Game/world/item/ItemInstance.hpp"
+#include "Minecraft/game_utils/game_functions.hpp"
+#include "Minecraft/game_utils/custom_string.hpp"
+#include "Minecraft/world/item/ItemInstance.hpp"
 
 namespace Game {
     class Item;
@@ -18,7 +18,7 @@ namespace Game {
         u8 unknown2[3];
         CustomString atlasName;
         int unknown4;
-        u16 unknown5;
+        u8 unknown5;
         u16 itemId;
         CustomString descriptionId;
         CustomString nameId;

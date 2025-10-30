@@ -1,5 +1,5 @@
 //Minecraft class v1.1 by: rairai6895
-#include "Game/Minecraft.hpp"
+#include "Minecraft/Minecraft.hpp"
 #include <cmath>
 
 

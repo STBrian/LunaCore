@@ -6,13 +6,13 @@
 #include "Core/Event.hpp"
 #include "string_hash.hpp"
 
-#include "Game/Minecraft.hpp"
+#include "Minecraft/Minecraft.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 
 enum world_offsets : u32
 {
-    cloudsHeight = 0x100000 + 0x2C5398
+    cloudsHeight = 0x3C5398
 };
 
 // ----------------------------------------------------------------------------

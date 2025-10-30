@@ -1,4 +1,4 @@
-#include "Game/Hooks/MainMenuLayoutLoad.hpp"
+#include "Minecraft/Hooks/MainMenuLayoutLoad.hpp"
 
 #include <vector>
 
@@ -13,10 +13,11 @@ using json = nlohmann::ordered_json;
 #include "string_hash.hpp"
 
 #include "Core/CrashHandler.hpp"
-#include "Game/game_utils/game_functions.hpp"
 #include "CoreGlobals.hpp"
 #include "Core/Debug.hpp"
 #include "Core/Utils/Utils.hpp"
+
+#include "Minecraft/game_utils/game_functions.hpp"
 
 #define BASE_OFF 0x100000
 

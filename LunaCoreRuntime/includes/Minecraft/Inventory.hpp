@@ -2,7 +2,7 @@
 
 #include "types.h"
 
-#include "Game/world/item/Item.hpp"
+#include "Minecraft/world/item/Item.hpp"
 
 namespace Game {
     class Inventory {

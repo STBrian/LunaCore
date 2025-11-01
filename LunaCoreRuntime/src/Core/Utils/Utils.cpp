@@ -90,6 +90,22 @@ namespace Core::Utils {
     }
 }
 
+static bool ReplaceStringWithPointer(u32 insAddr, u32 strAddr, u32 ptrAddr, u8 reg) {
+    u32 baseIns = (0xe5bf << 16)|((reg & 0xF) << 12);
+    u32 addrsOffset = strAddr - insAddr - 8;
+    if (addrsOffset & 0xFFF != addrsOffset)
+        return false;
+    if (!CTRPF::Process::Write32(insAddr, baseIns|addrsOffset)) return false; // Patch instruction
+    return CTRPF::Process::Write32(strAddr, ptrAddr); // Write pointer to offset
+}
+
+static bool ReplaceConstString(u32 insAddr, u32 strAddr, u8 reg, const std::string& text) {
+    char *textPtr = (char*)GameCalloc(text.size() + 1); // Allocate string space in game memory
+    if (textPtr == NULL) return false;
+    if (!CTRPF::Process::WriteString((u32)textPtr, text.c_str(), text.size() + 1)) return false; // Copy string
+    return ReplaceStringWithPointer(insAddr, strAddr, (u32)textPtr, reg);
+}
+
 bool Core::RegisterUtilsModule(lua_State *L)
 {
     const char *lua_Code = R"(

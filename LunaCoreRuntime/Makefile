@@ -37,7 +37,8 @@ endif
 CXXFLAGS	:= $(CFLAGS) -g -fno-rtti -fno-exceptions -std=gnu++20
 
 ASFLAGS		:=	$(ARCH)
-LDFLAGS		:= -T $(TOPDIR)/3gx.ld $(ARCH) -L $(PORTLIBS)/lib -Os -Wl,--gc-sections,--strip-discarded,--strip-debug,-Map=lcruntime.map
+LDFLAGS		:= -T $(TOPDIR)/3gx.ld $(ARCH) -L $(PORTLIBS)/lib -Os -Wl,--gc-sections,--strip-discarded,--strip-debug,-Map=lcruntime.map \
+				-Wl,--wrap=strlen,--wrap=snprintf
 
 LIBS		:=  -llua5.1 -lfslib -lctrpf -lctru -lffi
 LIBDIRS		:= 	$(CTRPFLIB) $(CTRULIB) $(PORTLIBS)

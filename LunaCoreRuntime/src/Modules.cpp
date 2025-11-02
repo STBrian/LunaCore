@@ -17,6 +17,7 @@
 #include "Core/Game/Items.hpp"
 #include "Core/Event.hpp"
 #include "Core/Graphics.hpp"
+#include "Core/Game/Recipes.hpp"
 
 #include "Core/Utils/Utils.hpp"
 #include "Core/Utils/FileLoader.hpp"
@@ -34,6 +35,7 @@ namespace Core {
         Core::Module::RegisterLocalPlayerModule(L);
         Core::Module::RegisterItemsModule(L);
         Core::Module::RegisterEntityModule(L);
+        Core::Module::RegisterRecipesModule(L);
         return true;
     }
 

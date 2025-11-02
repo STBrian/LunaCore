@@ -35,7 +35,7 @@ void TimeoutEventHook(lua_State *L, lua_Debug *ar)
         luaL_error(L, "Event listener exceeded execution time (5000 ms)");
 }
 
-// No need to do lua_setfield
+// This will append the new event to the table above, so make sure there is a table
 void Core::Event::NewEvent(lua_State* L, const char* eventName) {
     core_newevent(L, eventName);
 }

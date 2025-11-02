@@ -9,6 +9,7 @@ namespace CTRPF = CTRPluginFramework;
 
 // ----------------------------------------------------------------------------
 
+//!include LunaCoreRuntime/src/Core/Event.cpp
 //!include LunaCoreRuntime/src/Modules.cpp
 //$Game.Gamepad
 //@KeyCode: integer

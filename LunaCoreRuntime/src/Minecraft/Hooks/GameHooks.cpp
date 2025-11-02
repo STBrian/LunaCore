@@ -210,13 +210,39 @@ static void EntitySpawnFinishedHook(CoreHookContext *ctx) {
     hookReturnOverwrite(ctx, (u32)EntitySpawnFinishedOverwriteReturn);
 }
 
+static __attribute__((naked)) void RegisterRecipesOverwriteReturn() {
+    asm volatile (
+        "stmdb sp!,{r0,r4,r5,r6,r7,r8,r9,r10,r11,lr}\n"
+        "ldr r1, =0x1b4c54\n"
+        "vpush {d8}\n"
+        "sub sp, sp, #0x230\n"
+        "add r2, sp, #0x20c\n"
+        "ldr pc, =0x001b48ac"
+    );
+}
+
+static void RegisterRecipes(CoreHookContext* ctx) {
+    Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
+    GameState.LoadingRecipes.store(true);
+
+    {
+        std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
+        LuaObject::NewObject(Lua_global, "RecipesTable", (void*)ctx->r0);
+        Core::Event::TriggerEvent(Lua_global, "Game.Recipes.OnRegisterRecipes", 1);
+    }
+    
+    GameState.LoadingRecipes.store(false);
+    hookReturnOverwrite(ctx, (u32)RegisterRecipesOverwriteReturn);
+}
+
 void hookSomeFunctions() {
     Core::CrashHandler::CoreState lastcState = Core::CrashHandler::core_state;
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOKING;
     hookFunction(0x0056c2a0, (u32)RegisterItemsHook);
     hookFunction(0x0056de70, (u32)RegisterItemsTexturesHook);
     hookFunction(0x00578358, (u32)RegisterCreativeItemsHook);
-    //hookFunction(0x004df688, (u32)EntitySpawnStartHook);
+    hookFunction(0x001b4898, (u32)RegisterRecipes);
+    //hookFunction(0x004df688, (u32)EntitySpawnStartHook); disabled as there is a weird memory leak ? idk why
     //hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
     Core::CrashHandler::core_state = lastcState;
 }

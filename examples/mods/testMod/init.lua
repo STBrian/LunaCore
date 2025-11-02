@@ -12,14 +12,14 @@ local COPPER_INGOT = testModReg:registerItem("copper_ingot", 254, {
     }
 })
 
-local COPPER_INGOT2 = testModReg:registerItem("copper_ingot2", 253, {
-    texture = "items/copper_ingot.3dst",
+local COPPER_PICKAXE = testModReg:registerItem("copper_pickaxe", 253, {
+    texture = "items/copper_pickaxe.3dst",
     locales = {
-        en_US = "Better copper ingot",
-        es_MX = "Lingote de cobre piola"
+        en_US = "Copper pickaxe",
+        es_MX = "Pico de cobre"
     }
 })
-COPPER_INGOT2.StackSize = 32
+COPPER_PICKAXE.StackSize = 1
 
 local AMETHYST_SHARD = testModReg:registerItem("amethyst_shard", 252, {
     texture = "items/amethyst_shard.3dst",
@@ -33,8 +33,18 @@ LOGGER:info(tostring(AMETHYST_SHARD ~= nil))
 
 CoreAPI.ItemGroups.registerEntries(CoreAPI.ItemGroups.FOOD_MINERALS, function (entries)
     entries:addBefore(COPPER_INGOT, "iron_ingot")
-    entries:add(COPPER_INGOT2)
     entries:addAfter(AMETHYST_SHARD, "iron_nugget")
 end)
 
+CoreAPI.ItemGroups.registerEntries(CoreAPI.ItemGroups.TOOLS, function (entries)
+    entries:addAfter(COPPER_PICKAXE, "stone_pickaxe")
+end)
+
 testModReg:buildResources()
+
+Game.Recipes.OnRegisterRecipes:Connect(function (recipesTable)
+    local stick = Game.Items.findItemByName("stick")
+    if COPPER_PICKAXE and stick and COPPER_INGOT then
+        Game.Recipes.registerRecipe(recipesTable, COPPER_PICKAXE, 2, 50, "XXX", " # ", " # ", {{"X", COPPER_INGOT}, {"#", stick}})
+    end
+end)

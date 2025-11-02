@@ -24,6 +24,7 @@
 #include "Minecraft/Hooks/MainMenuLayoutLoad.hpp"
 #include "Minecraft/Hooks/LoadingWorldScreenMessage.hpp"
 #include "Minecraft/game_utils/game_functions.hpp"
+#include "Minecraft/world/item/ItemRecipe.hpp"
 
 #include "CoreInit.hpp"
 #include "PluginInit.hpp"
@@ -34,6 +35,23 @@ namespace CTRPF = CTRPluginFramework;
 using namespace Core;
 
 CTRPF::PluginMenu *gmenu;
+
+static __attribute__((naked)) void testCustomRecipeImplOverwriteReturn() {
+    asm volatile (
+        "stmdb sp!,{r0,r4,r5,r6,r7,r8,r9,r10,r11,lr}\n"
+        "ldr r1, =0x1b4c54\n"
+        "vpush {d8}\n"
+        "sub sp, sp, #0x230\n"
+        "add r2, sp, #0x20c\n"
+        "ldr pc, =0x001b48ac"
+    );
+}
+
+static void testCustomRecipeImpl(CoreHookContext* ctx) {
+    Core::Debug::LogMessage("Registering custom recipe", true);
+    Minecraft::ItemRecipe::testCustomRecipe((void*)ctx->r0);
+    hookReturnOverwrite(ctx, (u32)testCustomRecipeImplOverwriteReturn);
+}
 
 namespace CTRPluginFramework
 {
@@ -112,6 +130,7 @@ namespace CTRPluginFramework
 
         if (Core::Utils::checkCompatibility() || System::IsCitra()) {
             Minecraft::PatchProcess();
+            hookFunction(0x001b4898, (u32)testCustomRecipeImpl);
             SetMainMenuLayoutLoadCallback();
             SetLoadingWorldScreenMessageCallback();
             SetLeaveLevelPromptCallback();

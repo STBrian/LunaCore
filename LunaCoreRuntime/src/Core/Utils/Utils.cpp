@@ -5,6 +5,7 @@
 #include <CTRPluginFramework.hpp>
 
 #include "Core/Debug.hpp"
+#include "Minecraft/game_utils/game_functions.hpp"
 
 #define USA_REG 0x00040000001B8700LL
 #define EUR_REG 0x000400000017CA00LL

@@ -25,7 +25,7 @@ namespace CTRPF = CTRPluginFramework;
 
 static std::vector<std::unique_ptr<CoreHookContext>> hooks;
 
-static __attribute((naked)) void hookBody() {
+static __attribute__((naked)) void hookBody() {
     asm volatile ( // r4 contains hookCtxPtr
         "mov r5, sp\n" // Save stack pointer
         "str r0, [r4, #0x0c]\n" // Store r0-r3 in hookCtxPtr->r0-r3
@@ -43,7 +43,7 @@ static __attribute((naked)) void hookBody() {
     );
 }
 
-void hookReturnOverwrite(CoreHookContext *ctx, u32 returnCallback) {
+__attribute__((naked)) void hookReturnOverwrite(CoreHookContext *ctx, u32 returnCallback) {
     asm volatile ( // r0 contains hookCtxPtr
         "ldr sp, [r0, #0x20]\n"
         "add sp, sp, #0x10\n"
@@ -90,7 +90,7 @@ void hookFunction(u32 targetAddr, u32 callbackAddr) {
     *((u32*)targetAddr + 4) = (u32)hookCtxPtr;
 }
 
-static __attribute((naked)) void RegisterItemOverwriteReturn() {
+static __attribute__((naked)) void RegisterItemOverwriteReturn() {
     asm volatile (
         "add sp, sp, #0x3c\n"
         "ldmia sp!, {r4-r11, pc}"
@@ -115,7 +115,7 @@ static void RegisterItemsHook(CoreHookContext* ctx) {
     hookReturnOverwrite(ctx, (u32)RegisterItemOverwriteReturn);
 }
 
-static __attribute((naked)) void RegisterItemsTexturesOverwriteReturn() {
+static __attribute__((naked)) void RegisterItemsTexturesOverwriteReturn() {
     asm volatile (
         "add r0, sp, #0xa0\n"
         "ldr r4, =0x57c5a0\n"
@@ -138,7 +138,7 @@ static void RegisterItemsTexturesHook(CoreHookContext* ctx) {
     hookReturnOverwrite(ctx, (u32)RegisterItemsTexturesOverwriteReturn);
 }
 
-static __attribute((naked)) void RegisterCreativeItemsOverwriteReturn() {
+static __attribute__((naked)) void RegisterCreativeItemsOverwriteReturn() {
     asm volatile (
         "ldr r2, =0x56e108\n"
         "blx r2\n"
@@ -161,7 +161,7 @@ static void RegisterCreativeItemsHook(CoreHookContext* ctx) {
     hookReturnOverwrite(ctx, (u32)RegisterCreativeItemsOverwriteReturn);
 }
 
-static __attribute((naked)) void EntitySpawnStartOverwriteReturn() {
+static __attribute__((naked)) void EntitySpawnStartOverwriteReturn() {
     asm volatile (
         "ldr r10, =0x00b0ac0c\n"
         "ldr r0, [r10, #0x10]\n"
@@ -184,7 +184,7 @@ static void EntitySpawnStartHook(CoreHookContext *ctx) {
     hookReturnOverwrite(ctx, (u32)EntitySpawnStartOverwriteReturn);
 }
 
-static __attribute((naked)) void EntitySpawnFinishedOverwriteReturn() {
+static __attribute__((naked)) void EntitySpawnFinishedOverwriteReturn() {
     asm volatile (
         "ldr r0, [sp, #0x190]\n"
         "ldr r2, =0x004df7f8\n"

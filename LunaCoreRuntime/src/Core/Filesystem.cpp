@@ -4,8 +4,6 @@
 #include <3ds.h>
 
 #include <cstring>
-#include <codecvt>
-#include <locale>
 
 #include "Core/Debug.hpp"
 #include "string_hash.hpp"
@@ -13,13 +11,15 @@
 namespace CTRPF = CTRPluginFramework;
 
 fslib::Path path_from_string(const std::string& str) {
-    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter;
-    return converter.from_bytes(str);
+    std::u16string out;
+    CTRPF::Utils::ConvertUTF8ToUTF16(out, str);
+    return out;
 }
 
 std::string path_to_string(const std::u16string &path) {
-    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter;
-    return std::string(converter.to_bytes(path));
+    std::string out;
+    CTRPF::Utils::ConvertUTF16ToUTF8(out, path);
+    return out;
 }
 
 namespace Filesystem {

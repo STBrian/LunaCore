@@ -21,7 +21,7 @@ void LuaObject::RegisterNewObject(lua_State* L, const char* name, const LuaObjec
         objsLayouts[name][f->key] = {f->offset, f->type, f->access, f->flags, f->objtype};
 }
 
-void* LuaObject::CheckObject(lua_State* L, int narg, const char* objtype) {
+void** LuaObject::CheckObject(lua_State* L, int narg, const char* objtype) {
     if (lua_type(L, narg) == LUA_TUSERDATA) {
         if (luaL_getmetafield(L, narg, "__name") == LUA_TNIL)
             luaL_typerror(L, narg, objtype);
@@ -36,12 +36,34 @@ void* LuaObject::CheckObject(lua_State* L, int narg, const char* objtype) {
                 lua_error(L);
             } else {
                 lua_pop(L, 1);
-                return lua_touserdata(L, narg);
+                return (void**)lua_touserdata(L, narg);
             }
         }
     } else
         luaL_typerror(L, narg, objtype);
     return nullptr;
+}
+
+bool LuaObject::IsObject(lua_State* L, int narg, const char* objtype) {
+    if (lua_type(L, narg) == LUA_TUSERDATA) {
+        if (luaL_getmetafield(L, narg, "__name") == LUA_TNIL)
+            return false;
+        else {
+            if (lua_type(L, -1) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                return false;
+            }
+            if (std::strcmp(objtype, lua_tostring(L, -1)) != 0) {
+                lua_pop(L, 1);
+                return false;
+            } else {
+                lua_pop(L, 1);
+                return true;
+            }
+        }
+    } else
+        return false;
+    return false;
 }
 
 int LuaObject::l_index(lua_State* L) {

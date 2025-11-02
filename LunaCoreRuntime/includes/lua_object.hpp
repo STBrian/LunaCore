@@ -72,7 +72,9 @@ class LuaObject {
         luaC_setmetatable(L, objtype);
     }
 
-    static void* CheckObject(lua_State* L, int narg, const char* objtype);
+    static void** CheckObject(lua_State* L, int narg, const char* objtype);
+
+    static bool IsObject(lua_State* L, int narg, const char* objtype);
 
     static int l_index(lua_State* L);
     static int l_newindex(lua_State* L);

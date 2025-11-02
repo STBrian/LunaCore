@@ -1,12 +1,17 @@
 #pragma once
 
 #include <string>
-#include "Game/game_utils/custom_string.hpp"
-#include "Game/world/item/Item.hpp"
+#include "Minecraft/game_utils/custom_string.hpp"
+#include "Minecraft/game_utils/generic_vector.hpp"
+#include "Minecraft/world/item/Item.hpp"
+#include "Minecraft/world/item/Block.hpp"
+#include "Minecraft/world/item/Recipes.hpp"
 
-namespace Game {
+namespace Minecraft {
     class ItemRecipe {
         public:
+        using Item = Game::Item;
+        using ItemInstance = Game::ItemInstance;
 
         typedef struct {
             Item* item = nullptr;
@@ -31,8 +36,24 @@ namespace Game {
             ItemRecipe recipe(line1, line2, line3);
         }
 
+        static void testCustomRecipe(void* ptr1) {
+            Recipes::Shape recipe = {"XXX", " # ", " # "};
+            GenericVector vec;
+            definition(vec, '#', Item::mEmerald, 'X', Block::mBlocks[(*reinterpret_cast<Block**>(0x00a34740))->blockId]);
+            ItemInstance targetItem(Item::mItems[57]); // Diamond block
+            Recipes::addShapedRecipe(ptr1, targetItem, recipe, vec, 2, 10);
+
+            // --- Clean ---
+            // I reused a clean routine from InternalRecipeElementDefinition destructor, just adjusted the offset
+            reinterpret_cast<void(*)(ItemInstance*)>(0x00638c28)((ItemInstance*)((u32)&targetItem - 0x8));
+            // Clean elements of vec
+            for (InternalRecipeElementDefinition* current = reinterpret_cast<InternalRecipeElementDefinition*>(vec.field1); current != reinterpret_cast<InternalRecipeElementDefinition*>(vec.field2); current = current + 1) {
+                InternalRecipeElementDefinition::ManualDestroy(current);
+            }
+        }
+
         static void testRegisterRecipe(void* ptr1) {
-            ItemRecipe recipes[4] = {
+            Recipes::Shape recipes[4] = {
                 {"XXX", // pickaxe
                 " # ",
                 " # "},
@@ -46,45 +67,42 @@ namespace Game {
                 " #",
                 " #"},
             };
-            short material_ids[5] = {
-                *(unsigned char*)(*(int*)0x00a34740 + 4), // Prob wood block
-                *(unsigned char*)(*(int*)0x00a3473c + 4), // Prob cobblestone block
+            unsigned short material_ids[5] = {
+                ((*reinterpret_cast<Block**>(0x00a34740))->blockId), // Prob wood block
+                ((*reinterpret_cast<Block**>(0x00a3473c))->blockId), // Prob cobblestone block
                 Item::mIronIngot->itemId,
                 Item::mDiamond->itemId,
                 Item::mGoldIngot->itemId
             };
             Item* tool_items[20] = {
-
+                Item::mPickAxe_wood,
+                Item::mPickAxe_stone,
+                Item::mPickAxe_iron,
+                Item::mPickAxe_diamond,
+                Item::mPickAxe_gold,
+                Item::mShovel_wood,
+                Item::mShovel_stone,
+                Item::mShovel_iron,
+                Item::mShovel_diamond,
+                Item::mShovel_gold,
             }; // Imagine the items are here
-            void** unknownArray;
-            reinterpret_cast<void**(*)(void**&, void*, int)>(unknownArray, (void*)0x00989038, 80);
+            int unknownArray[20];
+            reinterpret_cast<void**(*)(int*, void*, int)>(unknownArray, (void*)0x00989038, 80);
             for (int i = 0; i < 5; i++) { // materials
                 short materialId = material_ids[i];
                 for (int j = 0; j < 4; j++) { // recipes
                     Item* curTool = tool_items[j * 5 + i];
                     if (materialId < 256) { // block
-                        TestRecipeStruct stick, material;
-                        stick.item = Item::mStick;
-                        stick.id = '#';
-                        material.block = Item::mBlocks[materialId];
-                        material.id = 'X';
-                        AnotherTestStruct vec;
-                        // [int, int, int]*, [Item*, int]
-                        reinterpret_cast<void(*)(AnotherTestStruct&, TestRecipeStruct&)>(0x008ff20c)(vec, stick);
-                        reinterpret_cast<void(*)(TestRecipeStruct&)>(0x00638c28)(stick);
-                        reinterpret_cast<void(*)(AnotherTestStruct&, TestRecipeStruct&)>(0x008ff20c)(vec, material);
-                        reinterpret_cast<void(*)(TestRecipeStruct&)>(0x00638c28)(material);
+                        GenericVector vec;
+                        definition(vec, '#', Item::mStick, 'X', Block::mBlocks[materialId]);
                         ItemInstance targetTool(curTool);
-                        void* unknownValue = unknownArray[j * 5 + i];
-                        reinterpret_cast<void(*)(void*, ItemInstance&, ItemRecipe&, AnotherTestStruct&, int, void*)>(0x0063684c)(ptr1, targetTool, recipes[j], vec, 2, unknownValue);
-                        for (void** unk1 = (void**)targetTool.field12; unk1 != (void**)targetTool.field13; unk1++) {
-                        }
-                        reinterpret_cast<void(*)(void*)>(0x001007d0)((void*)targetTool.field12);
-                        for (void** unk1 = (void**)targetTool.field9; unk1 != (void**)targetTool.field10; unk1++) {
-                        }
-                        reinterpret_cast<void(*)(void*)>(0x001007d0)((void*)targetTool.field9);
-                        if ((void*)targetTool.field4 != nullptr) {
-                            (*reinterpret_cast<void(**)(void)>(*(int*)targetTool.field4 + 4))();
+                        int unknownValue = unknownArray[j * 5 + i]; // Maybe position in recipes vector?
+                        Recipes::addShapedRecipe(ptr1, targetTool, recipes[j], vec, 2, unknownValue);
+                        
+                        // I reused a clean routine from InternalRecipeElementDefinition destructor, just adjusted the offset
+                        reinterpret_cast<void(*)(ItemInstance*)>(0x00638c28)((ItemInstance*)((u32)&targetTool - 0x8));
+                        for (InternalRecipeElementDefinition* current = reinterpret_cast<InternalRecipeElementDefinition*>(vec.field1); current != reinterpret_cast<InternalRecipeElementDefinition*>(vec.field2); current++) {
+                            InternalRecipeElementDefinition::ManualDestroy(current);
                         }
                     } else { // item
                         AnotherTestStruct stest2;

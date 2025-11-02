@@ -21,7 +21,6 @@ namespace Game {
         int field12; // 0x24
         int field13; // 0x28
         int field14; // 0x2c
-        //char field15; // 0x30
 
         ItemInstance() {
             reinterpret_cast<ItemInstance*(*)(ItemInstance*)>(0x001d28f4)(this);

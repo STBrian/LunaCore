@@ -56,6 +56,12 @@ bool DrawMonitors(const Screen &screen) {
     return false;
 }
 
+#ifdef DEBUG
+struct _pair {
+    u32 a, b;
+};
+#endif
+
 void InitMenu(PluginMenu &menu)
 {
     // Create your entries here, or elsewhere
@@ -247,6 +253,7 @@ void InitMenu(PluginMenu &menu)
     }));
 
     #ifdef DEBUG
+    #pragma message "'Dump memory to network' menu entry enabled"
     devFolder->Append(new MenuEntry("Dump memory to network", nullptr, [](MenuEntry *entry) {
         initSockets();
         Core::Network::TCPServer tcp(5432);
@@ -254,94 +261,64 @@ void InitMenu(PluginMenu &menu)
 
         // Draw message
         const Screen& topScreen = OSD::GetTopScreen();
+        topScreen.DrawRect(20, 20, 200, 200, Color::Black);
         topScreen.DrawSysfont("Connect to host: "+host+":5432", 40, 185, Color::White);
         topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
         OSD::SwapBuffers();
         topScreen.DrawSysfont("Connect to host: "+host+":5432", 40, 185, Color::White);
         topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
 
-        std::string dumpFilename;
-        Keyboard inskeyboard;
-        std::string& kmsg = inskeyboard.GetMessage();
-        kmsg = "Enter the dump filename";
-        if (inskeyboard.Open(dumpFilename) > 0) {
-            if (File::Exists("Dumps/" + dumpFilename + ".bin")) {
-                File sourceFile;
-                File::Open(sourceFile, "Dumps/" + dumpFilename + ".bin");
-                size_t remainingData = sourceFile.GetSize();
-                tcp.send(&remainingData, sizeof(size_t))
-            }
-        }
+        std::vector<struct _pair> regions = {
+            {0x100000, 0x919000},
+            {0x919000, 0xa29000},
+            {0xa29000, 0xa3a000},
+            {0xa3b000, 0xa3c000},
+            {0xa3d000, 0xb40000},
+            {0x8000000, 0x8002000},
+            {0x8006000, 0x800c000},
+            {0x8010000, 0x801e000},
+            {0x8020000, 0x8800000},
+            {0xe000000, 0xe004000},
+            {0xe005000, 0xe009000},
+            {0xe00a000, 0xe00c000},
+            {0xffc0000, 0x10000000},
+            {0x1ffb0000, 0x1ffb1000},
+            {0x1ffb2000, 0x1ffb4000},
+            {0x30000000, 0x35f80000}
+        };
 
+        // Wait until a connection
         if (!tcp.waitConnection(CancelOperationCallback)) {
             exitSockets();
             if (!tcp.aborted)
                 MessageBox("Connection error")();
             return;
         }
-        size_t fnameSize = 0;
-        if (!tcp.recv(&fnameSize, sizeof(size_t))) {
-            exitSockets();
-            MessageBox("Failed to get filename size")();
-            return;
-        }
-        char *namebuf = (char*)std::calloc(fnameSize, 1);
-        if (!namebuf) {
-            exitSockets();
-            MessageBox("Memory error")();
-            return;
-        }
-        if (namebuf == NULL || !tcp.recv(namebuf, fnameSize)) {
-            exitSockets();
-            delete namebuf;
-            MessageBox("Failed to get filename")();
-            return;
-        }
 
-        size_t size = 0;
-        if (!tcp.recv(&size, sizeof(size_t))) {
-            exitSockets();
-            delete namebuf;
-            MessageBox("Failed to get file size")();
-            return;
-        }
-        char *buffer = new char[size];
-        if (!buffer) {
-            exitSockets();
-            delete namebuf;
-            MessageBox("Memory error")();
-            return;
-        }
-        if (!tcp.recv(buffer, size)) {
-            exitSockets();
-            delete namebuf;
-            delete buffer;
-            MessageBox("Failed to get file")();
-            return;
-        }
-
-        if (Lua_Global_Mut.try_lock() && Core::LoadBuffer(buffer, size, ("net:/" + std::string(namebuf)).c_str())) {
-            MessageBox("Script loaded")();
-            if (MessageBox("Do you want to save this script to the sd card?", DialogType::DialogYesNo)()) {
-                if (!Directory::IsExists(PLUGIN_FOLDER "/scripts/"))
-                    Directory::Create(PLUGIN_FOLDER "/scripts/");
-                File scriptOut;
-                File::Open(scriptOut, PLUGIN_FOLDER "/scripts/" + std::string(namebuf, fnameSize), File::WRITE|File::CREATE);
-                if (!scriptOut.IsOpen()) {
-                    MessageBox("Failed to write to sd card")();
-                } else {
-                    scriptOut.Clear();
-                    scriptOut.Write(buffer, size);
-                    scriptOut.Flush();
-                }
+        u32 totalRegions = regions.size();
+        tcp.send_all(&totalRegions, sizeof(u32));
+        for (auto& region : regions) {
+            u32 regionSize = region.b - region.a;
+            u32 remaining = regionSize;
+            u32 currentPosition = region.a;
+            u32 packetSize = 0x1000;
+            tcp.send_all(&regionSize, sizeof(u32));
+            while (currentPosition < region.b) {
+                if (!tcp.send_all((void*)currentPosition, remaining < packetSize ? remaining : packetSize)) {
+                    exitSockets();
+                    MessageBox("Failed to send packets")();
+                    return;
+                } 
+                currentPosition += (remaining < packetSize ? remaining : packetSize);
+                remaining = region.b - currentPosition;
+                topScreen.DrawRect(90, 90, 50, 30, Color::Black);
+                topScreen.DrawSysfont(Utils::Format("Progress: %.2f", (float)(regionSize - remaining)/regionSize * 100), 100, 100, Color::White);
+                topScreen.DrawSysfont(Utils::Format("Dumping: %08X", region.a), 100, 110, Color::White);
+                OSD::SwapBuffers();
             }
-            Lua_Global_Mut.unlock();
-        } else {
-            MessageBox("Error executing the script")();
         }
+        
         exitSockets();
-        delete namebuf;
-        delete buffer;
     }));
     #endif
     

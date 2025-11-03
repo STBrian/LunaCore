@@ -33,6 +33,9 @@ CFLAGS		+=	$(INCLUDE) -D__3DS__ -I $(PORTLIBS)/include/lua5.1 \
 ifeq ($(EXPERIMENTAL), 1)
 	CFLAGS		+=	-DEXPERIMENTAL
 endif
+ifeq ($(DEBUG), 1)
+	CFLAGS		+=	-DDEBUG
+endif
 
 CXXFLAGS	:= $(CFLAGS) -g -fno-rtti -fno-exceptions -std=gnu++20
 

@@ -4,6 +4,7 @@
 #include <cstring>
 #include <unordered_map>
 #include <malloc.h>
+#include <memory>
 
 #include "CoreConstants.hpp"
 #include "CoreGlobals.hpp"
@@ -168,12 +169,110 @@ void InitMenu(PluginMenu &menu)
         initSockets();
         Core::Network::TCPServer tcp(5432);
         std::string host = tcp.getHostName();
+
+        // Draw tip message
         const Screen& topScreen = OSD::GetTopScreen();
         topScreen.DrawSysfont("Connect to host: "+host+":5432", 40, 185, Color::White);
         topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
         OSD::SwapBuffers();
         topScreen.DrawSysfont("Connect to host: "+host+":5432", 40, 185, Color::White);
         topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
+
+        // Wait for a connection
+        if (!tcp.waitConnection(CancelOperationCallback)) {
+            exitSockets();
+            if (!tcp.aborted)
+                MessageBox("Connection error")();
+            return;
+        } 
+
+        // Get the filename
+        size_t fnameSize = 0;
+        if (!tcp.recv(&fnameSize, sizeof(size_t))) {
+            exitSockets();
+            MessageBox("Failed to get filename size")();
+            return;
+        }
+        std::unique_ptr<char[]> namebuf(new (std::nothrow) char[fnameSize]);
+        if (!namebuf) {
+            exitSockets();
+            MessageBox("Memory error")();
+            return;
+        }
+        if (!tcp.recv(namebuf.get(), fnameSize)) {
+            exitSockets();
+            MessageBox("Failed to get filename")();
+            return;
+        }
+
+        // Get script file
+        size_t size = 0;
+        if (!tcp.recv(&size, sizeof(size_t))) {
+            exitSockets();
+            MessageBox("Failed to get file size")();
+            return;
+        }
+        std::unique_ptr<char[]> buffer(new (std::nothrow) char[size]);
+        if (!buffer) {
+            exitSockets();
+            MessageBox("Memory error")();
+            return;
+        }
+        if (!tcp.recv(buffer.get(), size)) {
+            exitSockets();
+            MessageBox("Failed to get file")();
+            return;
+        }
+
+        if (Lua_Global_Mut.try_lock() && Core::LoadBuffer(buffer.get(), size, ("net:/" + std::string(namebuf.get()).substr(0, fnameSize-1)).c_str())) {
+            MessageBox("Script loaded")();
+            if (MessageBox("Do you want to save this script to the sd card?", DialogType::DialogYesNo)()) {
+                if (!Directory::IsExists(PLUGIN_FOLDER "/scripts/"))
+                    Directory::Create(PLUGIN_FOLDER "/scripts/");
+                File scriptOut;
+                File::Open(scriptOut, PLUGIN_FOLDER "/scripts/" + std::string(namebuf.get()).substr(0, fnameSize-1), File::WRITE|File::CREATE);
+                if (!scriptOut.IsOpen()) {
+                    MessageBox("Failed to write to sd card")();
+                } else {
+                    scriptOut.Clear();
+                    scriptOut.Write(buffer.get(), size);
+                    scriptOut.Flush();
+                }
+            }
+            Lua_Global_Mut.unlock();
+        } else {
+            MessageBox("Error executing the script")();
+        }
+        exitSockets();
+    }));
+
+    #ifdef DEBUG
+    devFolder->Append(new MenuEntry("Dump memory to network", nullptr, [](MenuEntry *entry) {
+        initSockets();
+        Core::Network::TCPServer tcp(5432);
+        std::string host = tcp.getHostName();
+
+        // Draw message
+        const Screen& topScreen = OSD::GetTopScreen();
+        topScreen.DrawSysfont("Connect to host: "+host+":5432", 40, 185, Color::White);
+        topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
+        OSD::SwapBuffers();
+        topScreen.DrawSysfont("Connect to host: "+host+":5432", 40, 185, Color::White);
+        topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
+
+        std::string dumpFilename;
+        Keyboard inskeyboard;
+        std::string& kmsg = inskeyboard.GetMessage();
+        kmsg = "Enter the dump filename";
+        if (inskeyboard.Open(dumpFilename) > 0) {
+            if (File::Exists("Dumps/" + dumpFilename + ".bin")) {
+                File sourceFile;
+                File::Open(sourceFile, "Dumps/" + dumpFilename + ".bin");
+                size_t remainingData = sourceFile.GetSize();
+                tcp.send(&remainingData, sizeof(size_t))
+            }
+        }
+
         if (!tcp.waitConnection(CancelOperationCallback)) {
             exitSockets();
             if (!tcp.aborted)
@@ -244,6 +343,8 @@ void InitMenu(PluginMenu &menu)
         delete namebuf;
         delete buffer;
     }));
+    #endif
+    
     devFolder->Append(new MenuEntry("Clean Lua environment", nullptr, [](MenuEntry *entry) {
         if (!MessageBox("This will unload all loaded scripts. Continue?", DialogType::DialogYesNo)())
             return;

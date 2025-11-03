@@ -26,7 +26,7 @@ namespace Core {
 
                 bool waitConnection(WaitConnectionCallback callback = nullptr);
 
-                bool send(void *data, size_t size);
+                bool send_all(void *data, size_t size);
 
                 bool recv(void *buffer, size_t size);
         };

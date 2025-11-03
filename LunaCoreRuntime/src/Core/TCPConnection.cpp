@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <sys/socket.h>
 #include <cstring>
 #include <fcntl.h>
 
@@ -76,8 +77,21 @@ namespace Core {
             return true;
         }
 
-        bool TCPServer::send(void *data, size_t size) {
-            return size == write(client_fd, data, size);
+        bool TCPServer::send_all(void *data, size_t size) {
+            const char* ptr = reinterpret_cast<const char*>(data);
+            size_t total_sent = 0;
+            while (total_sent < size) {
+                ssize_t sent = send(client_fd, ptr + total_sent, size - total_sent, 0);
+                if (sent < 0) {
+                    if (errno == EINTR)
+                        continue;
+                    return false;
+                }
+                if (sent == 0)
+                    return false;
+                total_sent += sent;
+            }
+            return true;
         }
 
         bool TCPServer::recv(void *buffer, size_t size) {

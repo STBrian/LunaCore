@@ -19,8 +19,6 @@ using json = nlohmann::ordered_json;
 
 #include "Minecraft/game_utils/game_functions.hpp"
 
-#define BASE_OFF 0x100000
-
 namespace CTRPF = CTRPluginFramework;
 
 namespace MenuButtonID {
@@ -154,7 +152,7 @@ static void CreateMainMenuCustomLayout(int *ptr) {
 // Note: If a layout is loaded this will overwrite callback
 // So always do the same as the callback in MainMenuLayoutLoadCallback
 void PatchGameMenuLayoutFunction() {
-    CTRPF::Process::Write32(0x8ab4a4 + BASE_OFF, (u32)CreateMainMenuCustomLayout); // Patch only reference to CreateMenuButtons
+    CTRPF::Process::Write32(0x9ab4a4, (u32)CreateMainMenuCustomLayout); // Patch only reference to CreateMenuButtons
 }
 
 static void MainMenuLayoutLoadCallback(int *ptr) {
@@ -168,7 +166,7 @@ static void MainMenuLayoutLoadCallback(int *ptr) {
 }
 
 void SetMainMenuLayoutLoadCallback() {
-    CTRPF::Process::Write32(0x8ab4a4 + BASE_OFF, (u32)MainMenuLayoutLoadCallback); // Patch only reference to CreateMenuButtons
+    CTRPF::Process::Write32(0x9ab4a4, (u32)MainMenuLayoutLoadCallback); // Patch only reference to CreateMenuButtons
 }
 
 static void LoadButtonData(json &j, MenuBtnData &btnData) {

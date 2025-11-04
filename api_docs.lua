@@ -1,5 +1,16 @@
 ---@diagnostic disable: missing-return, duplicate-set-field
 
+Async = {}
+
+---Adds the function to the queue that will run apart from the game until the functions ends
+---@param func function
+function Async.create(func) end
+
+---Yeilds the current task until time has passed. Always returns true
+---@param seconds number?
+---@return boolean
+function Async.wait(seconds) end
+
 Game = {}
 
 Core = {}
@@ -12,6 +23,292 @@ function Core.getModpath(modname) end
 ---Returns the title id formated in a hex string
 ---@return string
 function Core.getTitleId() end
+
+Core.Debug = {}
+
+---Displays a notification on screen
+---@param msg string
+function Core.Debug.message(msg) end
+
+---Appends the message to log file. Optionally shows the message on screen
+---@param msg string
+---@param showOnScreen boolean?
+function Core.Debug.log(msg, showOnScreen) end
+
+---Appends the error message to log file and shows it on screen
+---@param msg string
+function Core.Debug.logerror(msg) end
+
+---Show error on screen
+---@param msg string
+function Core.Debug.error(msg) end
+
+Core.Event = {}
+
+---@class EventClass
+local EventClass = {}
+
+---Adds a function to call when this events fires. It also returns the function
+---@param func function
+---@return function
+function EventClass:Connect(func) end
+
+---Removes a listener previously connected to this event
+---@param func function
+function EventClass:Disconnect(func) end
+
+---Fire this event
+function EventClass:Trigger() end
+
+---@class BaseEvent: EventClass
+Core.Event.BaseEvent = {}
+
+---@class OnGameEntitySpawnStart: EventClass
+Core.Event.OnGameEntitySpawnStart = {}
+
+---@class OnGameEntitySpawn: EventClass
+Core.Event.OnGameEntitySpawn = {}
+
+Core.Filesystem = {}
+
+---@class FilesystemFile
+local FilesystemFile = {}
+
+---Opens a file. Returns nil if the file wasn't opened with an error message. Use sdmc:/ for sd card or extdata:/ for game extdata
+---@param fp string
+---@param mode string
+---@return FilesystemFile?
+---@return string?
+function Core.Filesystem.open(fp, mode) end
+
+---Checks if the file exists
+---@param fp string
+---@return boolean
+function Core.Filesystem.fileExists(fp) end
+
+---Checks if the directory exists
+---@param path string
+---@return boolean
+function Core.Filesystem.directoryExists(path) end
+
+---Returns a table with all the elements in a directory
+---@param path string
+---@return table
+function Core.Filesystem.getDirectoryElements(path) end
+
+---Creates a directory and returns if success
+---@param path string
+---@return boolean
+function Core.Filesystem.createDirectory(path) end
+
+---Reads the specified amount of bytes to read, or use "*all" to read all file and returns the data in a string or nil if error
+---@param bytes any
+---@return string?
+function FilesystemFile:read(bytes) end
+
+---Writes all data to file of the specified amount of bytes if provided. Returns true is success, false otherwise
+---@param data string
+---@param bytes integer?
+---@return boolean
+function FilesystemFile:write(data, bytes) end
+
+---Returns the actual position in the file
+---@return integer
+function FilesystemFile:tell() end
+
+---Flushes all file data in write buffer
+---@return boolean
+function FilesystemFile:flush() end
+
+---Sets the position in file and returns the new position or nil if error
+---@param offset integer
+---@param whence string?
+---@return integer
+function FilesystemFile:seek(offset, whence) end
+
+---Checks if the file is open
+---@return boolean
+function FilesystemFile:isOpen() end
+
+---Checks if the file is on end of file
+---@return boolean
+function FilesystemFile:isEOF() end
+
+---Closes the file
+function FilesystemFile:close() end
+
+---@class GameEntity
+local GameEntity = {}
+
+---@class GameSpawnCoords
+local GameSpawnCoords = {}
+
+GameEntity.X = 0.0
+
+GameEntity.Y = 0.0
+
+GameEntity.Z = 0.0
+
+GameEntity.EntityID = 0
+
+GameSpawnCoords.X = 0.0
+
+GameSpawnCoords.Y = 0.0
+
+GameSpawnCoords.Z = 0.0
+
+Game.Gamepad = {}
+
+---@class KeyCode: integer
+
+---Returns true if the key is pressed (only counts for the first press, for button held use isDown)
+---@param keycode KeyCode
+---@return boolean
+function Game.Gamepad.isPressed(keycode) end
+
+---Returns true if the key is down
+---@param keycode KeyCode
+---@return boolean
+function Game.Gamepad.isDown(keycode) end
+
+---Returns true if the key just got released
+---@param keycode KeyCode
+---@return boolean
+function Game.Gamepad.isReleased(keycode) end
+
+---Performs a virtual button press
+---@param keycode KeyCode
+function Game.Gamepad.pressButton(keycode) end
+
+---Returns touch x and y position
+---@return number
+---@return number
+function Game.Gamepad.getTouch() end
+
+---@class OnKeyPressed: EventClass
+Game.Gamepad.OnKeyPressed = {}
+
+---@class OnKeyDown: EventClass
+Game.Gamepad.OnKeyDown = {}
+
+---@class OnKeyReleased: EventClass
+Game.Gamepad.OnKeyReleased = {}
+
+Game.Gamepad.KeyCodes = {}
+
+Game.Gamepad.KeyCodes.A = 1
+
+Game.Gamepad.KeyCodes.B = 2
+
+Game.Gamepad.KeyCodes.SELECT = 4
+
+Game.Gamepad.KeyCodes.START = 8
+
+Game.Gamepad.KeyCodes.DPADRIGHT = 16
+
+Game.Gamepad.KeyCodes.DPADLEFT = 32
+
+Game.Gamepad.KeyCodes.DPADUP = 64
+
+Game.Gamepad.KeyCodes.DPADDOWN = 128
+
+Game.Gamepad.KeyCodes.R = 256
+
+Game.Gamepad.KeyCodes.L = 512
+
+Game.Gamepad.KeyCodes.X = 1024
+
+Game.Gamepad.KeyCodes.Y = 2048
+
+Game.Gamepad.KeyCodes.ZL = 16384
+
+Game.Gamepad.KeyCodes.ZR = 32768
+
+Game.Gamepad.KeyCodes.TOUCHPAD = 1048576
+
+Game.Gamepad.KeyCodes.CSTICKRIGHT = 16777216
+
+Game.Gamepad.KeyCodes.CSTICKLEFT = 33554432
+
+Game.Gamepad.KeyCodes.CSTICKUP = 67108864
+
+Game.Gamepad.KeyCodes.CSTICKDOWN = 134217728
+
+Game.Gamepad.KeyCodes.CPADRIGHT = 268435456
+
+Game.Gamepad.KeyCodes.CPADLEFT = 536870912
+
+Game.Gamepad.KeyCodes.CPADUP = 1073741824
+
+Game.Gamepad.KeyCodes.CPADDOWN = 2147483648
+
+Game.Gamepad.KeyCodes.UP = 1073741888
+
+Game.Gamepad.KeyCodes.DOWN = 2147483776
+
+Game.Gamepad.KeyCodes.LEFT = 536870944
+
+Game.Gamepad.KeyCodes.RIGHT = 268435472
+
+Game.Gamepad.KeyCodes.CPAD = 2952790016
+
+Game.Gamepad.KeyCodes.CSTICK = 184549376
+
+Game.Items = {}
+
+---@class GameItem
+local GameItem = {}
+
+---Find an item using its ID
+---@param name string
+---@return GameItem?
+function Game.Items.findItemByName(name) end
+
+---Find and item using its name
+---@param itemID integer
+---@return GameItem?
+function Game.Items.findItemByID(itemID) end
+
+---Get the item position in creative using the id
+---@param itemID integer
+---@param groupID integer
+---@return number
+function Game.Items.getCreativePosition(itemID, groupID) end
+
+---Creates a new item and stores it in the game's items table. Returns the address to the item
+---@param itemName string
+---@param itemId integer
+---@return GameItem?
+function Game.Items.registerItem(itemName, itemId) end
+
+---Takes a registered item with Game.Items.registerItem, and sets its texture
+---@param item GameItem
+---@param textureName string
+---@param textureIndex integer
+function GameItem:setTexture(item, textureName, textureIndex) end
+
+---Takes a registered item with Game.Items.registerItem, and registers it in creative menu
+---@param item GameItem
+---@param groupId integer
+---@param position integer
+function Game.Items.registerCreativeItem(item, groupId, position) end
+
+GameItem.StackSize = 64
+
+GameItem.ID = 1
+
+GameItem.NameID = ""
+
+GameItem.DescriptionID = ""
+
+---@class OnRegisterItems: EventClass
+Game.Items.OnRegisterItems = {}
+
+---@class OnRegisterItemsTextures: EventClass
+Game.Items.OnRegisterItemsTextures = {}
+
+---@class OnRegisterCreativeItems: EventClass
+Game.Items.OnRegisterCreativeItems = {}
 
 Game.LocalPlayer = {}
 
@@ -146,204 +443,26 @@ InventoryArmorSlot.ItemData = 0
 
 InventoryArmorSlot.ItemName = ""
 
-Core.Event = {}
-
----@class EventClass
-local EventClass = {}
-
----Adds a function to call when this events fires. It also returns the function
----@param func function
----@return function
-function EventClass:Connect(func) end
-
----Removes a listener previously connected to this event
----@param func function
-function EventClass:Disconnect(func) end
-
----Fire this event
-function EventClass:Trigger() end
-
----@class BaseEvent: EventClass
-Core.Event.BaseEvent = {}
-
----@class OnGameEntitySpawnStart: EventClass
-Core.Event.OnGameEntitySpawnStart = {}
-
----@class OnGameEntitySpawn: EventClass
-Core.Event.OnGameEntitySpawn = {}
-
-Game.Gamepad = {}
-
----@class KeyCode: integer
-
----Returns true if the key is pressed (only counts for the first press, for button held use isDown)
----@param keycode KeyCode
----@return boolean
-function Game.Gamepad.isPressed(keycode) end
-
----Returns true if the key is down
----@param keycode KeyCode
----@return boolean
-function Game.Gamepad.isDown(keycode) end
-
----Returns true if the key just got released
----@param keycode KeyCode
----@return boolean
-function Game.Gamepad.isReleased(keycode) end
-
----Performs a virtual button press
----@param keycode KeyCode
-function Game.Gamepad.pressButton(keycode) end
-
----Returns touch x and y position
----@return number
----@return number
-function Game.Gamepad.getTouch() end
-
----@class OnKeyPressed: EventClass
-Game.Gamepad.OnKeyPressed = {}
-
----@class OnKeyDown: EventClass
-Game.Gamepad.OnKeyDown = {}
-
----@class OnKeyReleased: EventClass
-Game.Gamepad.OnKeyReleased = {}
-
-Game.Gamepad.KeyCodes = {}
-
-Game.Gamepad.KeyCodes.A = 1
-
-Game.Gamepad.KeyCodes.B = 2
-
-Game.Gamepad.KeyCodes.SELECT = 4
-
-Game.Gamepad.KeyCodes.START = 8
-
-Game.Gamepad.KeyCodes.DPADRIGHT = 16
-
-Game.Gamepad.KeyCodes.DPADLEFT = 32
-
-Game.Gamepad.KeyCodes.DPADUP = 64
-
-Game.Gamepad.KeyCodes.DPADDOWN = 128
-
-Game.Gamepad.KeyCodes.R = 256
-
-Game.Gamepad.KeyCodes.L = 512
-
-Game.Gamepad.KeyCodes.X = 1024
-
-Game.Gamepad.KeyCodes.Y = 2048
-
-Game.Gamepad.KeyCodes.ZL = 16384
-
-Game.Gamepad.KeyCodes.ZR = 32768
-
-Game.Gamepad.KeyCodes.TOUCHPAD = 1048576
-
-Game.Gamepad.KeyCodes.CSTICKRIGHT = 16777216
-
-Game.Gamepad.KeyCodes.CSTICKLEFT = 33554432
-
-Game.Gamepad.KeyCodes.CSTICKUP = 67108864
-
-Game.Gamepad.KeyCodes.CSTICKDOWN = 134217728
-
-Game.Gamepad.KeyCodes.CPADRIGHT = 268435456
-
-Game.Gamepad.KeyCodes.CPADLEFT = 536870912
-
-Game.Gamepad.KeyCodes.CPADUP = 1073741824
-
-Game.Gamepad.KeyCodes.CPADDOWN = 2147483648
-
-Game.Gamepad.KeyCodes.UP = 1073741888
-
-Game.Gamepad.KeyCodes.DOWN = 2147483776
-
-Game.Gamepad.KeyCodes.LEFT = 536870944
-
-Game.Gamepad.KeyCodes.RIGHT = 268435472
-
-Game.Gamepad.KeyCodes.CPAD = 2952790016
-
-Game.Gamepad.KeyCodes.CSTICK = 184549376
-
----@class GameEntity
-local GameEntity = {}
-
----@class GameSpawnCoords
-local GameSpawnCoords = {}
-
-GameEntity.X = 0.0
-
-GameEntity.Y = 0.0
-
-GameEntity.Z = 0.0
-
-GameEntity.EntityID = 0
-
-GameSpawnCoords.X = 0.0
-
-GameSpawnCoords.Y = 0.0
-
-GameSpawnCoords.Z = 0.0
-
-Game.Items = {}
-
----@class GameItem
-local GameItem = {}
-
----Find an item using its ID
----@param name string
----@return GameItem?
-function Game.Items.findItemByName(name) end
-
----Find and item using its name
----@param itemID integer
----@return GameItem?
-function Game.Items.findItemByID(itemID) end
-
----Get the item position in creative using the id
----@param itemID integer
----@param groupID integer
----@return number
-function Game.Items.getCreativePosition(itemID, groupID) end
-
----Creates a new item and stores it in the game's items table. Returns the address to the item
----@param itemName string
----@param itemId integer
----@return GameItem?
-function Game.Items.registerItem(itemName, itemId) end
-
----Takes a registered item with Game.Items.registerItem, and sets its texture
----@param item GameItem
----@param textureName string
----@param textureIndex integer
-function GameItem:setTexture(item, textureName, textureIndex) end
-
----Takes a registered item with Game.Items.registerItem, and registers it in creative menu
----@param item GameItem
----@param groupId integer
+Game.Recipes = {}
+
+---@class RecipesTable
+local RecipesTable = {}
+
+---Allows to register a recipe. Use with the value given in event Game.Recipes.OnRegisterRecipes to get RecipesTable value
+---@param recipesTable RecipesTable
+---@param resultItem GameItem
+---@param count integer
+---@param data integer
+---@param categoryId integer
 ---@param position integer
-function Game.Items.registerCreativeItem(item, groupId, position) end
+---@param line1 string
+---@param line2 string
+---@param line3 string
+---@param components table
+function Game.Recipes.registerRecipe(recipesTable, resultItem, count, data, categoryId, position, line1, line2, line3, components) end
 
-GameItem.StackSize = 64
-
-GameItem.ID = 1
-
-GameItem.NameID = ""
-
-GameItem.DescriptionID = ""
-
----@class OnRegisterItems: EventClass
-Game.Items.OnRegisterItems = {}
-
----@class OnRegisterItemsTextures: EventClass
-Game.Items.OnRegisterItemsTextures = {}
-
----@class OnRegisterCreativeItems: EventClass
-Game.Items.OnRegisterCreativeItems = {}
+---@class OnRegisterRecipes: EventClass
+Game.Recipes.OnRegisterRecipes = {}
 
 Game.World = {}
 
@@ -361,24 +480,64 @@ Game.World.OnWorldJoin = {}
 ---@class OnWorldLeave: EventClass
 Game.World.OnWorldLeave = {}
 
-Game.Recipes = {}
+Core.Graphics = {}
 
----@class RecipesTable
-local RecipesTable = {}
+---Stops the game and allows to draw on screen. Until Core.Graphics.close is called the function will be executed every frame
+---Other events and async tasks will continue running
+---@param func function
+function Core.Graphics.open(func) end
 
----Allows to register a recipe. Use with the value given in event Game.Recipes.OnRegisterRecipes to get RecipesTable value
----@param recipesTable RecipesTable
----@param resultItem GameItem
----@param categoryId integer
----@param position integer
----@param line1 string
----@param line2 string
----@param line3 string
----@param components table
-function Game.Recipes.registerRecipe(recipesTable, resultItem, categoryId, position, line1, line2, line3, components) end
+---Resumes the game, the callback function will no longer be called and draw functions will not work
+function Core.Graphics.close() end
 
----@class OnRegisterRecipes: EventClass
-Game.Recipes.OnRegisterRecipes = {}
+---Returns if Graphics are open
+function Core.Graphics.isOpen() end
+
+---Draws a rect on screen. Only can be used when Core.Graphics.open was called
+---@param x integer
+---@param y integer
+---@param width integer
+---@param height integer
+---@param color integer
+function Core.Graphics.drawRect(x, y, width, height, color) end
+
+---Draws a solid rect on screen. Only can be used when Core.Graphics.open was called
+---@param x integer
+---@param y integer
+---@param width integer
+---@param height integer
+---@param color integer
+function Core.Graphics.drawRectFill(x, y, width, height, color) end
+
+---Draws a text on screen. Only can be used when Core.Graphics.open was called
+---@param text string
+---@param x integer
+---@param y integer
+---@param color integer
+function Core.Graphics.drawText(text, x, y, color) end
+
+---Returns the pixel width of the string
+---@param text string
+---@return integer
+function Core.Graphics.getTextWidth(text) end
+
+---Returns a color with the r, g, b values
+---@param r integer
+---@param g integer
+---@param b integer
+---@return integer
+function Core.Graphics.colorRGB(r, g, b) end
+
+---Returns a color with the r, g, b, a values
+---@param r integer
+---@param g integer
+---@param b integer
+---@param a integer
+---@return integer
+function Core.Graphics.colorRGBA(r, g, b, a) end
+
+---@class OnNewFrame: EventClass
+Core.Graphics.OnNewFrame = {}
 
 Core.Keyboard = {}
 
@@ -401,91 +560,6 @@ function Core.Keyboard.getInteger(message) end
 ---@param message string?
 ---@return integer?
 function Core.Keyboard.getHex(message) end
-
-Core.System = {}
-
----Returns UNIX time
----@return number
-function Core.System.getTime() end
-
-Core.Filesystem = {}
-
----@class FilesystemFile
-local FilesystemFile = {}
-
----Opens a file. Returns nil if the file wasn't opened with an error message. Use sdmc:/ for sd card or extdata:/ for game extdata
----@param fp string
----@param mode string
----@return FilesystemFile?
----@return string?
-function Core.Filesystem.open(fp, mode) end
-
----Checks if the file exists
----@param fp string
----@return boolean
-function Core.Filesystem.fileExists(fp) end
-
----Checks if the directory exists
----@param path string
----@return boolean
-function Core.Filesystem.directoryExists(path) end
-
----Returns a table with all the elements in a directory
----@param path string
----@return table
-function Core.Filesystem.getDirectoryElements(path) end
-
----Creates a directory and returns if success
----@param path string
----@return boolean
-function Core.Filesystem.createDirectory(path) end
-
----Reads the specified amount of bytes to read, or use "*all" to read all file and returns the data in a string or nil if error
----@param bytes any
----@return string?
-function FilesystemFile:read(bytes) end
-
----Writes all data to file of the specified amount of bytes if provided. Returns true is success, false otherwise
----@param data string
----@param bytes integer?
----@return boolean
-function FilesystemFile:write(data, bytes) end
-
----Returns the actual position in the file
----@return integer
-function FilesystemFile:tell() end
-
----Flushes all file data in write buffer
----@return boolean
-function FilesystemFile:flush() end
-
----Sets the position in file and returns the new position or nil if error
----@param offset integer
----@param whence string?
----@return integer
-function FilesystemFile:seek(offset, whence) end
-
----Checks if the file is open
----@return boolean
-function FilesystemFile:isOpen() end
-
----Checks if the file is on end of file
----@return boolean
-function FilesystemFile:isEOF() end
-
----Closes the file
-function FilesystemFile:close() end
-
-Async = {}
-
----Adds the function to the queue that will run apart from the game until the functions ends
----@param func function
-function Async.create(func) end
-
----Yeilds the current task until time has passed. Always returns true
----@param seconds number?
----@return boolean
-function Async.wait(seconds) end
 
 Core.Memory = {}
 
@@ -606,80 +680,8 @@ function Core.Memory.free(offset) end
 ---@return number
 function Core.Memory.call(foffset, argstype, returntype, ...) end
 
-Core.Graphics = {}
+Core.System = {}
 
----Stops the game and allows to draw on screen. Until Core.Graphics.close is called the function will be executed every frame
----Other events and async tasks will continue running
----@param func function
-function Core.Graphics.open(func) end
-
----Resumes the game, the callback function will no longer be called and draw functions will not work
-function Core.Graphics.close() end
-
----Returns if Graphics are open
-function Core.Graphics.isOpen() end
-
----Draws a rect on screen. Only can be used when Core.Graphics.open was called
----@param x integer
----@param y integer
----@param width integer
----@param height integer
----@param color integer
-function Core.Graphics.drawRect(x, y, width, height, color) end
-
----Draws a solid rect on screen. Only can be used when Core.Graphics.open was called
----@param x integer
----@param y integer
----@param width integer
----@param height integer
----@param color integer
-function Core.Graphics.drawRectFill(x, y, width, height, color) end
-
----Draws a text on screen. Only can be used when Core.Graphics.open was called
----@param text string
----@param x integer
----@param y integer
----@param color integer
-function Core.Graphics.drawText(text, x, y, color) end
-
----Returns the pixel width of the string
----@param text string
----@return integer
-function Core.Graphics.getTextWidth(text) end
-
----Returns a color with the r, g, b values
----@param r integer
----@param g integer
----@param b integer
----@return integer
-function Core.Graphics.colorRGB(r, g, b) end
-
----Returns a color with the r, g, b, a values
----@param r integer
----@param g integer
----@param b integer
----@param a integer
----@return integer
-function Core.Graphics.colorRGBA(r, g, b, a) end
-
----@class OnNewFrame: EventClass
-Core.Graphics.OnNewFrame = {}
-
-Core.Debug = {}
-
----Displays a notification on screen
----@param msg string
-function Core.Debug.message(msg) end
-
----Appends the message to log file. Optionally shows the message on screen
----@param msg string
----@param showOnScreen boolean?
-function Core.Debug.log(msg, showOnScreen) end
-
----Appends the error message to log file and shows it on screen
----@param msg string
-function Core.Debug.logerror(msg) end
-
----Show error on screen
----@param msg string
-function Core.Debug.error(msg) end
+---Returns UNIX time
+---@return number
+function Core.System.getTime() end

@@ -34,6 +34,8 @@ static bool repeatedValue(std::vector<Minecraft::RecipeComponentDef>& components
 - Allows to register a recipe. Use with the value given in event Game.Recipes.OnRegisterRecipes to get RecipesTable value
 ## recipesTable: RecipesTable
 ## resultItem: GameItem
+## count: integer
+## data: integer
 ## categoryId: integer
 ## position: integer
 ## line1: string
@@ -45,19 +47,21 @@ static bool repeatedValue(std::vector<Minecraft::RecipeComponentDef>& components
 static int l_Recipes_registerRecipe(lua_State* L) {
     void* ptr1 = *(void**)LuaObject::CheckObject(L, 1, "RecipesTable");
     Minecraft::Item* resultItem = *(Minecraft::Item**)LuaObject::CheckObject(L, 2, "GameItem");
-    u16 categoryId = luaL_checkinteger(L, 3);
-    s16 position = luaL_checkinteger(L, 4);
-    std::string line1 = luaL_checkstring(L, 5);
-    std::string line2 = luaL_checkstring(L, 6);
-    std::string line3 = luaL_checkstring(L, 7);
-    luaL_checktype(L, 8, LUA_TTABLE);
+    u16 count = luaL_checkinteger(L, 3);
+    u16 data = luaL_checkinteger(L, 4);
+    u16 categoryId = luaL_checkinteger(L, 5);
+    s16 position = luaL_checkinteger(L, 6);
+    std::string line1 = luaL_checkstring(L, 7);
+    std::string line2 = luaL_checkstring(L, 8);
+    std::string line3 = luaL_checkstring(L, 9);
+    luaL_checktype(L, 10, LUA_TTABLE); // Table
     if (line1.length() > 3 || line2.length() > 3 || line3.length() > 3)
         return luaL_error(L, "shape is not a square!");
     if (line1.length() + line2.length() + line3.length() < 1)
         return luaL_error(L, "shape is empty!");
 
     std::vector<Minecraft::RecipeComponentDef> components;
-    lua_pushvalue(L, 8);
+    lua_pushvalue(L, 10); // Table
     lua_pushnil(L);
     while (lua_next(L, -2) != 0) {
         char idc;
@@ -113,7 +117,11 @@ static int l_Recipes_registerRecipe(lua_State* L) {
     if (components.empty())
         return luaL_error(L, "no components were passed!");
 
-    Minecraft::Recipes::registerRecipe(ptr1, resultItem, line1.c_str(), line2.c_str(), line3.c_str(), components.data(), components.size(), categoryId, position);
+    Minecraft::Recipes::Shape shape = {line1, line2, line3};
+    GenericVectorType<Minecraft::InternalRecipeElementDefinition> vec;
+    Minecraft::definition(vec, components.data(), components.size());
+    Minecraft::ItemInstance resultItemInstance(resultItem, count, data);
+    Minecraft::Recipes::addShapedRecipe(ptr1, resultItemInstance, shape, vec, categoryId, position);
     return 0;
 }
 

@@ -1,8 +1,9 @@
 -- This template assumes it is used in conjunction with LunaCoreAPI
 
-local LOGGER = CoreAPI.Utils.Logger.newLogger("testMod")
+local LOGGER = CoreAPI.Utils.Logger.newLogger("testmod")
 
-local testModReg = CoreAPI.Items.newItemRegistry("testMod") -- This must be the same as the mod name in mod.json
+local testModReg = CoreAPI.Items.newItemRegistry("testmod") -- This must be the same as the mod name in mod.json
+-- Core load mods names as lowercase, so use your mod name as lowercase
 
 local COPPER_INGOT = testModReg:registerItem("copper_ingot", 254, {
     texture = "items/copper_ingot.3dst", -- This will search the texture in the folder assets/textures
@@ -45,6 +46,6 @@ testModReg:buildResources()
 Game.Recipes.OnRegisterRecipes:Connect(function (recipesTable)
     local stick = Game.Items.findItemByName("stick")
     if COPPER_PICKAXE and stick and COPPER_INGOT then
-        Game.Recipes.registerRecipe(recipesTable, COPPER_PICKAXE, 2, 50, "XXX", " # ", " # ", {{"X", COPPER_INGOT}, {"#", stick}})
+        Game.Recipes.registerRecipe(recipesTable, COPPER_PICKAXE, 1, 0, 2, 50, "XXX", " # ", " # ", {{"X", COPPER_INGOT}, {"#", stick}})
     end
 end)

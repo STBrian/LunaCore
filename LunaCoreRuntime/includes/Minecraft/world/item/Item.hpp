@@ -54,7 +54,7 @@ namespace Game {
         }
 
         inline static void addCreativeItem(Item* item, u8 categoryId, s16 position) {
-            ItemInstance itemins(item->itemId);
+            ItemInstance itemins(item->itemId, 1, 0); // Def values
             itemins.unknown1 = categoryId;
             itemins.unknown2 = position;
             reinterpret_cast<void(*)(ItemInstance*)>(0x0056e108)(&itemins);

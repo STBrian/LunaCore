@@ -27,11 +27,19 @@ namespace Game {
         }
 
         ItemInstance(Item* item) {
-            reinterpret_cast<ItemInstance*(*)(ItemInstance*, Item*)>(0x001d2444)(this, item);
+            reinterpret_cast<void(*)(ItemInstance*,Item*)>(0x001d2444)(this, item);
         }
 
-        ItemInstance(short itemId, short count = 1, short unkn = 0) {
-            reinterpret_cast<ItemInstance*(*)(ItemInstance*, short, short, short)>(0x001d2894)(this, itemId, count, unkn);
+        ItemInstance(Item* item, u16 count) {
+            reinterpret_cast<void(*)(ItemInstance*,Item*,u16)>(0x001d2694)(this, item, count);
+        }
+
+        ItemInstance(Item* item, u16 count, u16 data) {
+            reinterpret_cast<void(*)(ItemInstance*,Item*,u16,u16)>(0x001d2510)(this, item, count, data);
+        }
+
+        ItemInstance(short itemId, short count, short unkn) {
+            reinterpret_cast<void(*)(ItemInstance*,short,short,short)>(0x001d2894)(this, itemId, count, unkn);
         }
 
         ~ItemInstance() {

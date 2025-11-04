@@ -25,6 +25,10 @@ namespace CTRPF = CTRPluginFramework;
 
 static std::vector<std::unique_ptr<CoreHookContext>> hooks;
 
+extern "C" void lc_setCoreHookState() {
+    Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
+}
+
 static __attribute__((naked)) void hookBody() {
     asm volatile ( // r4 contains hookCtxPtr
         "mov r5, sp\n" // Save stack pointer
@@ -35,6 +39,7 @@ static __attribute__((naked)) void hookBody() {
         "str lr, [r4, #0x1c]\n"
         "str r5, [r4, #0x20]\n" // Store current sp
         "ldr r6, [r4, #0x4]\n" // Load callback function address
+        "bl lc_setCoreHookState\n"
         "mov r0, r4\n" // Copy hookCtxPtr to r0 (arg 1)
         "blx r6\n"
         "mov sp, r5\n" // Restore stack pointer
@@ -98,7 +103,6 @@ static __attribute__((naked)) void RegisterItemOverwriteReturn() {
 }
 
 static void RegisterItemsHook(CoreHookContext* ctx) {
-    Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
     Game::Item* totemItem = reinterpret_cast<Game::Item*>(ctx->r0);
     totemItem->padding[6] = 1;
     Game::Item::mTotem = totemItem;
@@ -126,7 +130,6 @@ static __attribute__((naked)) void RegisterItemsTexturesOverwriteReturn() {
 }
 
 static void RegisterItemsTexturesHook(CoreHookContext* ctx) {
-    Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
     GameState.SettingItemsTextures.store(true);
 
     {
@@ -149,7 +152,6 @@ static __attribute__((naked)) void RegisterCreativeItemsOverwriteReturn() {
 }
 
 static void RegisterCreativeItemsHook(CoreHookContext* ctx) {
-    Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
     GameState.LoadingCreativeItems.store(true);
 
     {
@@ -173,7 +175,6 @@ static __attribute__((naked)) void EntitySpawnStartOverwriteReturn() {
 }
 
 static void EntitySpawnStartHook(CoreHookContext *ctx) {
-    Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
 
     if (ctx->r2 != 0) {
         std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
@@ -198,7 +199,6 @@ static __attribute__((naked)) void EntitySpawnFinishedOverwriteReturn() {
 
 static void EntitySpawnFinishedHook(CoreHookContext *ctx) {
     // Core::Debug::LogError("Trying to hook entity spawn");
-    Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
 
     if (ctx->r0 != 0) {
         std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
@@ -222,7 +222,6 @@ static __attribute__((naked)) void RegisterRecipesOverwriteReturn() {
 }
 
 static void RegisterRecipes(CoreHookContext* ctx) {
-    Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
     GameState.LoadingRecipes.store(true);
 
     {
@@ -236,7 +235,6 @@ static void RegisterRecipes(CoreHookContext* ctx) {
 }
 
 void hookSomeFunctions() {
-    Core::CrashHandler::CoreState lastcState = Core::CrashHandler::core_state;
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOKING;
     hookFunction(0x0056c2a0, (u32)RegisterItemsHook);
     hookFunction(0x0056de70, (u32)RegisterItemsTexturesHook);
@@ -244,5 +242,4 @@ void hookSomeFunctions() {
     hookFunction(0x001b4898, (u32)RegisterRecipes);
     //hookFunction(0x004df688, (u32)EntitySpawnStartHook); disabled as there is a weird memory leak ? idk why
     //hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
-    Core::CrashHandler::core_state = lastcState;
 }

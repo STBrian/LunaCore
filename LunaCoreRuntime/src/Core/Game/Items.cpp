@@ -10,6 +10,7 @@
 
 namespace CTRPF = CTRPluginFramework;
 using Item = Game::Item;
+using ItemInstance = Game::ItemInstance;
 
 Item* Core::Items::SearchItemByName(const std::string& name) {
     short i = 1;
@@ -52,6 +53,7 @@ u16 Core::Items::GetCreativeItemPositionOfGroup(u16 itemId, u16 groupId) {
 
 //$Game.Items
 //@@GameItem
+//@@GameItemInstance
 
 // ----------------------------------------------------------------------------
 
@@ -150,12 +152,30 @@ static int l_Items_registerCreativeItem(lua_State *L) {
     return 0;
 }
 
+/*
+- Returns a GameItemInstance
+## item: GameItem
+## count: integer
+## data: integer
+## return: GameItemInstance
+### Game.Items.getItemInstance
+*/
+static int l_Items_getItemInstance(lua_State *L) {
+    Item *itemData = *(Item**)LuaObject::CheckObject(L, 1, "GameItem");
+    u16 count = luaL_checkinteger(L, 2);
+    u16 data = luaL_checkinteger(L, 3);
+    ItemInstance* ins = new ItemInstance(itemData, count, data);
+    LuaObject::NewObject(L, "GameItemInstance", ins);
+    return 1;
+}
+
 static const luaL_Reg items_functions[] = {
     {"findItemByName", l_Items_findItemByName},
     {"findItemByID", l_Items_findItemByID},
     {"getCreativePosition", l_Items_getCreativePosition},
     {"registerItem", l_Items_registerItem},
     {"registerCreativeItem", l_Items_registerCreativeItem},
+    {"getItemInstance", l_Items_getItemInstance},
     {NULL, NULL}
 };
 
@@ -177,8 +197,21 @@ static const LuaObjectField GameItemFields[] = {
     {NULL, OBJF_TYPE_NIL, 0}
 };
 
+static int l_gc_GameItemInstance(lua_State* L) {
+    ItemInstance* ptr = *(ItemInstance**)LuaObject::CheckObject(L, 1, "GameItemInstance");
+    delete ptr;
+    return 0;
+}
+
+static const LuaObjectField GameItemInstanceFields[] = {
+    {"dummy", OBJF_TYPE_SHORT, 0},
+    {NULL, OBJF_TYPE_NIL, 0}
+};
+
 bool Core::Module::RegisterItemsModule(lua_State *L) {
     LuaObject::RegisterNewObject(L, "GameItem", GameItemFields);
+    LuaObject::RegisterNewObject(L, "GameItemInstance", GameItemInstanceFields);
+    LuaObject::SetGCObjectField(L, "GameItemInstance", l_gc_GameItemInstance);
     lua_getglobal(L, "Game");
     lua_newtable(L); // Items
 

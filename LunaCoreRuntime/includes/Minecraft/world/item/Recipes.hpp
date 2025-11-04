@@ -24,6 +24,11 @@ namespace Minecraft {
         Block* block = nullptr;
     } RecipeComponentDef;
 
+    typedef struct {
+        char id;
+        ItemInstance* item = nullptr;
+    } RecipeComponentDefIns;
+
     // Item
     void definition(GenericVector& vec, char itemchr, Item* item) {
         InternalRecipeElementDefinition itemDef;
@@ -37,6 +42,18 @@ namespace Minecraft {
         InternalRecipeElementDefinition itemDef;
         itemDef.item = item;
         itemDef.id = itemchr;
+        reinterpret_cast<void(*)(GenericVectorType<InternalRecipeElementDefinition>&, InternalRecipeElementDefinition&)>(0x008ff20c)(vec, itemDef); // emplace_back
+    }
+
+    // ItemInstance
+    void definition(GenericVector& vec, char itemchr, ItemInstance* item) {
+        InternalRecipeElementDefinition itemDef = {nullptr, nullptr, ItemInstance(item), itemchr};
+        reinterpret_cast<void(*)(GenericVector&, InternalRecipeElementDefinition&)>(0x008ff20c)(vec, itemDef); // emplace_back
+    }
+
+    // ItemInstance
+    void definition(GenericVectorType<InternalRecipeElementDefinition>& vec, char itemchr, ItemInstance* item) {
+        InternalRecipeElementDefinition itemDef = {nullptr, nullptr, ItemInstance(item), itemchr};
         reinterpret_cast<void(*)(GenericVectorType<InternalRecipeElementDefinition>&, InternalRecipeElementDefinition&)>(0x008ff20c)(vec, itemDef); // emplace_back
     }
 
@@ -86,6 +103,15 @@ namespace Minecraft {
                 definition(vec, components[i].id, components[i].item);
             } else if (components[i].block != nullptr) {
                 definition(vec, components[i].id, components[i].block);
+            }
+        }
+    }
+
+    // Use an array of components definitions
+    void definition(GenericVectorType<InternalRecipeElementDefinition>& vec, RecipeComponentDefIns* components, u32 size) {
+        for (u32 i = 0; i < size; i++) {
+            if (components[i].item != nullptr) {
+                definition(vec, components[i].id, components[i].item);
             }
         }
     }

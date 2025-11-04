@@ -58,7 +58,6 @@ namespace Game {
             itemins.unknown1 = categoryId;
             itemins.unknown2 = position;
             reinterpret_cast<void(*)(ItemInstance*)>(0x0056e108)(&itemins);
-            reinterpret_cast<void(*)(ItemInstance*)>(0x001d295c)(&itemins);
         }
 
         virtual void unkFunc1();

@@ -259,6 +259,9 @@ Game.Items = {}
 ---@class GameItem
 local GameItem = {}
 
+---@class GameItemInstance
+local GameItemInstance = {}
+
 ---Find an item using its ID
 ---@param name string
 ---@return GameItem?
@@ -292,6 +295,13 @@ function GameItem:setTexture(item, textureName, textureIndex) end
 ---@param groupId integer
 ---@param position integer
 function Game.Items.registerCreativeItem(item, groupId, position) end
+
+---Returns a GameItemInstance
+---@param item GameItem
+---@param count integer
+---@param data integer
+---@return GameItemInstance
+function Game.Items.getItemInstance(item, count, data) end
 
 GameItem.StackSize = 64
 
@@ -450,16 +460,14 @@ local RecipesTable = {}
 
 ---Allows to register a recipe. Use with the value given in event Game.Recipes.OnRegisterRecipes to get RecipesTable value
 ---@param recipesTable RecipesTable
----@param resultItem GameItem
----@param count integer
----@param data integer
+---@param resultItem GameItemInstance
 ---@param categoryId integer
 ---@param position integer
 ---@param line1 string
 ---@param line2 string
 ---@param line3 string
 ---@param components table
-function Game.Recipes.registerRecipe(recipesTable, resultItem, count, data, categoryId, position, line1, line2, line3, components) end
+function Game.Recipes.registerRecipe(recipesTable, resultItem, categoryId, position, line1, line2, line3, components) end
 
 ---@class OnRegisterRecipes: EventClass
 Game.Recipes.OnRegisterRecipes = {}

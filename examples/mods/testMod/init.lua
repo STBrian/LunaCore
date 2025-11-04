@@ -45,7 +45,10 @@ testModReg:buildResources()
 
 Game.Recipes.OnRegisterRecipes:Connect(function (recipesTable)
     local stick = Game.Items.findItemByName("stick")
-    if COPPER_PICKAXE and stick and COPPER_INGOT then
-        Game.Recipes.registerRecipe(recipesTable, COPPER_PICKAXE, 1, 0, 2, 50, "XXX", " # ", " # ", {{"X", COPPER_INGOT}, {"#", stick}})
+    if stick and COPPER_PICKAXE and COPPER_INGOT then
+        local stickIns = Game.Items.getItemInstance(stick, 1, 0)
+        local copper_ingotIns = Game.Items.getItemInstance(COPPER_INGOT, 1, 0)
+        local copper_pickaxe_ins = Game.Items.getItemInstance(COPPER_PICKAXE, 1, 0)
+        Game.Recipes.registerRecipe(recipesTable, copper_pickaxe_ins, 2, 50, "XXX", " # ", " # ", {{"X", copper_ingotIns}, {"#", stickIns}})
     end
 end)

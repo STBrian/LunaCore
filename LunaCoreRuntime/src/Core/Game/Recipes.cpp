@@ -33,9 +33,7 @@ static bool repeatedValue(std::vector<Minecraft::RecipeComponentDef>& components
 /*
 - Allows to register a recipe. Use with the value given in event Game.Recipes.OnRegisterRecipes to get RecipesTable value
 ## recipesTable: RecipesTable
-## resultItem: GameItem
-## count: integer
-## data: integer
+## resultItem: GameItemInstance
 ## categoryId: integer
 ## position: integer
 ## line1: string
@@ -46,26 +44,24 @@ static bool repeatedValue(std::vector<Minecraft::RecipeComponentDef>& components
 */
 static int l_Recipes_registerRecipe(lua_State* L) {
     void* ptr1 = *(void**)LuaObject::CheckObject(L, 1, "RecipesTable");
-    Minecraft::Item* resultItem = *(Minecraft::Item**)LuaObject::CheckObject(L, 2, "GameItem");
-    u16 count = luaL_checkinteger(L, 3);
-    u16 data = luaL_checkinteger(L, 4);
-    u16 categoryId = luaL_checkinteger(L, 5);
-    s16 position = luaL_checkinteger(L, 6);
-    std::string line1 = luaL_checkstring(L, 7);
-    std::string line2 = luaL_checkstring(L, 8);
-    std::string line3 = luaL_checkstring(L, 9);
-    luaL_checktype(L, 10, LUA_TTABLE); // Table
+    Minecraft::ItemInstance* resultItem = *(Minecraft::ItemInstance**)LuaObject::CheckObject(L, 2, "GameItemInstance");
+    u16 categoryId = luaL_checkinteger(L, 3);
+    s16 position = luaL_checkinteger(L, 4);
+    std::string line1 = luaL_checkstring(L, 5);
+    std::string line2 = luaL_checkstring(L, 6);
+    std::string line3 = luaL_checkstring(L, 7);
+    luaL_checktype(L, 8, LUA_TTABLE); // Table
     if (line1.length() > 3 || line2.length() > 3 || line3.length() > 3)
         return luaL_error(L, "shape is not a square!");
     if (line1.length() + line2.length() + line3.length() < 1)
         return luaL_error(L, "shape is empty!");
 
-    std::vector<Minecraft::RecipeComponentDef> components;
-    lua_pushvalue(L, 10); // Table
+    std::vector<Minecraft::RecipeComponentDefIns> components;
+    lua_pushvalue(L, 8); // Table
     lua_pushnil(L);
     while (lua_next(L, -2) != 0) {
         char idc;
-        Minecraft::Item* item = nullptr;
+        Minecraft::ItemInstance* item = nullptr;
         // Must be a table of tables with two elements
         if (!lua_istable(L, -1)) {
             lua_pop(L, 3);
@@ -83,31 +79,23 @@ static int l_Recipes_registerRecipe(lua_State* L) {
                     return luaL_error(L, "Unexpected type in component id (expected non empty string)");
                 }
                 idc = id[0];
-                if (repeatedValue(components, idc)) {
-                    lua_pop(L, 4);
-                    return luaL_error(L, "Component id repeated!");
-                }
             }
             lua_pop(L, 1);
 
-            // Second element must be the GameItem
+            // Second element must be the GameItemInstance
             lua_rawgeti(L, -1, 2);
-            if (!LuaObject::IsObject(L, -1, "GameItem")) {
+            if (!LuaObject::IsObject(L, -1, "GameItemInstance")) {
                 lua_pop(L, 4);
-                return luaL_error(L, "Unexpected type in component item (expected GameItem)");
+                return luaL_error(L, "Unexpected type in component item (expected GameItemInstance)");
             } else {
-                item = *(Minecraft::Item**)LuaObject::CheckObject(L, -1, "GameItem");
+                item = *(Minecraft::ItemInstance**)lua_touserdata(L, -1);
             }
             lua_pop(L, 1);
         }
 
         // Get the block if the id is from a block
         if (item != nullptr) {
-            if (item->itemId < 256) {
-                components.push_back({idc, nullptr, Minecraft::Block::mBlocks[item->itemId]});
-            } else {
-                components.push_back({idc, item, nullptr});
-            }
+            components.push_back({idc, item});
         }
 
         lua_pop(L, 1);
@@ -120,8 +108,7 @@ static int l_Recipes_registerRecipe(lua_State* L) {
     Minecraft::Recipes::Shape shape = {line1, line2, line3};
     GenericVectorType<Minecraft::InternalRecipeElementDefinition> vec;
     Minecraft::definition(vec, components.data(), components.size());
-    Minecraft::ItemInstance resultItemInstance(resultItem, count, data);
-    Minecraft::Recipes::addShapedRecipe(ptr1, resultItemInstance, shape, vec, categoryId, position);
+    Minecraft::Recipes::addShapedRecipe(ptr1, *resultItem, shape, vec, categoryId, position);
     return 0;
 }
 

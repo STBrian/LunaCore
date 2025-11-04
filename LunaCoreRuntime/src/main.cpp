@@ -134,7 +134,6 @@ namespace CTRPluginFramework
     {
         ToggleTouchscreenForceOn();
         Core::CrashHandler::plg_state = Core::CrashHandler::PLUGIN_EXIT;
-        Core::CrashHandler::core_state = Core::CrashHandler::CORE_EXIT;
 
         // Cleanup
         Core::Debug::LogMessage("Exiting LunaCore", false);

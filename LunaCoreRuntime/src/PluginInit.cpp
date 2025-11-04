@@ -78,6 +78,7 @@ void InitMenu(PluginMenu &menu)
     });*/
     auto optionsFolder = new MenuFolder("Options");
     auto devFolder = new MenuFolder("Developer");
+
     optionsFolder->Append(new MenuEntry("Toggle Script Loader", nullptr, [](MenuEntry *entry)
     {
         bool changed = false;
@@ -261,10 +262,11 @@ void InitMenu(PluginMenu &menu)
 
         // Draw message
         const Screen& topScreen = OSD::GetTopScreen();
-        topScreen.DrawRect(20, 20, 200, 200, Color::Black);
+        topScreen.DrawRect(35, 21, 380, 200, Color::Black);
         topScreen.DrawSysfont("Connect to host: "+host+":5432", 40, 185, Color::White);
         topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
         OSD::SwapBuffers();
+        topScreen.DrawRect(35, 21, 380, 200, Color::Black);
         topScreen.DrawSysfont("Connect to host: "+host+":5432", 40, 185, Color::White);
         topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
 
@@ -281,9 +283,6 @@ void InitMenu(PluginMenu &menu)
             {0xe000000, 0xe004000},
             {0xe005000, 0xe009000},
             {0xe00a000, 0xe00c000},
-            {0xffc0000, 0x10000000},
-            {0x1ffb0000, 0x1ffb1000},
-            {0x1ffb2000, 0x1ffb4000},
             {0x30000000, 0x35f80000}
         };
 
@@ -308,10 +307,10 @@ void InitMenu(PluginMenu &menu)
                     exitSockets();
                     MessageBox("Failed to send packets")();
                     return;
-                } 
+                }
                 currentPosition += (remaining < packetSize ? remaining : packetSize);
                 remaining = region.b - currentPosition;
-                topScreen.DrawRect(90, 90, 50, 30, Color::Black);
+                topScreen.DrawRect(35, 21, 380, 200, Color::Black);
                 topScreen.DrawSysfont(Utils::Format("Progress: %.2f", (float)(regionSize - remaining)/regionSize * 100), 100, 100, Color::White);
                 topScreen.DrawSysfont(Utils::Format("Dumping: %08X", region.a), 100, 110, Color::White);
                 OSD::SwapBuffers();

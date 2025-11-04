@@ -26,6 +26,10 @@ namespace Game {
             reinterpret_cast<ItemInstance*(*)(ItemInstance*)>(0x001d28f4)(this);
         }
 
+        ItemInstance(ItemInstance* ins) {
+            reinterpret_cast<void(*)(ItemInstance*,ItemInstance*)>(0x001d2768)(this, ins);
+        }
+
         ItemInstance(Item* item) {
             reinterpret_cast<void(*)(ItemInstance*,Item*)>(0x001d2444)(this, item);
         }

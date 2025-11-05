@@ -137,7 +137,15 @@ namespace Minecraft {
         }
 
         static void addShapedRecipe(void* ptr1, ItemInstance& result, Recipes::Shape& shape, GenericVectorType<InternalRecipeElementDefinition>& defVector, int categoryId, int pos) {
-            reinterpret_cast<void(*)(void*, ItemInstance&, Recipes::Shape&, GenericVectorType<InternalRecipeElementDefinition>&,int,int)>(0x0063684c)(ptr1, result, shape, defVector, categoryId, pos);
+            reinterpret_cast<void(*)(void*,ItemInstance&,Recipes::Shape&,GenericVectorType<InternalRecipeElementDefinition>&,int,int)>(0x0063684c)(ptr1, result, shape, defVector, categoryId, pos);
+        }
+
+        static void addShapedRecipe(void* ptr1, ItemInstance& result, const CustomString& line1, GenericVectorType<InternalRecipeElementDefinition>& defVector, int categoryId, int pos) {
+            reinterpret_cast<void(*)(void*,ItemInstance&,const CustomString&,GenericVectorType<InternalRecipeElementDefinition>&,int,int)>(0x006366dc)(ptr1, result, line1, defVector, categoryId, pos);
+        }
+
+        static void addShapedRecipe(void* ptr1, ItemInstance& result, const CustomString& line1, const CustomString& line2, GenericVectorType<InternalRecipeElementDefinition>& defVector, int categoryId, int pos) {
+            reinterpret_cast<void(*)(void*,ItemInstance&,const CustomString&,const CustomString&,GenericVectorType<InternalRecipeElementDefinition>&,int,int)>(0x00636744)(ptr1, result, line1, line2, defVector, categoryId, pos);
         }
 
         static void registerRecipe(void* ptr1, Item* resItem, const char* line1, const char* line2, const char* line3, RecipeComponentDef* components, u32 size, u16 categoryId, s16 position) {

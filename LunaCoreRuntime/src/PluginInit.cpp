@@ -322,7 +322,7 @@ void InitMenu(PluginMenu &menu)
     #endif
     
     devFolder->Append(new MenuEntry("Clean Lua environment", nullptr, [](MenuEntry *entry) {
-        if (!MessageBox("This will unload all loaded scripts. Continue?", DialogType::DialogYesNo)())
+        if (!MessageBox("This will reload Lua env without any scripts or mods. Continue?", DialogType::DialogYesNo)())
             return;
         if (!Lua_Global_Mut.try_lock())
             return
@@ -331,11 +331,11 @@ void InitMenu(PluginMenu &menu)
         Lua_global = luaL_newstate();
         Core::LoadLuaEnv();
         loadedScripts = 0;
-        MessageBox("Lua environment reloaded")();
+        MessageBox("Lua environment cleaned")();
         Lua_Global_Mut.unlock();
     }));
-    devFolder->Append(new MenuEntry("Reload scripts", nullptr, [](MenuEntry *entry) {
-        if (!MessageBox("This will reload saved scripts, not including loaded by network (if not saved to sd card). Continue?", DialogType::DialogYesNo)())
+    devFolder->Append(new MenuEntry("Reload Lua environment", nullptr, [](MenuEntry *entry) {
+        if (!MessageBox("This will reload Lua env and load all scripts and mods. Continue?", DialogType::DialogYesNo)())
             return;
         if (!Lua_Global_Mut.try_lock())
             return
@@ -343,6 +343,7 @@ void InitMenu(PluginMenu &menu)
         lua_close(Lua_global);
         Lua_global = luaL_newstate();
         Core::LoadLuaEnv();
+        Core::LoadMods();
         loadedScripts = 0;
         Core::PreloadScripts();
         MessageBox("Lua environment reloaded")();

@@ -467,7 +467,7 @@ local RecipesTable = {}
 ---@param line2 string
 ---@param line3 string
 ---@param components table
-function Game.Recipes.registerRecipe(recipesTable, resultItem, categoryId, position, line1, line2, line3, components) end
+function Game.Recipes.registerShapedRecipe(recipesTable, resultItem, categoryId, position, line1, line2, line3, components) end
 
 ---@class OnRegisterRecipes: EventClass
 Game.Recipes.OnRegisterRecipes = {}

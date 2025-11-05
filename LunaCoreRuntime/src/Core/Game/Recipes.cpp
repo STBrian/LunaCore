@@ -40,9 +40,9 @@ static bool repeatedValue(std::vector<Minecraft::RecipeComponentDef>& components
 ## line2: string
 ## line3: string
 ## components: table
-### Game.Recipes.registerRecipe
+### Game.Recipes.registerShapedRecipe
 */
-static int l_Recipes_registerRecipe(lua_State* L) {
+static int l_Recipes_registerShapedRecipe(lua_State* L) {
     void* ptr1 = *(void**)LuaObject::CheckObject(L, 1, "RecipesTable");
     Minecraft::ItemInstance* resultItem = *(Minecraft::ItemInstance**)LuaObject::CheckObject(L, 2, "GameItemInstance");
     u16 categoryId = luaL_checkinteger(L, 3);
@@ -130,7 +130,7 @@ static int l_Recipes_registerRecipe(lua_State* L) {
 }
 
 static const luaL_Reg recipes_functions[] = {
-    {"registerRecipe", l_Recipes_registerRecipe},
+    {"registerShapedRecipe", l_Recipes_registerShapedRecipe},
     {NULL, NULL}
 };
 

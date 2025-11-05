@@ -18,6 +18,10 @@ namespace Core {
 
         std::string strip(const std::string& str);
 
+        void toLower(std::string &str);
+
+        std::string convertToLower(const std::string &str);
+
         std::string LoadFile(const std::string& filepath);
 
         inline bool startsWith(const std::string& str, const std::string& prefix) {

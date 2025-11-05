@@ -69,6 +69,17 @@ namespace Core::Utils {
         return newStr;
     }
 
+    void toLower(std::string &str) {
+        std::transform(str.begin(), str.end(), str.begin(), 
+            [](unsigned char c){ return std::tolower(c); });
+    }
+
+    std::string convertToLower(const std::string &str) {
+        std::string newStr = str;
+        toLower(newStr);
+        return newStr;
+    }
+
     std::string LoadFile(const std::string& filepath) {
         std::string content;
         if (!CTRPF::File::Exists(filepath))

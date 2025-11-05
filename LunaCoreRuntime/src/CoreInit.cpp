@@ -203,47 +203,42 @@ void Core::PreloadScripts()
     }
 }
 
-bool LoadMod(const std::string& modName, std::unordered_map<std::string, std::string>& modsAvailable, std::vector<u32> &modsLoading, std::vector<u32> &modsLoaded, std::vector<u32> &modsDiscarded)
+bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& modsAvailable, std::vector<u32> &modsLoading, std::vector<u32> &modsLoaded, std::vector<u32> &modsDiscarded)
 {
-    std::string modNameLower = std::string(modName);
-    std::transform(modNameLower.begin(), modNameLower.end(), modNameLower.begin(), 
-        [](unsigned char c){ return std::tolower(c); });
-    if (std::find(modsDiscarded.begin(), modsDiscarded.end(), hash(modNameLower.c_str())) != modsDiscarded.end() || 
-    std::find(modsLoading.begin(), modsLoading.end(), hash(modNameLower.c_str())) != modsLoading.end())
+    Core::Utils::toLower(modName);
+    if (std::find(modsDiscarded.begin(), modsDiscarded.end(), hash(modName.c_str())) != modsDiscarded.end() || 
+    std::find(modsLoading.begin(), modsLoading.end(), hash(modName.c_str())) != modsLoading.end())
         return false;
-    if (std::find(modsLoaded.begin(), modsLoaded.end(), hash(modNameLower.c_str())) != modsLoaded.end())
+    if (std::find(modsLoaded.begin(), modsLoaded.end(), hash(modName.c_str())) != modsLoaded.end())
         return true;
 
-    modsLoading.emplace_back(hash(modNameLower.c_str()));
-    std::string fileContent = Core::Utils::LoadFile(PLUGIN_FOLDER "/mods/" + modsAvailable[modNameLower] + "/mod.json");
+    modsLoading.emplace_back(hash(modName.c_str()));
+    std::string fileContent = Core::Utils::LoadFile(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/mod.json");
     if (fileContent.empty()) {
-        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to open 'mod.json'", modsAvailable[modNameLower].c_str()));
-        modsDiscarded.emplace_back(hash(modNameLower.c_str()));
+        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to open 'mod.json'", modsAvailable[modName].c_str()));
+        modsDiscarded.emplace_back(hash(modName.c_str()));
         return false;
     }
     
     json j = json::parse(std::string(fileContent), nullptr, false);
     fileContent.clear();
     if (j.is_discarded()) {
-        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to parse 'mod.json'", modsAvailable[modNameLower].c_str()));
-        modsDiscarded.emplace_back(hash(modNameLower.c_str()));
+        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to parse 'mod.json'", modsAvailable[modName].c_str()));
+        modsDiscarded.emplace_back(hash(modName.c_str()));
         return false;
     }
 
     if (j.contains("dependencies") && j["dependencies"].is_array()) {
         for (const auto& modDependency : j["dependencies"]) {
             if (modDependency.is_string()) {
-                std::string modDNameLower = modDependency;
-                std::transform(modDNameLower.begin(), modDNameLower.end(), modDNameLower.begin(), 
-                    [](unsigned char c){ return std::tolower(c); });
-
+                std::string modDNameLower = Core::Utils::convertToLower(modDependency);
                 bool sucess = false;
                 if (modsAvailable.contains(modDNameLower))
                     sucess = LoadMod(modDNameLower, modsAvailable, modsLoading, modsLoaded, modsDiscarded);
 
                 if (!sucess) {
-                    Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to load dependency '%s'", modNameLower.c_str(), modDNameLower.c_str()));
-                    modsDiscarded.emplace_back(hash(modNameLower.c_str()));
+                    Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to load dependency '%s'", modName.c_str(), modDNameLower.c_str()));
+                    modsDiscarded.emplace_back(hash(modName.c_str()));
                     return false;
                 }
             }
@@ -253,31 +248,29 @@ bool LoadMod(const std::string& modName, std::unordered_map<std::string, std::st
     if (j.contains("optional_dependencies") && j["optional_dependencies"].is_array()) {
         for (const auto& modDependency : j["optional_dependencies"]) {
             if (modDependency.is_string()) {
-                std::string modDNameLower = modDependency;
-                std::transform(modDNameLower.begin(), modDNameLower.end(), modDNameLower.begin(), 
-                    [](unsigned char c){ return std::tolower(c); });
+                std::string modDNameLower = Core::Utils::convertToLower(modDependency);
                 if (modsAvailable.contains(modDNameLower))
                     LoadMod(modDNameLower, modsAvailable, modsLoading, modsLoaded, modsDiscarded);
             }
         }
     }
 
-    if (!CTRPF::File::Exists(PLUGIN_FOLDER "/mods/" + modsAvailable[modNameLower] + "/init.lua")) {
-        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to open 'init.lua'", modNameLower.c_str()));
-        modsDiscarded.emplace_back(hash(modNameLower.c_str()));
+    if (!CTRPF::File::Exists(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/init.lua")) {
+        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to open 'init.lua'", modName.c_str()));
+        modsDiscarded.emplace_back(hash(modName.c_str()));
         return false;
     }
-    modPaths[modNameLower] = PLUGIN_FOLDER "/mods/" + modsAvailable[modNameLower];
-    if (!Core::LoadScript(PLUGIN_FOLDER "/mods/" + modsAvailable[modNameLower] + "/init.lua")) {
-        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to load 'init.lua'", modNameLower.c_str()));
-        modsDiscarded.emplace_back(hash(modNameLower.c_str()));
-        modPaths.erase(modNameLower);
+    modPaths[modName] = PLUGIN_FOLDER "/mods/" + modsAvailable[modName];
+    if (!Core::LoadScript(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/init.lua")) {
+        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to load 'init.lua'", modName.c_str()));
+        modsDiscarded.emplace_back(hash(modName.c_str()));
+        modPaths.erase(modName);
         return false;
     }
-    auto it = std::find(modsLoading.begin(), modsLoading.end(), hash(modNameLower.c_str()));
+    auto it = std::find(modsLoading.begin(), modsLoading.end(), hash(modName.c_str()));
     if (it != modsLoading.end())
         modsLoading.erase(it);
-    modsLoaded.emplace_back(hash(modNameLower.c_str()));
+    modsLoaded.emplace_back(hash(modName.c_str()));
     return true;
 }
 
@@ -311,10 +304,7 @@ void Core::LoadMods()
         }
 
         if (j.contains("name") && j["name"].is_string()) {
-            std::string modNameLower = std::string(j["name"]);
-            std::transform(modNameLower.begin(), modNameLower.end(), modNameLower.begin(), 
-                [](unsigned char c){ return std::tolower(c); });
-            modsAvailable[modNameLower] = dir;
+            modsAvailable[Core::Utils::convertToLower(j["name"])] = dir;
         } else {
             Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Missing name in 'mod.json'", dir.c_str()));
             continue;

@@ -262,11 +262,11 @@ void InitMenu(PluginMenu &menu)
 
         // Draw message
         const Screen& topScreen = OSD::GetTopScreen();
-        topScreen.DrawRect(35, 21, 380, 200, Color::Black);
+        topScreen.DrawRect(30, 20, 360, 200, Color::Black);
         topScreen.DrawSysfont("Connect to host: "+host+":5432", 40, 185, Color::White);
         topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
         OSD::SwapBuffers();
-        topScreen.DrawRect(35, 21, 380, 200, Color::Black);
+        topScreen.DrawRect(30, 20, 360, 200, Color::Black);
         topScreen.DrawSysfont("Connect to host: "+host+":5432", 40, 185, Color::White);
         topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
 
@@ -310,7 +310,7 @@ void InitMenu(PluginMenu &menu)
                 }
                 currentPosition += (remaining < packetSize ? remaining : packetSize);
                 remaining = region.b - currentPosition;
-                topScreen.DrawRect(35, 21, 380, 200, Color::Black);
+                topScreen.DrawRect(30, 20, 360, 200, Color::Black);
                 topScreen.DrawSysfont(Utils::Format("Progress: %.2f", (float)(regionSize - remaining)/regionSize * 100), 100, 100, Color::White);
                 topScreen.DrawSysfont(Utils::Format("Dumping: %08X", region.a), 100, 110, Color::White);
                 OSD::SwapBuffers();

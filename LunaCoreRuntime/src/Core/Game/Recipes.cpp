@@ -47,13 +47,14 @@ static int l_Recipes_registerRecipe(lua_State* L) {
     Minecraft::ItemInstance* resultItem = *(Minecraft::ItemInstance**)LuaObject::CheckObject(L, 2, "GameItemInstance");
     u16 categoryId = luaL_checkinteger(L, 3);
     s16 position = luaL_checkinteger(L, 4);
-    std::string line1 = luaL_checkstring(L, 5);
-    std::string line2 = luaL_checkstring(L, 6);
-    std::string line3 = luaL_checkstring(L, 7);
+    size_t line1s = 0, line2s = 0, line3s = 0;
+    std::string line1 = luaL_checklstring(L, 5, &line1s);
+    std::string line2 = luaL_checklstring(L, 6, &line2s);
+    std::string line3 = luaL_checklstring(L, 7, &line3s);
     luaL_checktype(L, 8, LUA_TTABLE); // Table
-    if (line1.length() > 3 || line2.length() > 3 || line3.length() > 3)
+    if (line1s > 3 || line2s > 3 || line3s > 3)
         return luaL_error(L, "shape is not a square!");
-    if (line1.length() + line2.length() + line3.length() < 1)
+    if (line1s + line2s + line3s < 1)
         return luaL_error(L, "shape is empty!");
 
     std::vector<Minecraft::RecipeComponentDefIns> components;
@@ -105,10 +106,26 @@ static int l_Recipes_registerRecipe(lua_State* L) {
     if (components.empty())
         return luaL_error(L, "no components were passed!");
 
-    Minecraft::Recipes::Shape shape = {line1, line2, line3};
-    GenericVectorType<Minecraft::InternalRecipeElementDefinition> vec;
-    Minecraft::definition(vec, components.data(), components.size());
-    Minecraft::Recipes::addShapedRecipe(ptr1, *resultItem, shape, vec, categoryId, position);
+    if (line3s == 0 && line2s == 0 && line1s < 3 ) {
+        GenericVectorType<Minecraft::InternalRecipeElementDefinition> vec;
+        Minecraft::definition(vec, components.data(), components.size());
+        Minecraft::Recipes::addShapedRecipe(ptr1, *resultItem, line1, vec, categoryId, position);
+    }
+    else if (line3s == 0 && line1s < 3 && line2s < 3) {
+        if (line1s == 0) line1 = " ";
+        if (line2s == 0) line2 = " ";
+        GenericVectorType<Minecraft::InternalRecipeElementDefinition> vec;
+        Minecraft::definition(vec, components.data(), components.size());
+        Minecraft::Recipes::addShapedRecipe(ptr1, *resultItem, line1, line2, vec, categoryId, position);
+    } else {
+        if (line1s == 0) line1 = " ";
+        if (line2s == 0) line2 = " ";
+        if (line3s == 0) line3 = " ";
+        Minecraft::Recipes::Shape shape = {line1, line2, line3};
+        GenericVectorType<Minecraft::InternalRecipeElementDefinition> vec;
+        Minecraft::definition(vec, components.data(), components.size());
+        Minecraft::Recipes::addShapedRecipe(ptr1, *resultItem, shape, vec, categoryId, position);
+    }
     return 0;
 }
 

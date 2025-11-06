@@ -11,13 +11,13 @@ class ExceptionType(Enum):
     def getExceptionString(state: int):
         stateStr = "unknown"
         match state:
-            case ExceptionType.PREFETCH:
+            case ExceptionType.PREFETCH.value:
                 stateStr = "Prefetch abort"
-            case ExceptionType.DATA_ABORT:
+            case ExceptionType.DATA_ABORT.value:
                 stateStr = "Data abort"
-            case ExceptionType.UNDEFINED:
+            case ExceptionType.UNDEFINED.value:
                 stateStr = "Undefined instruction"
-            case ExceptionType.VFP:
+            case ExceptionType.VFP.value:
                 stateStr = "VFP (floating point) exception"
         return stateStr
 
@@ -34,19 +34,19 @@ class CoreState(Enum):
     def getCoreStateString(state: int):
         stateStr = "unknown"
         match state:
-            case CoreState.INIT:
+            case CoreState.INIT.value:
                 stateStr = "Core startup"
-            case CoreState.LOADING_RUNTIME:
+            case CoreState.LOADING_RUNTIME.value:
                 stateStr = "Loading Lua runtime"
-            case CoreState.LOADING_SCRIPTS:
+            case CoreState.LOADING_SCRIPTS.value:
                 stateStr = "Loading scripts"
-            case CoreState.LOADING_MODS:
+            case CoreState.LOADING_MODS.value:
                 stateStr = "Loading mods"
-            case CoreState.EVENT:
+            case CoreState.EVENT.value:
                 stateStr = "Event triggered"
-            case CoreState.EXECUTING_HOOK:
+            case CoreState.EXECUTING_HOOK.value:
                 stateStr = "Executing a hook in a game function"
-            case CoreState.CREATING_HOOK:
+            case CoreState.CREATING_HOOK.value:
                 stateStr = "Setting up hooks"
         return stateStr
 
@@ -79,7 +79,10 @@ def main(errorCode: int):
     if possibleError == 4:
         print("Error in plugin initialization")
     pc = ((errorCode & 0b1111111111111111111111) << 2) + 0x100000
-    print(f"PC: {pc:08X}")
+    if (pc == 0x100000):
+        print(f"Plugin fault")
+    else:
+        print(f"PC: {pc:08X}")
 
 if __name__ == "__main__":
     code = 0

@@ -3,7 +3,7 @@
 #include <string>
 
 #include "Minecraft/game_utils/game_functions.hpp"
-#include "Minecraft/game_utils/custom_string.hpp"
+#include "Minecraft/game_utils/gstd_string.hpp"
 #include "Minecraft/world/item/ItemInstance.hpp"
 
 namespace Game {
@@ -13,18 +13,24 @@ namespace Game {
 
     class Item {
         public:
-        //void* vtable;
-        u8 maxStackSize;
-        u8 unknown2[3];
-        CustomString atlasName;
-        int unknown4;
-        u8 unknown5;
-        u16 itemId;
-        CustomString descriptionId;
-        CustomString nameId;
-        u8 unknown6[6];
-        u16 blockID;
-        u8 padding[0xac - 0x24];
+        //void* vtable; // 0x0
+        u8 maxStackSize; // 0x4
+        //char unk1[3]; // 0x5
+        gstd::string atlasName; // 0x8
+        int unk2; // 0xc
+        char unk3; // 0x10
+        u16 itemId; // 0x12
+        gstd::string descriptionId; // 0x14
+        gstd::string nameId; // 0x18
+        short unk4; // 0x1c
+        u16 durability; // 0x1e
+        bool enchantEffect; // 0x20
+        short unk5; // 0x22
+        bool disablePlacement; // 0x24
+        short unk6; // 0x26
+        u8 blockID; // 0x28
+        bool canEat; // 0x29
+        u8 padding[0xac - 0x2a];
 
         class Tier {
             int miningLevel;
@@ -42,7 +48,6 @@ namespace Game {
 
         constexpr static short MAX_ITEMS = 512;
         inline static Item** mItems = reinterpret_cast<Item**>(0x00b0cef0);
-        inline static void** mBlocks = reinterpret_cast<void**>(0x00b10520); // Maybe?
         inline static ItemInstance** creativeItems = reinterpret_cast<ItemInstance**>(0x00b0d744);
         inline static ItemInstance** creativeItemsEnd = reinterpret_cast<ItemInstance**>(0x00b0d748);
 
@@ -50,7 +55,7 @@ namespace Game {
 
         /* Item.itemId = itemId + 0x100 */
         Item(const std::string& nameId, short itemId) {
-            reinterpret_cast<void*(*)(Item*, CustomString, short)>(0x005790a4)(this, nameId, itemId);
+            reinterpret_cast<void*(*)(Item*, gstd::string, short)>(0x005790a4)(this, nameId, itemId);
         }
 
         inline static void addCreativeItem(Item* item, u8 categoryId, s16 position) {

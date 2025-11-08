@@ -42,8 +42,8 @@ namespace Game {
             reinterpret_cast<void(*)(ItemInstance*,Item*,u16,u16)>(0x001d2510)(this, item, count, data);
         }
 
-        ItemInstance(short itemId, short count, short unkn) {
-            reinterpret_cast<void(*)(ItemInstance*,short,short,short)>(0x001d2894)(this, itemId, count, unkn);
+        ItemInstance(short itemId, short count, short data) {
+            reinterpret_cast<void(*)(ItemInstance*,short,short,short)>(0x001d2894)(this, itemId, count, data);
         }
 
         ~ItemInstance() {

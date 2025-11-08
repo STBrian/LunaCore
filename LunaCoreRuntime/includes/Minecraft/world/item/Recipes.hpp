@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Minecraft/game_utils/generic_vector.hpp"
-#include "Minecraft/game_utils/custom_string.hpp"
+#include "Minecraft/game_utils/gstd_string.hpp"
 #include "Minecraft/world/item/Item.hpp"
 #include "Minecraft/world/item/Block.hpp"
 
@@ -123,8 +123,8 @@ namespace Minecraft {
             public:
             GenericVector vec;
 
-            Shape(const CustomString& line1, const CustomString& line2, const CustomString& line3) {
-                reinterpret_cast<void(*)(Shape*,const CustomString&,const CustomString&,const CustomString&)>(0x00641144)(this, line1, line2, line3);
+            Shape(const gstd::string& line1, const gstd::string& line2, const gstd::string& line3) {
+                reinterpret_cast<void(*)(Shape*,const gstd::string&,const gstd::string&,const gstd::string&)>(0x00641144)(this, line1, line2, line3);
             }
 
             ~Shape() {
@@ -140,12 +140,12 @@ namespace Minecraft {
             reinterpret_cast<void(*)(void*,ItemInstance&,Recipes::Shape&,GenericVectorType<InternalRecipeElementDefinition>&,int,int)>(0x0063684c)(ptr1, result, shape, defVector, categoryId, pos);
         }
 
-        static void addShapedRecipe(void* ptr1, ItemInstance& result, const CustomString& line1, GenericVectorType<InternalRecipeElementDefinition>& defVector, int categoryId, int pos) {
-            reinterpret_cast<void(*)(void*,ItemInstance&,const CustomString&,GenericVectorType<InternalRecipeElementDefinition>&,int,int)>(0x006366dc)(ptr1, result, line1, defVector, categoryId, pos);
+        static void addShapedRecipe(void* ptr1, ItemInstance& result, const gstd::string& line1, GenericVectorType<InternalRecipeElementDefinition>& defVector, int categoryId, int pos) {
+            reinterpret_cast<void(*)(void*,ItemInstance&,const gstd::string&,GenericVectorType<InternalRecipeElementDefinition>&,int,int)>(0x006366dc)(ptr1, result, line1, defVector, categoryId, pos);
         }
 
-        static void addShapedRecipe(void* ptr1, ItemInstance& result, const CustomString& line1, const CustomString& line2, GenericVectorType<InternalRecipeElementDefinition>& defVector, int categoryId, int pos) {
-            reinterpret_cast<void(*)(void*,ItemInstance&,const CustomString&,const CustomString&,GenericVectorType<InternalRecipeElementDefinition>&,int,int)>(0x00636744)(ptr1, result, line1, line2, defVector, categoryId, pos);
+        static void addShapedRecipe(void* ptr1, ItemInstance& result, const gstd::string& line1, const gstd::string& line2, GenericVectorType<InternalRecipeElementDefinition>& defVector, int categoryId, int pos) {
+            reinterpret_cast<void(*)(void*,ItemInstance&,const gstd::string&,const gstd::string&,GenericVectorType<InternalRecipeElementDefinition>&,int,int)>(0x00636744)(ptr1, result, line1, line2, defVector, categoryId, pos);
         }
 
         static void registerRecipe(void* ptr1, Item* resItem, const char* line1, const char* line2, const char* line3, RecipeComponentDef* components, u32 size, u16 categoryId, s16 position) {

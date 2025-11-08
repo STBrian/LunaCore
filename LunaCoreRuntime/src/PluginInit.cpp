@@ -62,14 +62,9 @@ bool DrawMonitors(const Screen &screen) {
 }
 
 #ifdef DEBUG
-typedef struct {
-    Core::Network::TCPServer* tcp;
-    u32* stackStart;
-    u32* stackEnd;
-} PCConnectionThreadInfo;
+#include "Helpers/Threads.hpp"
 
-void PCConnectionThreadFunction(PCConnectionThreadInfo* info) {
-    Core::Network::TCPServer* tcp = info->tcp;
+void PCConnectionThreadFunction(Core::Network::TCPServer* tcp) {
     u32 cmdId = 0;
     while (cmdId != 0x5AB1E) {
         tcp->recv(&cmdId, 4);
@@ -84,7 +79,7 @@ void PCConnectionThreadFunction(PCConnectionThreadInfo* info) {
                 Process::Write32(offset, value);
                 break;
             }
-            case 2: { // read32 to offset
+            case 2: { // read32 from offset
                 u32 offset, value;
                 tcp->recv(&offset, 4);
                 Process::Read32(offset, value);
@@ -120,14 +115,9 @@ void PCConnectionThreadFunction(PCConnectionThreadInfo* info) {
                 break;
             }
         }
-        svcSleepThread(10000000);
     }
 
     delete tcp;
-    u32* stackStart = info->stackStart;
-    delete info;
-    free(stackStart);
-    svcExitThread();
 }
 
 struct _pair {
@@ -422,15 +412,15 @@ void InitMenu(PluginMenu &menu)
         if (!tcp->waitConnection(CancelOperationCallback)) {
             if (!tcp->aborted)
                 MessageBox("Connection error")();
+            delete tcp;
             return;
         }
 
-        PCConnectionThreadInfo* info = new PCConnectionThreadInfo;
-        info->tcp = tcp;
-        info->stackStart = (u32*)memalign(0x8, 0x800);
-        info->stackEnd = (u32*)((u32)info->stackStart + 0x800);
-        Handle threadHandle;
-        svcCreateThread(&threadHandle, (ThreadFunc)PCConnectionThreadFunction, (u32)info, info->stackEnd, 0x30, -2);
+        Core::Thread connThread(PCConnectionThreadFunction, tcp);
+        if (!connThread.isStarted()) {
+            MessageBox("Failed to start thread")();
+            delete tcp;
+        }
     }));
     #endif
     

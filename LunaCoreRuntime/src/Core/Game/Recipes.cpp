@@ -107,14 +107,14 @@ static int l_Recipes_registerShapedRecipe(lua_State* L) {
         return luaL_error(L, "no components were passed!");
 
     if (line3s == 0 && line2s == 0 && line1s < 3 ) {
-        GenericVectorType<Minecraft::InternalRecipeElementDefinition> vec;
+        gstd::vector<Minecraft::InternalRecipeElementDefinition> vec;
         Minecraft::definition(vec, components.data(), components.size());
         Minecraft::Recipes::addShapedRecipe(ptr1, *resultItem, line1, vec, categoryId, position);
     }
     else if (line3s == 0 && line1s < 3 && line2s < 3) {
         if (line1s == 0) line1 = " ";
         if (line2s == 0) line2 = " ";
-        GenericVectorType<Minecraft::InternalRecipeElementDefinition> vec;
+        gstd::vector<Minecraft::InternalRecipeElementDefinition> vec;
         Minecraft::definition(vec, components.data(), components.size());
         Minecraft::Recipes::addShapedRecipe(ptr1, *resultItem, line1, line2, vec, categoryId, position);
     } else {
@@ -122,7 +122,7 @@ static int l_Recipes_registerShapedRecipe(lua_State* L) {
         if (line2s == 0) line2 = " ";
         if (line3s == 0) line3 = " ";
         Minecraft::Recipes::Shape shape = {line1, line2, line3};
-        GenericVectorType<Minecraft::InternalRecipeElementDefinition> vec;
+        gstd::vector<Minecraft::InternalRecipeElementDefinition> vec;
         Minecraft::definition(vec, components.data(), components.size());
         Minecraft::Recipes::addShapedRecipe(ptr1, *resultItem, shape, vec, categoryId, position);
     }

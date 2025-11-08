@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <malloc.h>
 #include <memory>
+#include <FsLib/fslib.hpp>
 
 #include "CoreConstants.hpp"
 #include "CoreGlobals.hpp"
@@ -12,6 +13,7 @@
 #include "Core/TCPConnection.hpp"
 #include "Core/Config.hpp"
 #include "Core/Debug.hpp"
+#include "Core/Filesystem.hpp"
 
 using namespace CTRPluginFramework;
 
@@ -31,8 +33,11 @@ void initSockets()
 
 void exitSockets()
 {
-	socExit();
-	free(socBuffer);
+    if (socBuffer != NULL) {
+        socExit();
+	    free(socBuffer);
+        socBuffer = NULL;
+    }
 }
 
 bool CancelOperationCallback() {
@@ -57,6 +62,74 @@ bool DrawMonitors(const Screen &screen) {
 }
 
 #ifdef DEBUG
+typedef struct {
+    Core::Network::TCPServer* tcp;
+    u32* stackStart;
+    u32* stackEnd;
+} PCConnectionThreadInfo;
+
+void PCConnectionThreadFunction(PCConnectionThreadInfo* info) {
+    Core::Network::TCPServer* tcp = info->tcp;
+    u32 cmdId = 0;
+    while (cmdId != 0x5AB1E) {
+        tcp->recv(&cmdId, 4);
+        switch (cmdId) {
+            case 0: // ping
+                tcp->send_all(&cmdId, 4);
+                break;
+            case 1: { // write32 to offset
+                u32 offset, value;
+                tcp->recv(&offset, 4);
+                tcp->recv(&value, 4);
+                Process::Write32(offset, value);
+                break;
+            }
+            case 2: { // read32 to offset
+                u32 offset, value;
+                tcp->recv(&offset, 4);
+                Process::Read32(offset, value);
+                tcp->send_all(&value, 4);
+                break;
+            }
+            case 3: { // storfile
+                u32 dstPathLen, fileSize;
+                tcp->recv(&dstPathLen, 4);
+                char* pathData = new (std::nothrow) char[dstPathLen];
+                if (pathData) {
+                    tcp->recv(pathData, dstPathLen);
+                    pathData[dstPathLen-1] = '\0';
+                    std::string pathName(pathData);
+                    delete pathData;
+                    tcp->recv(&fileSize, 4);
+                    fslib::File dstFile;
+                    dstFile.open(path_from_string(pathName), FS_OPEN_WRITE|FS_OPEN_CREATE);
+                    char* buffer = new (std::nothrow) char[0x100];
+                    if (buffer) {
+                        u32 currentRecv = 0;
+                        while (currentRecv < fileSize) {
+                            u32 toRecv = fileSize - currentRecv > 0x100 ? 0x100 : fileSize - currentRecv;
+                            tcp->recv(buffer, toRecv);
+                            dstFile.write(buffer, toRecv);
+                            currentRecv += toRecv;
+                        }
+                        dstFile.flush();
+                        delete buffer;
+                    }
+                    dstFile.close();
+                }
+                break;
+            }
+        }
+        svcSleepThread(10000000);
+    }
+
+    delete tcp;
+    u32* stackStart = info->stackStart;
+    delete info;
+    free(stackStart);
+    svcExitThread();
+}
+
 struct _pair {
     u32 a, b;
 };
@@ -172,8 +245,25 @@ void InitMenu(PluginMenu &menu)
             OSD::Stop(DrawMonitors);
         enabled = !enabled;
     }));
+    devFolder->Append(new MenuEntry("Init network", nullptr, [](MenuEntry *entry) {
+        if (socBuffer == NULL) {
+            initSockets();
+            MessageBox("Network started")();
+        } else
+            MessageBox("Network already started")();
+    }));
+    devFolder->Append(new MenuEntry("Exit network", nullptr, [](MenuEntry *entry) {
+        if (socBuffer != NULL) {
+            exitSockets();
+            MessageBox("Network exited")();
+        } else
+            MessageBox("Network is not started")();
+    }));
     devFolder->Append(new MenuEntry("Load script from network", nullptr, [](MenuEntry *entry) {
-        initSockets();
+        if (socBuffer == NULL) {
+            MessageBox("Network is not started")();
+            return;
+        }
         Core::Network::TCPServer tcp(5432);
         std::string host = tcp.getHostName();
 
@@ -187,7 +277,6 @@ void InitMenu(PluginMenu &menu)
 
         // Wait for a connection
         if (!tcp.waitConnection(CancelOperationCallback)) {
-            exitSockets();
             if (!tcp.aborted)
                 MessageBox("Connection error")();
             return;
@@ -196,18 +285,15 @@ void InitMenu(PluginMenu &menu)
         // Get the filename
         size_t fnameSize = 0;
         if (!tcp.recv(&fnameSize, sizeof(size_t))) {
-            exitSockets();
             MessageBox("Failed to get filename size")();
             return;
         }
         std::unique_ptr<char[]> namebuf(new (std::nothrow) char[fnameSize]);
         if (!namebuf) {
-            exitSockets();
             MessageBox("Memory error")();
             return;
         }
         if (!tcp.recv(namebuf.get(), fnameSize)) {
-            exitSockets();
             MessageBox("Failed to get filename")();
             return;
         }
@@ -215,18 +301,15 @@ void InitMenu(PluginMenu &menu)
         // Get script file
         size_t size = 0;
         if (!tcp.recv(&size, sizeof(size_t))) {
-            exitSockets();
             MessageBox("Failed to get file size")();
             return;
         }
         std::unique_ptr<char[]> buffer(new (std::nothrow) char[size]);
         if (!buffer) {
-            exitSockets();
             MessageBox("Memory error")();
             return;
         }
         if (!tcp.recv(buffer.get(), size)) {
-            exitSockets();
             MessageBox("Failed to get file")();
             return;
         }
@@ -250,13 +333,15 @@ void InitMenu(PluginMenu &menu)
         } else {
             MessageBox("Error executing the script")();
         }
-        exitSockets();
     }));
 
     #ifdef DEBUG
-    #pragma message "'Dump memory to network' menu entry enabled"
+    #pragma message "Debug enabled"
     devFolder->Append(new MenuEntry("Dump memory to network", nullptr, [](MenuEntry *entry) {
-        initSockets();
+        if (socBuffer == NULL) {
+            MessageBox("Network is not started")();
+            return;
+        }
         Core::Network::TCPServer tcp(5432);
         std::string host = tcp.getHostName();
 
@@ -288,7 +373,6 @@ void InitMenu(PluginMenu &menu)
 
         // Wait until a connection
         if (!tcp.waitConnection(CancelOperationCallback)) {
-            exitSockets();
             if (!tcp.aborted)
                 MessageBox("Connection error")();
             return;
@@ -304,7 +388,6 @@ void InitMenu(PluginMenu &menu)
             tcp.send_all(&regionSize, sizeof(u32));
             while (currentPosition < region.b) {
                 if (!tcp.send_all((void*)currentPosition, remaining < packetSize ? remaining : packetSize)) {
-                    exitSockets();
                     MessageBox("Failed to send packets")();
                     return;
                 }
@@ -316,8 +399,38 @@ void InitMenu(PluginMenu &menu)
                 OSD::SwapBuffers();
             }
         }
-        
-        exitSockets();
+    }));
+    devFolder->Append(new MenuEntry("Connect to PC", nullptr, [](MenuEntry *entry) {
+        if (socBuffer == NULL) {
+            MessageBox("Network is not started")();
+            return;
+        }
+        auto tcp = new Core::Network::TCPServer(5431);
+        std::string host = tcp->getHostName();
+
+        // Draw message
+        const Screen& topScreen = OSD::GetTopScreen();
+        topScreen.DrawRect(30, 20, 340, 200, Color::Black);
+        topScreen.DrawSysfont("Connect to host: "+host+":5431", 40, 185, Color::White);
+        topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
+        OSD::SwapBuffers();
+        topScreen.DrawRect(30, 20, 340, 200, Color::Black);
+        topScreen.DrawSysfont("Connect to host: "+host+":5431", 40, 185, Color::White);
+        topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
+
+        // Wait until a connection
+        if (!tcp->waitConnection(CancelOperationCallback)) {
+            if (!tcp->aborted)
+                MessageBox("Connection error")();
+            return;
+        }
+
+        PCConnectionThreadInfo* info = new PCConnectionThreadInfo;
+        info->tcp = tcp;
+        info->stackStart = (u32*)memalign(0x8, 0x800);
+        info->stackEnd = (u32*)((u32)info->stackStart + 0x800);
+        Handle threadHandle;
+        svcCreateThread(&threadHandle, (ThreadFunc)PCConnectionThreadFunction, (u32)info, info->stackEnd, 0x30, -2);
     }));
     #endif
     

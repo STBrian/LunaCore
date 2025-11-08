@@ -66,22 +66,23 @@ def main(errorCode: int):
     excepType = (errorCode >> 30) & 0b11
     core_state = (errorCode >> 27) & 0b111
     game_state = (errorCode >> 25) & 0b11
-    possibleError = (errorCode >> 22) & 0b111
+    possibleError = (errorCode >> 23) & 0b11
+    pluginFault = (errorCode >> 22) & 0b1
     print("Exception:", ExceptionType.getExceptionString(excepType))
     print("Last Core state:", CoreState.getCoreStateString(core_state))
     print("Last Game state:", getGameStateString(game_state))
     if possibleError == 1:
         print("Error in plugin patch process")
     if possibleError == 2:
-        print("Possible out of memory. Lua memory usage was bigger than 2 MB")
-    if possibleError == 3:
         print("The error was caused by the scripting runtime")
-    if possibleError == 4:
+    if possibleError == 3:
         print("Error in plugin initialization")
-    pc = ((errorCode & 0b1111111111111111111111) << 2) + 0x100000
-    if (pc == 0x100000):
-        print(f"Plugin fault")
+    pc = ((errorCode & 0b1111111111111111111111) << 2)
+    if (pluginFault == 1):
+        pc += 0x07000100
+        print(f"PC: {pc:08X}")
     else:
+        pc += 0x00100000
         print(f"PC: {pc:08X}")
 
 if __name__ == "__main__":

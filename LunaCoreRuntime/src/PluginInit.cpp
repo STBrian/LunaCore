@@ -17,7 +17,6 @@
 
 using namespace CTRPluginFramework;
 
-extern PluginMenu *gmenu;
 u32 *socBuffer = NULL;
 
 void initSockets()

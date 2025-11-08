@@ -48,7 +48,7 @@ namespace Core {
             if (!stackPtr)
                 return;
             threadCtx* ctx = new threadCtx;
-            ctx->stackPtr = stackPtr
+            ctx->stackPtr = stackPtr;
             ctx->stackPtrTop = stackPtr + 0x800;
             ctx->callback = (ThreadFunc)func;
             ctx->passValue = reinterpret_cast<u32>(value);

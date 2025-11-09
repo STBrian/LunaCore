@@ -1,31 +1,26 @@
 #pragma once
 
 #include <3ds.h>
-#include <atomic>
 
 class CustomMutex
 {
     private:
-        std::atomic<bool> locked = false;
+        LightLock _lock;
     public:
-        CustomMutex() {}
-        ~CustomMutex() {}
-
-        void lock() {
-            while (this->locked.load())
-                svcSleepThread(1000000);
-            this->locked.store(true);
+        CustomMutex() {
+            LightLock_Init(&_lock);
         }
 
+        void lock() {
+            LightLock_Lock(&_lock);
+        }
+
+        // true on success
         bool try_lock() {
-            if (this->locked.load())
-                return false;
-            else 
-                this->locked.store(true);
-            return true;
+            return LightLock_TryLock(&_lock) == 0;
         }
 
         void unlock() {
-            this->locked.store(false);
+            LightLock_Unlock(&_lock);
         }
 };

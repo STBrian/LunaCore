@@ -51,6 +51,8 @@ class LuaObject {
     
     static std::unordered_map<std::string, std::unordered_map<std::string, ValueMetadata>> objsLayouts;
 
+    static std::unordered_map<std::string, std::string> parents;
+
     static void RegisterNewObject(lua_State* L, const char* name, const LuaObjectField* fields);
 
     static void SetGCObjectField(lua_State* L, const char* objtype, lua_CFunction gcfuncion) {
@@ -70,6 +72,11 @@ class LuaObject {
         void** objaddr = (void**)lua_newuserdata(L, sizeof(void*));
         *objaddr = addr;
         luaC_setmetatable(L, objtype);
+    }
+
+    static void SetParent(const std::string& objtype, const std::string& parent) {
+        if (objsLayouts.contains(objtype) && objsLayouts.contains(parent))
+            parents[objtype] = parent;
     }
 
     static void** CheckObject(lua_State* L, int narg, const char* objtype);

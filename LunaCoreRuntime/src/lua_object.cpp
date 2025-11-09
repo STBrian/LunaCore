@@ -1,8 +1,9 @@
 #include "lua_object.hpp"
 
-#include <string.h>
+#include <cstring>
 
 std::unordered_map<std::string, std::unordered_map<std::string, LuaObject::ValueMetadata>> LuaObject::objsLayouts;
+std::unordered_map<std::string, std::string> parents;
 
 void LuaObject::RegisterNewObject(lua_State* L, const char* name, const LuaObjectField* fields) {
     luaL_newmetatable(L, name);
@@ -53,13 +54,19 @@ bool LuaObject::IsObject(lua_State* L, int narg, const char* objtype) {
                 lua_pop(L, 1);
                 return false;
             }
-            if (std::strcmp(objtype, lua_tostring(L, -1)) != 0) {
-                lua_pop(L, 1);
-                return false;
-            } else {
-                lua_pop(L, 1);
-                return true;
+            std::string curIns = lua_tostring(L, -1);
+            while (!curIns.empty()) {
+                if (curIns == objtype) {
+                    lua_pop(L, 1);
+                    return true;
+                }
+                if (parents.contains(curIns))
+                    curIns = parents[curIns];
+                else
+                    curIns.clear();
             }
+            lua_pop(L, 1);
+            return false;
         }
     } else
         return false;

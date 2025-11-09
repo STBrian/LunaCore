@@ -3,7 +3,7 @@
 #include <cstring>
 
 std::unordered_map<std::string, std::unordered_map<std::string, LuaObject::ValueMetadata>> LuaObject::objsLayouts;
-std::unordered_map<std::string, std::string> parents;
+std::unordered_map<std::string, std::string> LuaObject::parents;
 
 void LuaObject::RegisterNewObject(lua_State* L, const char* name, const LuaObjectField* fields) {
     luaL_newmetatable(L, name);
@@ -31,14 +31,23 @@ void** LuaObject::CheckObject(lua_State* L, int narg, const char* objtype) {
                 lua_pop(L, 1);
                 luaL_typerror(L, narg, objtype);
             }
-            if (std::strcmp(objtype, lua_tostring(L, -1)) != 0) {
-                lua_pushfstring(L, "bad argument #%d (%s expected, got %s)", narg, objtype, lua_tostring(L, -1));
-                lua_remove(L, -2);
-                lua_error(L);
-            } else {
-                lua_pop(L, 1);
-                return (void**)lua_touserdata(L, narg);
+            std::string* curIns = new std::string(lua_tostring(L, -1));
+            while (!curIns->empty()) {
+                if (*curIns == objtype) {
+                    lua_pop(L, 1);
+                    delete curIns;
+                    return (void**)lua_touserdata(L, narg);
+                }
+                if (parents.contains(*curIns))
+                    *curIns = parents[*curIns];
+                else
+                    curIns->clear();
             }
+            delete curIns;
+            lua_pop(L, 1);
+            lua_pushfstring(L, "bad argument #%d (%s expected, got %s)", narg, objtype, lua_tostring(L, -1));
+            lua_remove(L, -2);
+            lua_error(L);
         }
     } else
         luaL_typerror(L, narg, objtype);
@@ -103,16 +112,17 @@ int LuaObject::l_index(lua_State* L) {
         }
 
         valid = true;
-        u32 offset = objsLayouts[objName][key].offset;
-        const char* objtype = objsLayouts[objName][key].objtype;
+        ValueMetadata& md = objsLayouts[currClass][key];
+        u32 offset = md.offset;
+        const char* objtype = md.objtype;
         void* dataOff;
-        if (objsLayouts[objName][key].flags & OBJF_FLAG_ABS)
+        if (md.flags & OBJF_FLAG_ABS)
             dataOff = (void*)offset;
         else
             dataOff = (void*)((u32)objOffset + offset);
         
 
-        switch (objsLayouts[objName][key].type) {
+        switch (md.type) {
             case OBJF_TYPE_CHAR:
                 lua_pushnumber(L, *(char*)dataOff);
                 break;

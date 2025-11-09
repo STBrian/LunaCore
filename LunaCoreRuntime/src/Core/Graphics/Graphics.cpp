@@ -1,12 +1,14 @@
-#include "Core/Graphics.hpp"
+#include "Core/Graphics/Graphics.hpp"
 
 #include <string>
-
 #include <mutex>
 
+#include "lua_object.hpp"
 #include "CoreGlobals.hpp"
 #include "Core/Event.hpp"
 #include "Core/Async.hpp"
+
+#include "Core/Graphics/GraphicsManager.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 
@@ -17,17 +19,6 @@ static bool shouldGraphicsClose = false;
 static const CTRPF::Screen *currentScreen = NULL;
 static Core::GraphicsFrameCallback graphicsFrameCallback = NULL;
 static Core::GraphicsExitCallback graphicsExitCallback = NULL;
-
-static void processEventHandler(CTRPF::Process::Event event) {
-    if (event == CTRPF::Process::Event::SLEEP_ENTER)
-        shouldGraphicsClose = true;
-}
-
-void Core::GraphicsOpen(GraphicsFrameCallback frameCallback, GraphicsExitCallback exitCallback) {
-    graphicsFrameCallback = frameCallback;
-    graphicsExitCallback = exitCallback;
-    gmenu->Callback(Core::GraphicsHandlerMainloop); // Better add it as Callback to avoid script exahustion
-}
 
 bool Core::GraphicsHandlerCallback(const CTRPF::Screen& screen) {
     if (graphicsOpen || !Lua_Global_Mut.try_lock())
@@ -42,116 +33,14 @@ bool Core::GraphicsHandlerCallback(const CTRPF::Screen& screen) {
     return false;
 }
 
-void Core::GraphicsHandlerMainloop() {
-    CTRPF::Process::Pause();
-    CTRPF::Process::SetProcessEventCallback(processEventHandler);
-
-    graphicsOpen = true;
-    bool exit = false;
-    while (!exit && !shouldGraphicsClose) {
-        CTRPF::Controller::Update();
-
-        Core::EventHandlerCallback();
-        Core::AsyncHandlerCallback();
-
-        if (CTRPF::OSD::TryLock())
-            continue;
-
-        if (graphicsFrameCallback == NULL) {
-            exit = true;
-            continue;
-        }
-        
-        graphicsFrameCallback();
-        
-        CTRPF::OSD::SwapBuffers();
-        CTRPF::OSD::Unlock();
-
-        if (CTRPF::Controller::IsKeyReleased(CTRPF::Key::Select)) {
-            exit = true;
-            gmenu->ForceOpen();
-        }
-    }
-
-    // Exit Graphics Mainloop
-    if (graphicsExitCallback != NULL)
-        graphicsExitCallback();
-    CTRPF::Process::SetProcessEventCallback(nullptr);
-    *gmenu -= Core::GraphicsHandlerMainloop;
-    graphicsFrameCallback = NULL;
-    graphicsExitCallback = NULL;
-    graphicsOpen = false;
-    shouldGraphicsClose = false;
-    CTRPF::Process::Play();
-}
-
-static void LuaGraphicsFrameCallback() {
-    if (lua_callback == LUA_NOREF) {
-        shouldGraphicsClose = true;
-        return;
-    }
-    lua_State *L = Lua_global;
-    const CTRPF::Screen& topScreen = CTRPF::OSD::GetTopScreen();
-    currentScreen = &topScreen;
-    lua_rawgeti(L, LUA_REGISTRYINDEX, lua_callback);
-    lua_pushstring(L, "top");
-    if (lua_pcall(L, 1, 0, 0))
-        lua_pop(L, 1);
-
-    const CTRPF::Screen& bottomScreen = CTRPF::OSD::GetBottomScreen();
-    currentScreen = &bottomScreen;
-    lua_rawgeti(L, LUA_REGISTRYINDEX, lua_callback);
-    lua_pushstring(L, "bottom");
-    if (lua_pcall(L, 1, 0, 0))
-        lua_pop(L, 1);
-}
-
-static void LuaGraphicsExitCallback() {
-    lua_State *L = Lua_global;
-    luaL_unref(L, LUA_REGISTRYINDEX, lua_callback);
-    lua_callback = LUA_NOREF;
-}
-
 // ----------------------------------------------------------------------------
 
 //$Core.Graphics
+//@@Drawable
+//$@@@GRect: Drawable
+//$@@@GLabel: Drawable
 
 // ----------------------------------------------------------------------------
-
-/*
-- Stops the game and allows to draw on screen. Until Core.Graphics.close is called the function will be executed every frame
-- Other events and async tasks will continue running
-## func: function
-### Core.Graphics.open
-*/
-static int l_Graphics_open(lua_State *L) {
-    if (!lua_isfunction(L, 1))
-        return luaL_typerror(L, 1, "function");
-    
-    if (graphicsOpen)
-        return 0;
-
-    if (lua_callback != LUA_NOREF) {
-        luaL_unref(L, LUA_REGISTRYINDEX, lua_callback);
-        lua_callback = LUA_NOREF;
-    }
-    
-    lua_pushvalue(L, 1);
-    lua_callback = luaL_ref(L, LUA_REGISTRYINDEX);
-    Core::GraphicsOpen(LuaGraphicsFrameCallback, LuaGraphicsExitCallback);
-    return 0;
-}
-
-/*
-- Resumes the game, the callback function will no longer be called and draw functions will not work
-### Core.Graphics.close
-*/
-static int l_Graphics_close(lua_State *L) {
-    if (!graphicsOpen)
-        return 0;
-    shouldGraphicsClose = true;
-    return 0;
-}
 
 /*
 - Returns if Graphics are open
@@ -300,10 +189,46 @@ static int l_Graphics_colorRGBA(lua_State *L) {
     return 1;
 }
 
+/*
+- Creates a new instance of a rectangle drawable object
+## x: integer
+## y: integer
+## width: integer
+## height: integer
+## return: GRect
+### Core.Graphics.newRect
+*/
+static int l_Graphics_newRect(lua_State *L) {
+    short x = luaL_checknumber(L, 1);
+    short y = luaL_checknumber(L, 2);
+    short width = luaL_checknumber(L, 3);
+    short height = luaL_checknumber(L, 4);
+
+    Core::Rect* obj = new Core::Rect(x, y, width, height, false);
+    LuaObject::NewObject(L, "GRect", obj);
+    return 1;
+}
+
+/*
+- Creates a new instance of a label drawable object
+## x: integer
+## y: integer
+## text: string
+## return: GLabel
+### Core.Graphics.newRect
+*/
+static int l_Graphics_newRect(lua_State *L) {
+    short x = luaL_checknumber(L, 1);
+    short y = luaL_checknumber(L, 2);
+    const char* text = luaL_checkstring(L, 3);
+
+    Core::Label* obj = new Core::Label(x, y, false);
+    LuaObject::NewObject(L, "GRect", obj);
+    return 1;
+}
+
 static const luaL_Reg graphics_functions[] =
 {
-    {"open", l_Graphics_open},
-    {"close", l_Graphics_close},
     {"isOpen", l_Graphics_isOpen},
     {"drawText", l_Graphics_drawText},
     {"drawRect", l_Graphics_drawRect},
@@ -316,8 +241,51 @@ static const luaL_Reg graphics_functions[] =
 
 // ----------------------------------------------------------------------------
 
+/*
+- Sets if the object should be drawn
+## visible: boolean
+### Drawable:setVisible
+*/
+static int l_Graphics_Drawable_setVisible(lua_State* L) {
+    Core::Drawable* obj = *(Core::Drawable**)LuaObject::CheckObject(L, 1, "Drawable");
+    bool visible = lua_toboolean(L, 2);
+    obj->visible = visible;
+    return 0;
+}
+
+/*
+- Destroys the reference. Do NOT use the object after calling this
+### GRect:destroy
+*/
+static int l_Graphics_GRect_gc(lua_State* L) {
+    Core::Rect** obj = (Core::Rect**)LuaObject::CheckObject(L, 1, "GRect");
+    if (*obj != nullptr) {
+        Core::GraphicsManager& ins = Core::GraphicsManager::getInstance();
+        ins.Lock();
+        ins.removeObject(*obj);
+        delete *obj;
+        *obj = nullptr;
+    }
+    return 0;
+}
+
+static const LuaObjectField DrawableFields[] = {
+    {"setVisible", OBJF_TYPE_METHOD, (u32)l_Graphics_Drawable_setVisible},
+    {NULL, OBJF_TYPE_NIL, 0}
+};
+
+static const LuaObjectField GRectFields[] = {
+    {"destroy", OBJF_TYPE_METHOD, (u32)l_Graphics_GRect_gc},
+    {NULL, OBJF_TYPE_NIL, 0}
+};
+
+// ----------------------------------------------------------------------------
+
 bool Core::Module::RegisterGraphicsModule(lua_State *L)
 {
+    LuaObject::RegisterNewObject(L, "Drawable", DrawableFields);
+    LuaObject::RegisterNewObject(L, "GRect", GRectFields);
+    LuaObject::SetParent("GRect", "Drawable");
     lua_getglobal(L, "Core");
     luaC_register_field(L, graphics_functions, "Graphics");
     lua_getfield(L, -1, "Graphics");

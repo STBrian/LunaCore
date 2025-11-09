@@ -16,7 +16,7 @@
 #include "Core/Game/Player/Player.hpp"
 #include "Core/Game/Items.hpp"
 #include "Core/Event.hpp"
-#include "Core/Graphics.hpp"
+#include "Core/Graphics/Graphics.hpp"
 #include "Core/Game/Recipes.hpp"
 
 #include "Core/Utils/Utils.hpp"

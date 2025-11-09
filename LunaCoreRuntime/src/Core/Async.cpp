@@ -23,7 +23,7 @@ static void TimeoutAsyncHook(lua_State *L, lua_Debug *ar)
 
 void Core::AsyncHandlerCallback()
 {
-    std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
+    std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
     lua_State *L = Lua_global;
     int curTop = lua_gettop(L);
 

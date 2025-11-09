@@ -108,7 +108,7 @@ static void RegisterItemsHook(CoreHookContext* ctx) {
     Game::Item::mTotem = totemItem;
 
     {
-        std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
+        std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
         GameState.LoadingItems.store(true);
         Core::Event::TriggerEvent(Lua_global, "Game.Items.OnRegisterItems");
         GameState.LoadingItems.store(false);
@@ -133,7 +133,7 @@ static void RegisterItemsTexturesHook(CoreHookContext* ctx) {
     GameState.SettingItemsTextures.store(true);
 
     {
-        std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
+        std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
         Core::Event::TriggerEvent(Lua_global, "Game.Items.OnRegisterItemsTextures");
     }
 
@@ -155,7 +155,7 @@ static void RegisterCreativeItemsHook(CoreHookContext* ctx) {
     GameState.LoadingCreativeItems.store(true);
 
     {
-        std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
+        std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
         Core::Event::TriggerEvent(Lua_global, "Game.Items.OnRegisterCreativeItems");
     }
 
@@ -177,7 +177,7 @@ static __attribute__((naked)) void EntitySpawnStartOverwriteReturn() {
 static void EntitySpawnStartHook(CoreHookContext *ctx) {
 
     if (ctx->r2 != 0) {
-        std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
+        std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
         LuaObject::NewObject(Lua_global, "GameSpawnCoords", reinterpret_cast<void*>(ctx->r2)); // Pass the reference
         Core::Event::TriggerEvent(Lua_global, "Core.Event.OnGameEntitySpawnStart", 1);
     }
@@ -201,7 +201,7 @@ static void EntitySpawnFinishedHook(CoreHookContext *ctx) {
     // Core::Debug::LogError("Trying to hook entity spawn");
 
     if (ctx->r0 != 0) {
-        std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
+        std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
         Game::Entity* entity = reinterpret_cast<Game::Entity*>(ctx->r0);
         LuaObject::NewObject(Lua_global, "GameEntity", entity);
         Core::Event::TriggerEvent(Lua_global, "Core.Event.OnGameEntitySpawn", 1);
@@ -225,7 +225,7 @@ static void RegisterRecipes(CoreHookContext* ctx) {
     GameState.LoadingRecipes.store(true);
 
     {
-        std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
+        std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
         LuaObject::NewObject(Lua_global, "RecipesTable", (void*)ctx->r0);
         Core::Event::TriggerEvent(Lua_global, "Game.Recipes.OnRegisterRecipes", 1);
     }

@@ -35,7 +35,7 @@ void Core::InitCore() {
     u64 titleID = CTRPF::Process::GetTitleID();
         if (!IS_TARGET_ID(titleID))
             return;
-    std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
+    std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
 
     if (!fslib::openExtData(u"extdata", static_cast<uint32_t>(titleID >> 8 & 0x00FFFFFF))) {
         Core::Debug::LogError("Failed to open extdata");

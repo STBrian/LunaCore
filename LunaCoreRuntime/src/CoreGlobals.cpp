@@ -3,7 +3,7 @@
 Core::SharedFunctions SharedFunctions_obj;
 
 lua_State *Lua_global = NULL;
-CustomMutex Lua_Global_Mut;
+Core::Mutex Lua_Global_Mut;
 
 bool patchEnabled = false;
 int loadedScripts;

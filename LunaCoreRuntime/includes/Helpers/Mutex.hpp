@@ -2,12 +2,13 @@
 
 #include <3ds.h>
 
-class CustomMutex
+namespace Core {
+class Mutex
 {
     private:
         LightLock _lock;
     public:
-        CustomMutex() {
+        Mutex() {
             LightLock_Init(&_lock);
         }
 
@@ -24,3 +25,4 @@ class CustomMutex
             LightLock_Unlock(&_lock);
         }
 };
+}

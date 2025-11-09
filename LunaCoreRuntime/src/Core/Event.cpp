@@ -84,7 +84,7 @@ void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsig
 
 void Core::EventHandlerCallback()
 {
-    std::lock_guard<CustomMutex> lock(Lua_Global_Mut);
+    std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
     lua_State *L = Lua_global;
 
     // KeyPressed Event

@@ -14,7 +14,7 @@
 #include "Core/Event.hpp"
 #include "Core/Filesystem.hpp"
 #include "Core/Async.hpp"
-#include "Core/Graphics.hpp"
+#include "Core/Graphics/Graphics.hpp"
 #include "Core/Utils/Utils.hpp"
 #include "Core/Config.hpp"
 #include "Core/CrashHandler.hpp"
@@ -34,6 +34,8 @@ namespace CTRPF = CTRPluginFramework;
 using namespace Core;
 
 CTRPF::PluginMenu *gmenu;
+
+// Note Linux: using commit 14f1aff3
 
 namespace CTRPluginFramework
 {

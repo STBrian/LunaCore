@@ -5,13 +5,13 @@
 #include "types.h"
 
 #include "lua_common.h"
-#include "Core/Utils/CustomMutex.hpp"
+#include "Helpers/Mutex.hpp"
 #include "SharedFunctions.hpp"
 
 extern Core::SharedFunctions SharedFunctions_obj;
 
 extern lua_State *Lua_global;
-extern CustomMutex Lua_Global_Mut;
+extern Core::Mutex Lua_Global_Mut;
 
 extern bool patchEnabled;
 extern int loadedScripts;

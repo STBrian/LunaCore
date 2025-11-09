@@ -25,7 +25,7 @@ class GraphicsManager {
     void addObject(Drawable* obj) {
         _lock.lock();
         auto it = std::find(drawables.begin(), drawables.end(), obj);
-        if (it != drawables.end())
+        if (it == drawables.end())
             this->drawables.push_back(obj);
         _lock.unlock();
     }

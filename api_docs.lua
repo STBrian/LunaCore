@@ -490,13 +490,14 @@ Game.World.OnWorldLeave = {}
 
 Core.Graphics = {}
 
----Stops the game and allows to draw on screen. Until Core.Graphics.close is called the function will be executed every frame
----Other events and async tasks will continue running
----@param func function
-function Core.Graphics.open(func) end
+---@class Drawable
+local Drawable = {}
 
----Resumes the game, the callback function will no longer be called and draw functions will not work
-function Core.Graphics.close() end
+---@class GRect: Drawable
+GRect = {}
+
+---@class GLabel: Drawable
+GLabel = {}
 
 ---Returns if Graphics are open
 function Core.Graphics.isOpen() end
@@ -543,6 +544,74 @@ function Core.Graphics.colorRGB(r, g, b) end
 ---@param a integer
 ---@return integer
 function Core.Graphics.colorRGBA(r, g, b, a) end
+
+---Creates a new instance of a rectangle drawable object
+---@param x integer
+---@param y integer
+---@param width integer
+---@param height integer
+---@return GRect
+function Core.Graphics.newRect(x, y, width, height) end
+
+---Creates a new instance of a label drawable object
+---@param x integer
+---@param y integer
+---@param text string
+---@return GLabel
+function Core.Graphics.newLabel(x, y, text) end
+
+---Adds a Drawable object to render on screen
+---@param obj Drawable
+function Core.Graphics.add(obj) end
+
+---Remove a Drawable object from the render
+---@param obj Drawable
+function Core.Graphics.remove(obj) end
+
+---Sets if the object should be drawn
+---@param visible boolean
+function Drawable:setVisible(visible) end
+
+---Sets in which screen should be drawn
+---@param top boolean
+---@param bottom boolean
+function Drawable:setScreens(top, bottom) end
+
+---Sets the position of the object in screen
+---@param x integer
+---@param y integer
+function Drawable:setPosition(x, y) end
+
+---Set the main color of the object
+---@param color integer
+function Drawable:setColor(color) end
+
+---Destroys the reference. Do NOT use the object after calling this
+function GRect:destroy() end
+
+---Sets if the rect should be filled
+---@param filled boolean
+function GRect:setFilled(filled) end
+
+---Set the width and height of the rect
+---@param width integer
+---@param height integer
+function GRect:setSize(width, height) end
+
+---Destroys the reference. Do NOT use the object after calling this
+function GLabel:destroy() end
+
+---Set if the label should use SystemFont. Enabling it will disable background
+---@param useSystemFont boolean
+function GLabel:setSystemFont(useSystemFont) end
+
+---Set the bg color that will be used if the label doesn't use system font
+---@param color integer
+function GLabel:setBgColor(color) end
+
+---Set the label text
+---@param text string
+function GLabel:setText(text) end
 
 ---@class OnNewFrame: EventClass
 Core.Graphics.OnNewFrame = {}

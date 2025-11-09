@@ -24,7 +24,7 @@ class Drawable {
     DrawableType getType() const { return id; };
 
     bool shouldDraw(const CTRPluginFramework::Screen& screen) {
-        return visible && (screen.IsTop && drawTop) || (!screen.IsTop && drawBottom);
+        return visible && ((screen.IsTop && drawTop) || (!screen.IsTop && drawBottom));
     }
 
     void toggleTopScreen() {

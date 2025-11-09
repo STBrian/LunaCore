@@ -182,7 +182,7 @@ namespace CTRPluginFramework
 
         gmenu->Callback(Core::EventHandlerCallback);
         gmenu->Callback(Core::AsyncHandlerCallback);
-        OSD::Run(Core::GraphicsHandlerCallback);
+        gmenu->Callback(Core::GraphicsHandlerCallback);
 
         // Init our menu entries & folders
         InitMenu(*gmenu);

@@ -1,27 +1,42 @@
 local white = Core.Graphics.colorRGB(255, 255, 255)
 local black = Core.Graphics.colorRGB(0, 0, 0)
 
-local function drawTextLeft(text, x, y, color)
+---@param obj GLabel
+---@param text string
+---@param x integer
+---@param y integer
+local function setAlignLeft(obj, text, x, y)
     local textWidth = Core.Graphics.getTextWidth(text)
-    Core.Graphics.drawText(text, x - textWidth, y, color)
+    obj:setPosition(x - textWidth, y)
+    obj:setText(text)
 end
 
-Core.Graphics.OnNewFrame:Connect(function (screen)
-    if screen == "top" then
-        drawTextLeft("Hunger: "..tostring(Game.LocalPlayer.CurrentHunger), 400 - 10, 75, black)
-        drawTextLeft("FOV: "..tostring(Game.LocalPlayer.Camera.FOV), 400 - 10, 85, black)
+local objects = {
+    hungerLabel = Core.Graphics.newLabel(0, 0, "Hunger: "),
+    fovLabel = Core.Graphics.newLabel(0, 0, "FOV: ")
+}
+
+objects.hungerLabel:setSystemFont(true)
+objects.hungerLabel:setColor(black)
+objects.hungerLabel:setScreens(true, false)
+objects.hungerLabel:setVisible(false)
+objects.fovLabel:setSystemFont(true)
+objects.fovLabel:setColor(black)
+objects.fovLabel:setScreens(true, false)
+objects.fovLabel:setVisible(false)
+setAlignLeft(objects.hungerLabel, "Hunger: ", 400 - 10, 75)
+setAlignLeft(objects.fovLabel, "FOV: ", 400 - 10, 85)
+Core.Graphics.add(objects.hungerLabel)
+Core.Graphics.add(objects.fovLabel)
+
+Core.Graphics.OnNewFrame:Connect(function ()
+    if Game.LocalPlayer.Loaded then
+        objects.hungerLabel:setVisible(true)
+        objects.fovLabel:setVisible(true)
+        setAlignLeft(objects.hungerLabel, string.format("Hunger: %d", Game.LocalPlayer.CurrentHunger), 400 - 10, 75)
+        setAlignLeft(objects.fovLabel, string.format("FOV: %f", Game.LocalPlayer.Camera.FOV), 400 - 10, 85)
+    else
+        objects.hungerLabel:setVisible(false)
+        objects.fovLabel:setVisible(false)
     end
 end)
-
---[[ You need to call open function to be able to draw on screen
--- The game will frezee and that allows to avoid artifacts on screen
--- Every other events and async task will continue execution
-Game.Event.OnKeyReleased:Connect(function ()
-    if gamepad.isReleased(keys.START) then
-        if not Core.Graphics.isOpen() then
-            Core.Graphics.open(drawGraphics)
-        else
-            Core.Graphics.close()
-        end
-    end
-end)]]

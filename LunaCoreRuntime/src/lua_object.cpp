@@ -167,6 +167,7 @@ int LuaObject::l_newindex(lua_State* L) {
 
     const char* key = lua_tostring(L, 2);
     std::string* currClassPtr = new std::string(objName); // I made a ptr so I can manually delete it when doing a lua_error, maybe there is a better way of doing this
+    bool valid = false;
     while (!currClassPtr->empty()) {
         if (!objsLayouts[*currClassPtr].contains(key)) {
             if (parents.contains(*currClassPtr))
@@ -180,16 +181,18 @@ int LuaObject::l_newindex(lua_State* L) {
             delete currClassPtr;
             return luaL_error(L, "unable to assign value to read-only field %s", key);
         }
+        ValueMetadata& md = objsLayouts[*currClassPtr][key];
         delete currClassPtr;
+        valid = true;
             
-        u32 offset = objsLayouts[objName][key].offset;
+        u32 offset = md.offset;
         void* dataOff;
-        if (objsLayouts[objName][key].flags & OBJF_FLAG_ABS)
+        if (md.flags & OBJF_FLAG_ABS)
             dataOff = (void*)offset;
         else
             dataOff = (void*)((u32)objOffset + offset);
 
-        switch (objsLayouts[objName][key].type) {
+        switch (md.type) {
             case OBJF_TYPE_CHAR:
                 if (lua_type(L, 3) != LUA_TNUMBER)
                     return luaL_error(L, "unable to assign %s to %s data type", luaL_typename(L, 3), "integer");
@@ -227,11 +230,10 @@ int LuaObject::l_newindex(lua_State* L) {
             case OBJF_TYPE_OBJECT: case OBJF_TYPE_OBJECT_POINTER:
                 return luaL_error(L, "unable to assign value to constant %s data type", "object");
                 break;
-            default:
-                return luaL_error(L, "unable to assign value to invalid field %s", key);
-                break;
         }
     }
+    if (!valid)
+        return luaL_error(L, "unable to assign value to invalid field %s", key);
     return 0;
 }
 

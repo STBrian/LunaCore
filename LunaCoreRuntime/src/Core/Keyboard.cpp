@@ -2,6 +2,7 @@
 
 #include <CTRPluginFramework.hpp>
 
+#include "CoreGlobals.hpp"
 #include "Core/Event.hpp"
 #include "Core/Async.hpp"
 
@@ -30,11 +31,11 @@ static int l_Keyboard_getString(lua_State *L) {
     std::string inputText;
     if (keyboard.Open(inputText) == 0) {
         Core::EventRestartClock();
-        Core::AsyncRestartClock();
+        timeoutAsyncClock.Restart();
         lua_pushstring(L, inputText.c_str());
     } else {
         Core::EventRestartClock();
-        Core::AsyncRestartClock();
+        timeoutAsyncClock.Restart();
         lua_pushnil(L);
     }
     return 1;
@@ -57,11 +58,11 @@ static int l_Keyboard_getNumber(lua_State *L) {
     float inputNumber;
     if (keyboard.Open(inputNumber) == 0) {
         Core::EventRestartClock();
-        Core::AsyncRestartClock();
+        timeoutAsyncClock.Restart();
         lua_pushnumber(L, inputNumber);
     } else {
         Core::EventRestartClock();
-        Core::AsyncRestartClock();
+        timeoutAsyncClock.Restart();
         lua_pushnil(L);
     }
     return 1;
@@ -84,11 +85,11 @@ static int l_Keyboard_getInteger(lua_State *L) {
     u32 inputNumber;
     if (keyboard.Open(inputNumber) == 0) {
         Core::EventRestartClock();
-        Core::AsyncRestartClock();
+        timeoutAsyncClock.Restart();
         lua_pushnumber(L, inputNumber);
     } else {
         Core::EventRestartClock();
-        Core::AsyncRestartClock();
+        timeoutAsyncClock.Restart();
         lua_pushnil(L);
     }
     return 1;
@@ -112,11 +113,11 @@ static int l_Keyboard_getHex(lua_State *L) {
     keyboard.IsHexadecimal(true);
     if (keyboard.Open(inputNumber) == 0) {
         Core::EventRestartClock();
-        Core::AsyncRestartClock();
+        timeoutAsyncClock.Restart();
         lua_pushnumber(L, inputNumber);
     } else {
         Core::EventRestartClock();
-        Core::AsyncRestartClock();
+        timeoutAsyncClock.Restart();
         lua_pushnil(L);
     }
     return 1;

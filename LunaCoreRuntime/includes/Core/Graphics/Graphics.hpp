@@ -5,9 +5,6 @@
 #include <CTRPluginFramework.hpp>
 
 namespace Core {
-
-    void GraphicsHandlerCallback();
-
     namespace Module {
         bool RegisterGraphicsModule(lua_State *L);
     }

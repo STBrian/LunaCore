@@ -1,5 +1,7 @@
 #pragma once
 
+#include <CTRPluginFramework.hpp>
+
 #include <atomic>
 #include <unordered_map>
 #include "types.h"
@@ -31,3 +33,5 @@ typedef struct {
 } GameState_s;
 
 extern GameState_s GameState;
+
+extern CTRPluginFramework::Clock timeoutAsyncClock;

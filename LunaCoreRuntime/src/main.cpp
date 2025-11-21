@@ -13,11 +13,11 @@
 #include "Core/Debug.hpp"
 #include "Core/Event.hpp"
 #include "Core/Filesystem.hpp"
-#include "Core/Async.hpp"
 #include "Core/Graphics/Graphics.hpp"
 #include "Core/Utils/Utils.hpp"
 #include "Core/Config.hpp"
 #include "Core/CrashHandler.hpp"
+#include "Core/Scheduler.hpp"
 
 #include "Minecraft/Minecraft.hpp"
 #include "Minecraft/Hooks/GameHooks.hpp"
@@ -181,8 +181,7 @@ namespace CTRPluginFramework
         gmenu->ShowWelcomeMessage(false);
 
         gmenu->Callback(Core::EventHandlerCallback);
-        gmenu->Callback(Core::AsyncHandlerCallback);
-        gmenu->Callback(Core::GraphicsHandlerCallback);
+        gmenu->Callback(Core::Scheduler::Update);
 
         // Init our menu entries & folders
         InitMenu(*gmenu);

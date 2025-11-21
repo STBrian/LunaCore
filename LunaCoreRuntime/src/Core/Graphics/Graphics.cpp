@@ -12,11 +12,6 @@
 
 namespace CTRPF = CTRPluginFramework;
 
-void Core::GraphicsHandlerCallback() {
-    std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
-    Event::TriggerEvent(Lua_global, "Core.Graphics.OnNewFrame");
-}
-
 // ----------------------------------------------------------------------------
 
 //$Core.Graphics

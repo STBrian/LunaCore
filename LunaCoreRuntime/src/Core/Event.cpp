@@ -93,18 +93,20 @@ void Core::EventHandlerCallback()
     u32 releasedKeys = CTRPF::Controller::GetKeysReleased();
     if (pressedKeys > 0) {
         lua_pushnumber(L, pressedKeys);
-        Core::Event::TriggerEvent(L, "Game.Gamepad.OnKeyPressed", 1);
+        Event::TriggerEvent(L, "Game.Gamepad.OnKeyPressed", 1);
     }
 
     if (downKeys > 0) {
         lua_pushnumber(L, downKeys);
-        Core::Event::TriggerEvent(L, "Game.Gamepad.OnKeyDown", 1);
+        Event::TriggerEvent(L, "Game.Gamepad.OnKeyDown", 1);
     }
 
     if (releasedKeys > 0) {
         lua_pushnumber(L, releasedKeys);
-        Core::Event::TriggerEvent(L, "Game.Gamepad.OnKeyReleased", 1);
+        Event::TriggerEvent(L, "Game.Gamepad.OnKeyReleased", 1);
     }
+
+    Event::TriggerEvent(Lua_global, "Core.Graphics.OnNewFrame");
 
     /*static float lastSlider = 0;
     float slider = osGet3DSliderState();

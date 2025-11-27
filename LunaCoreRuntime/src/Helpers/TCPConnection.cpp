@@ -1,4 +1,4 @@
-#include "Core/TCPConnection.hpp"
+#include "Helpers/TCPConnection.hpp"
 
 #include <unistd.h>
 #include <arpa/inet.h>

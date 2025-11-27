@@ -16,6 +16,7 @@ Scheduler& Scheduler::getInstance() {
     return s;
 }
 
+/* Checks the thread status code. Prints the error to the log if any and/or removes the task if ended */
 static inline void checkThreadStatus(Scheduler& ins, std::unordered_map<lua_State*, int>& tasks, lua_State* L, int call_result, lua_State* T) {
     if (call_result != 0 && call_result != LUA_YIELD) { // Ended with error
         const char *errMsg = lua_tostring(T, -1);

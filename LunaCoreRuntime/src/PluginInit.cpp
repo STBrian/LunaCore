@@ -10,10 +10,11 @@
 #include "CoreConstants.hpp"
 #include "CoreGlobals.hpp"
 #include "CoreInit.hpp"
-#include "Core/TCPConnection.hpp"
 #include "Core/Config.hpp"
 #include "Core/Debug.hpp"
 #include "Core/Filesystem.hpp"
+
+#include "Helpers/TCPConnection.hpp"
 
 using namespace CTRPluginFramework;
 

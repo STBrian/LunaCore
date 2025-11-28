@@ -7,6 +7,14 @@ namespace gstd {
         return GameMemalloc(n);
     }
 
+    inline void* calloc(size_t nitems, size_t size) {
+        return GameCalloc(nitems, size);
+    }
+
+    inline void* realloc(void* p, size_t newsize) {
+        return GameRealloc(p, newsize);
+    }
+
     inline void free(void* p) {
         GameFree(p);
     }
@@ -15,7 +23,11 @@ namespace gstd {
         return GameStrlen(s);
     }
 
-    inline void* calloc(size_t nitems, size_t size) {
-        return GameCalloc(nitems, size);
+    inline void memcpy(void* dst, const void* src, size_t size) {
+        GameMemcpy(dst, src, size);
+    }
+
+    inline int vsnprintf(char* buffer, size_t size, const char* fmt, va_list vals) {
+        return GameVsnprintf(buffer, size, fmt, vals);
     }
 }

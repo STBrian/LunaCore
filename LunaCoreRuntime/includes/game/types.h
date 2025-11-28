@@ -2,6 +2,8 @@
 
 #ifndef TYPES_H
 #define TYPES_H
+#include <stdbool.h>
+#include <stdint.h>
 #include <stddef.h>
 #include "game/asserts.h"
 
@@ -12,16 +14,6 @@ ASSERT_SIZE(long long, 8);
 ASSERT_SIZE(float, 4);
 ASSERT_SIZE(double, 8);
 ASSERT_SIZE(void*, 4);
-
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
-
-typedef signed char int8_t;
-typedef signed short int16_t;
-typedef signed int int32_t;
-typedef signed long long int64_t;
 
 typedef uint8_t u8;   ///<  8-bit unsigned integer
 typedef uint16_t u16; ///< 16-bit unsigned integer
@@ -83,8 +75,5 @@ typedef void (*voidfn)(void);
     #define NORETURN __attribute__((noreturn))
 
 #endif
-
-#define CUR_THREAD_HANDLE       0xFFFF8000
-#define CUR_PROCESS_HANDLE      0xFFFF8001
 
 #endif

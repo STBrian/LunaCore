@@ -1,11 +1,14 @@
 #pragma once
 
+#include "game/gstd.hpp"
 #include "game/types.h"
 
 #ifndef NOSTDLIB_BUILD
-#include <cstring>
 #include <string>
 #endif
+
+// If building with nostdlib, you must provide a minimal libc
+#include <string.h>
 
 namespace gstd { // to follow rairai's implementation
     class string {
@@ -52,16 +55,25 @@ namespace gstd { // to follow rairai's implementation
         }
 
         bool operator==(const std::string& rhs) {
-            return length() == rhs.length() && std::memcmp(data, rhs.data(), length()) == 0;
+            return length() == rhs.length() && memcmp(data, rhs.data(), length()) == 0;
         }
+        #endif
 
         bool operator==(const char* rhs) {
-            return std::strncmp(data, rhs, length()) == 0 && rhs[length()] == '\0';
+            return strncmp(data, rhs, length()) == 0 && rhs[length()] == '\0';
         }
 
         bool operator==(const string& rhs) const {
-            return length() == rhs.length() && std::memcmp(data, rhs.data, length()) == 0;
+            return length() == rhs.length() && memcmp(data, rhs.data, length()) == 0;
         }
-        #endif
     };
+
+    inline gstd::string format(const char* fmt, ...) {
+        char buffer[0x100] = {0};
+        va_list argList;
+        va_start(argList, fmt);
+        gstd::vsnprintf(buffer, sizeof(buffer), fmt, argList);
+        va_end(argList);
+        return gstd::string(buffer);
+    }
 }

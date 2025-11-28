@@ -76,7 +76,7 @@ def main(errorCode: int):
     if possibleError == 2:
         print("The error was caused by the scripting runtime")
     if possibleError == 3:
-        print("Error in plugin initialization")
+        print("Lua out of memory")
     pc = ((errorCode & 0b1111111111111111111111) << 2)
     if (pluginFault == 1):
         pc += 0x07000100

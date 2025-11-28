@@ -78,12 +78,18 @@ namespace Core {
             }
             u8 possibleError = 0;
             if (plg_state == PluginState::PLUGIN_PATCHPROCESS) possibleError = 1;
-            else if (possibleOOM) possibleError = 2;
-            else if (luaEnvBusy) possibleError = 3;
-            else if (plg_state == PluginState::PLUGIN_MAIN) possibleError = 4;
-            u32 pc = regs->pc - 0x100000 < 0x919000 ? regs->pc - 0x100000 : 0;
+            else if (luaEnvBusy) possibleError = 2;
+            else if (possibleOOM) possibleError = 3;
+            u32 pc = 0;
+            bool pluginFault = false;
+            if (regs->pc - 0x00100000 < 0x919000) {
+                pc = regs->pc - 0x00100000;
+            } else {
+                pc = regs->pc - 0x07000100;
+                pluginFault = true;
+            }
             pc = (pc >> 2) & 0b1111111111111111111111;
-            u32 errorCode = (excep->type << 30 | core_state << 27 | game_state << 25 | possibleError << 22 | pc);
+            u32 errorCode = (excep->type << 30 | core_state << 27 | game_state << 25 | possibleError << 23 | pluginFault << 22 | pc);
             Core::Debug::LogRaw(CTRPF::Utils::Format("\tError code: %08X\n", errorCode));
             Core::Debug::CloseLogFile();
             if (plg_state != PluginState::PLUGIN_MAINLOOP)

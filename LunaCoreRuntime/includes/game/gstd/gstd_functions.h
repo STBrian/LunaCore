@@ -4,6 +4,7 @@
 
 #define GameMemalloc ((void*(*)(size_t))(0x11493c))
 #define GameStrlen ((size_t(*)(const char*))(0x2fe990))
+#define GameFree ((void(*)(void*))(0x1007D0|1))
 
 inline void *GameCalloc(size_t nitems, size_t size) {
     void *dstPtr = GameMemalloc(nitems * size);

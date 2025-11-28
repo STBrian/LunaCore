@@ -7,6 +7,10 @@ namespace gstd {
         return GameMemalloc(n);
     }
 
+    inline void free(void* p) {
+        GameFree(p);
+    }
+
     inline size_t strlen(const char* s) {
         return GameStrlen(s);
     }

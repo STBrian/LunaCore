@@ -31,24 +31,27 @@ namespace Minecraft {
 
     // Item
     void definition(gstd::vector<InternalRecipeElementDefinition>& vec, char itemchr, Item* item) {
-        InternalRecipeElementDefinition itemDef;
-        itemDef.item = item;
-        itemDef.id = itemchr;
-        reinterpret_cast<void(*)(gstd::vector<InternalRecipeElementDefinition>&, InternalRecipeElementDefinition&)>(0x008ff20c)(vec, itemDef); // emplace_back
+        //InternalRecipeElementDefinition itemDef;
+        //itemDef.item = item;
+        //itemDef.id = itemchr;
+        //reinterpret_cast<void(*)(gstd::vector<InternalRecipeElementDefinition>&, InternalRecipeElementDefinition&)>(0x008ff20c)(vec, itemDef); // emplace_back
+        vec.push_back((InternalRecipeElementDefinition){.item=item, .id=itemchr});
     }
 
     // ItemInstance
     void definition(gstd::vector<InternalRecipeElementDefinition>& vec, char itemchr, ItemInstance* item) {
-        InternalRecipeElementDefinition itemDef = {nullptr, nullptr, ItemInstance(item), itemchr};
-        reinterpret_cast<void(*)(gstd::vector<InternalRecipeElementDefinition>&, InternalRecipeElementDefinition&)>(0x008ff20c)(vec, itemDef); // emplace_back
+        //InternalRecipeElementDefinition itemDef = {nullptr, nullptr, ItemInstance(item), itemchr};
+        //reinterpret_cast<void(*)(gstd::vector<InternalRecipeElementDefinition>&, InternalRecipeElementDefinition&)>(0x008ff20c)(vec, itemDef); // emplace_back
+        vec.push_back((InternalRecipeElementDefinition){.ins=item, .id=itemchr});
     }
 
     // Block
     void definition(gstd::vector<InternalRecipeElementDefinition>& vec, char blockchr, Block* block) {
-        InternalRecipeElementDefinition blockDef;
-        blockDef.block = block;
-        blockDef.id = blockchr;
-        reinterpret_cast<void(*)(gstd::vector<InternalRecipeElementDefinition>&, InternalRecipeElementDefinition&)>(0x008ff20c)(vec, blockDef); // emplace_back
+        //InternalRecipeElementDefinition blockDef;
+        //blockDef.block = block;
+        //blockDef.id = blockchr;
+        //reinterpret_cast<void(*)(gstd::vector<InternalRecipeElementDefinition>&, InternalRecipeElementDefinition&)>(0x008ff20c)(vec, blockDef); // emplace_back
+        vec.push_back((InternalRecipeElementDefinition){.block=block, .id=blockchr});
     }
 
     // Item, Block

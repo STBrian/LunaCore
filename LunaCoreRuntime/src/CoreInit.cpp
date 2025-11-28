@@ -13,12 +13,13 @@
 
 #include "Core/Debug.hpp"
 #include "Core/Utils/Utils.hpp"
-#include "Modules.hpp"
-#include "CoreConstants.hpp"
-#include "CoreGlobals.hpp"
+#include "Core/Modules.hpp"
 #include "Core/CrashHandler.hpp"
 #include "Core/Config.hpp"
 #include "Core/Event.hpp"
+
+#include "CoreConstants.hpp"
+#include "CoreGlobals.hpp"
 
 #define IS_VUSA_COMP(id, version) ((id) == 0x00040000001B8700LL && (version) == 9408) // 1.9.19 USA
 #define IS_VEUR_COMP(id, version) ((id) == 0x000400000017CA00LL && (version) == 9392) // 1.9.19 EUR

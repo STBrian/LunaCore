@@ -5,7 +5,6 @@
 #include <CTRPluginFramework.hpp>
 
 #include "Core/Debug.hpp"
-#include "Minecraft/game_utils/game_functions.hpp"
 
 #define USA_REG 0x00040000001B8700LL
 #define EUR_REG 0x000400000017CA00LL
@@ -112,7 +111,7 @@ static bool ReplaceStringWithPointer(u32 insAddr, u32 strAddr, u32 ptrAddr, u8 r
 }
 
 static bool ReplaceConstString(u32 insAddr, u32 strAddr, u8 reg, const std::string& text) {
-    char *textPtr = (char*)GameCalloc(text.size() + 1); // Allocate string space in game memory
+    char *textPtr = (char*)std::calloc(text.size() + 1, 1);
     if (textPtr == NULL) return false;
     if (!CTRPF::Process::WriteString((u32)textPtr, text.c_str(), text.size() + 1)) return false; // Copy string
     return ReplaceStringWithPointer(insAddr, strAddr, (u32)textPtr, reg);

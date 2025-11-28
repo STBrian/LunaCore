@@ -8,7 +8,6 @@
 
 #include "Core/Debug.hpp"
 #include "Core/CrashHandler.hpp"
-#include "Core/Game/Gamepad.hpp"
 #include "Core/Utils/Utils.hpp"
 #include "CoreGlobals.hpp"
 

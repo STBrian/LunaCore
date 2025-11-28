@@ -9,7 +9,6 @@
 #include <cstring>
 
 #include "lua_common.h"
-#include "Modules.hpp"
 #include "Core/Debug.hpp"
 #include "Core/Event.hpp"
 #include "Core/Filesystem.hpp"
@@ -19,16 +18,16 @@
 #include "Core/CrashHandler.hpp"
 #include "Core/Scheduler.hpp"
 
-#include "Minecraft/Minecraft.hpp"
-#include "Minecraft/Hooks/GameHooks.hpp"
-#include "Minecraft/Hooks/MainMenuLayoutLoad.hpp"
-#include "Minecraft/Hooks/LoadingWorldScreenMessage.hpp"
-#include "Minecraft/game_utils/game_functions.hpp"
+#include "Core/Hooks/GameHooks.hpp"
+#include "Core/Hooks/MainMenuLayoutLoad.hpp"
+#include "Core/Hooks/LoadingWorldScreenMessage.hpp"
 
 #include "CoreInit.hpp"
 #include "PluginInit.hpp"
 #include "CoreConstants.hpp"
 #include "CoreGlobals.hpp"
+
+#include "game/Minecraft.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;

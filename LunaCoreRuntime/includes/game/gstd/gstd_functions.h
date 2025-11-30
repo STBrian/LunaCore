@@ -12,7 +12,7 @@
 
 #define GameStrlen ((size_t(*)(const char*))(0x2fe990))
 /* dst, src, size */
-#define GameMemcpy ((void(*)(void*, const void*, size_t))(0x12CE5C))
+//#define GameMemcpy ((void(*)(void*, const void*, size_t))(0x12CE5C)) // unstable
 
 #define GameMemalloc ((void*(*)(size_t))(0x11493c))
 #define GameFree ((void(*)(void*))(0x1007D0|1))
@@ -39,7 +39,7 @@ inline void* GameRealloc(void* p, size_t newsize) {
             return p;
 
         if (void* newp = GameMemalloc(newsize)) {
-            GameMemcpy(newp, p, newsize < oldsize ? newsize : oldsize);
+            memcpy(newp, p, newsize < oldsize ? newsize : oldsize);
             GameFree(p);
             return newp;
         }

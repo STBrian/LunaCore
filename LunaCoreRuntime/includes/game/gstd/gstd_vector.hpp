@@ -5,10 +5,6 @@
 
 #pragma once
 
-#ifdef NOSTDLIB_BUILD
-#error "This header will not work in a nostdlib build"
-#endif
-
 #include <type_traits>
 #include <vector>
 #include "game/types.h"

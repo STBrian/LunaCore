@@ -23,9 +23,9 @@ namespace gstd {
         return GameStrlen(s);
     }
 
-    inline void memcpy(void* dst, const void* src, size_t size) {
+    /*inline void memcpy(void* dst, const void* src, size_t size) {
         GameMemcpy(dst, src, size);
-    }
+    }*/
 
     inline int vsnprintf(char* buffer, size_t size, const char* fmt, va_list vals) {
         return GameVsnprintf(buffer, size, fmt, vals);

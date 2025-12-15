@@ -2,9 +2,10 @@
 
 #include <concepts>
 #include <type_traits>
+#include <new>
 
 #include <malloc.h>
-#include "3ds.h"
+#include <3ds.h>
 
 namespace Core {
     template<typename F, typename T>
@@ -15,44 +16,69 @@ namespace Core {
     template<typename T>
     concept PrimitiveOrPointer = std::is_arithmetic_v<T> || std::is_pointer_v<T>;
 
-    template<typename T>
-    concept PrimitiveIntegerOrPointerNot64 = (std::is_integral_v<T> && sizeof(T) < 8) || std::is_pointer_v<T>;
-
     /* The thread will start automatically when the instance is created */
     class Thread {
         private:
         Handle threadHndl;
         bool started = false;
 
-        typedef struct {
+        template<typename T>
+        class threadCtx {
+            public:
             u8* stackPtr;
             u8* stackPtrTop;
-            ThreadFunc callback;
-            u32 passValue;
-        } threadCtx;
+            void (*callback)(T);
+            T passValue;
+        };
         
         private:
         Thread() {}
 
-        static void threadBodyFunction(threadCtx* ctx);
+        template<typename T>
+        static void threadBodyFunction(threadCtx<T>* ctx) {
+            ctx->callback(ctx->passValue);
+            u8* stackStart = ctx->stackPtr;
+            delete ctx;
+            free(stackStart);
+            svcExitThread();
+        }
 
         using ThreadEmptyFunc = void (*)(void);
 
         public:
-        Thread(ThreadEmptyFunc func);
+        Thread(ThreadEmptyFunc func) {
+            u8* stackPtr = (u8*)memalign(0x8, 0x800);
+            if (!stackPtr)
+                return;
+            threadCtx<void*>* ctx = new (std::nothrow) threadCtx<void*>;
+            if (!ctx) {
+                free(stackPtr);
+                return;
+            }
+            ctx->stackPtr = stackPtr;
+            ctx->stackPtrTop = stackPtr + 0x800;
+            ctx->callback = (ThreadFunc)func;
+            ctx->passValue = nullptr;
+            svcCreateThread(&this->threadHndl, (ThreadFunc)threadBodyFunction<void*>, (u32)ctx, (u32*)ctx->stackPtrTop, 0x30, -2);
+            this->started = true;
+        }
 
         template<typename F, typename T>
-        requires VoidFunctionOneArg<F, T> && PrimitiveIntegerOrPointerNot64<T>
+        requires VoidFunctionOneArg<F, T> && PrimitiveOrPointer<T>
         Thread(F func, T value) {
             u8* stackPtr = (u8*)memalign(0x8, 0x800);
             if (!stackPtr)
                 return;
-            threadCtx* ctx = new threadCtx;
+            threadCtx<T>* ctx = new (std::nothrow) threadCtx<T>;
+            if (!ctx) {
+                free(stackPtr);
+                return;
+            }
             ctx->stackPtr = stackPtr;
             ctx->stackPtrTop = stackPtr + 0x800;
             ctx->callback = (ThreadFunc)func;
-            ctx->passValue = reinterpret_cast<u32>(value);
-            svcCreateThread(&this->threadHndl, (ThreadFunc)threadBodyFunction, (u32)ctx, (u32*)ctx->stackPtrTop, 0x30, -2);
+            ctx->passValue = value;
+            svcCreateThread(&this->threadHndl, (ThreadFunc)threadBodyFunction<T>, (u32)ctx, (u32*)ctx->stackPtrTop, 0x30, -2);
             this->started = true;
         }
 
@@ -61,6 +87,7 @@ namespace Core {
         }
 
         class Sleep {
+            public:
             static void Nanoseconds(u64 ns) {
                 svcSleepThread(ns);
             }

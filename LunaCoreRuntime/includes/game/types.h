@@ -40,6 +40,11 @@ typedef s32 Result;                 ///< Function result.
 typedef void (*ThreadFunc)(void *); ///< Thread entrypoint function.
 typedef void (*voidfn)(void);
 
+typedef u8 undefined1;
+typedef u16 undefined2;
+typedef u32 undefined4;
+typedef u64 undefined8;
+
 /// Creates a bitmask from a bit number.
 #define BIT(n) (1U<<(n))
 

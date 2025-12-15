@@ -1,4 +1,5 @@
-#include "game/gstd/gstd_functions.h"
+#include "game/gstdio.h"
+#include "game/gstring.h"
 
 NAKED size_t __wrap_strlen(const char* str) {
     return GameStrlen(str);

@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <vector>
 #include "game/types.h"
-#include "game/gstd.hpp"
+#include "game/gstdlib.h"
 
 namespace gstd { // yep also to follow rairai's impl
 class GenericVector {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/gstd.hpp"
+#include "game/gstdio.h"
 #include "game/types.h"
 
 #ifndef NOSTDLIB_BUILD

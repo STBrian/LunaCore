@@ -1,6 +1,8 @@
 #pragma once
 
+#ifndef NOSTDLIB_BUILD
 #include <string>
+#endif
 
 //#include "Minecraft/game_utils/game_functions.hpp"
 #include "game/gstd/gstd_string.hpp"
@@ -33,6 +35,7 @@ namespace Game {
         u8 padding[0xac - 0x2a];
 
         class Tier {
+            public:
             int miningLevel;
             int durability;
             float miningEfficiency;
@@ -53,9 +56,16 @@ namespace Game {
 
         inline static void (*registerItems)(void) = reinterpret_cast<void(*)(void)>(0x00563db0);
 
+        #ifndef NOSTDLIB_BUILD
         /* Item.itemId = itemId + 0x100 */
         Item(const std::string& nameId, short itemId) {
-            reinterpret_cast<void*(*)(Item*, gstd::string, short)>(0x005790a4)(this, nameId, itemId);
+            reinterpret_cast<void*(*)(Item*, const gstd::string&, short)>(0x005790a4)(this, nameId, itemId);
+        }
+        #endif
+
+        /* Item.itemId = itemId + 0x100 */
+        Item(const gstd::string& nameId, short itemId) {
+            reinterpret_cast<void*(*)(Item*, const gstd::string&, short)>(0x005790a4)(this, nameId, itemId);
         }
 
         inline static void addCreativeItem(Item* item, u8 categoryId, s16 position) {

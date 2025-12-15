@@ -17,7 +17,7 @@ using json = nlohmann::ordered_json;
 #include "Core/Debug.hpp"
 #include "Core/Utils/Utils.hpp"
 
-#include "game/gstd.hpp"
+#include "game/gstdlib.h"
 
 namespace CTRPF = CTRPluginFramework;
 

@@ -49,6 +49,6 @@ Game.Recipes.OnRegisterRecipes:Connect(function (recipesTable)
         local stickIns = Game.Items.getItemInstance(stick, 1, 0)
         local copper_ingotIns = Game.Items.getItemInstance(COPPER_INGOT, 1, 0)
         local copper_pickaxe_ins = Game.Items.getItemInstance(COPPER_PICKAXE, 1, 0)
-        Game.Recipes.registerRecipe(recipesTable, copper_pickaxe_ins, 2, 50, "XXX", " # ", " # ", {{"X", copper_ingotIns}, {"#", stickIns}})
+        Game.Recipes.registerShapedRecipe(recipesTable, copper_pickaxe_ins, 2, 50, "XXX", " # ", " # ", {{"X", copper_ingotIns}, {"#", stickIns}})
     end
 end)

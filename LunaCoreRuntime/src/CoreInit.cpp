@@ -38,9 +38,9 @@ void Core::InitCore() {
             return;
     std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
 
-    if (!fslib::openExtData(u"extdata", static_cast<uint32_t>(titleID >> 8 & 0x00FFFFFF))) {
+    if (!fslib::open_extra_data(u"extdata", static_cast<uint32_t>(titleID >> 8 & 0x00FFFFFF))) {
         Core::Debug::LogError("Failed to open extdata");
-        Core::Debug::LogRaw(std::string(fslib::getErrorString()) + "\n");
+        Core::Debug::LogRaw(std::string(fslib::error::get_string()) + "\n");
     }
 
     if (!CTRPF::Directory::IsExists(PLUGIN_FOLDER"/scripts"))

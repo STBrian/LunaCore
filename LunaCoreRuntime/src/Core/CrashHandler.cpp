@@ -95,7 +95,7 @@ namespace Core {
             if (plg_state != PluginState::PLUGIN_MAINLOOP)
                 return CTRPF::Process::EXCB_REBOOT;
             else {
-                fslib::closeDevice(u"extdata");
+                fslib::close_device(u"extdata");
                 fslib::exit();
             }
 

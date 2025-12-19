@@ -39,11 +39,11 @@ namespace Filesystem {
         }
         fileStruct->filePtr = new fslib::File(path_from_string(filename), fileStruct->mode);
         
-        if (!fileStruct->filePtr->isOpen()) {
+        if (!fileStruct->filePtr->is_open()) {
             delete fileStruct;
             return NULL;
         } else {
-            fileStruct->size = fileStruct->filePtr->getSize();
+            fileStruct->size = fileStruct->filePtr->get_size();
         }
         return fileStruct;
     }
@@ -54,7 +54,7 @@ namespace Filesystem {
     }
 
     size_t fseek(FilesystemFile* file, long off, int ori) {
-        file->filePtr->seek(off, ori);
+        file->filePtr->seek(off, (fslib::File::Origin)ori);
         return file->filePtr->tell();
     }
 
@@ -63,7 +63,7 @@ namespace Filesystem {
     }
 
     void rewind(FilesystemFile* file) {
-        file->filePtr->seek(0, SEEK_SET);
+        file->filePtr->seek(0, (fslib::File::Origin)SEEK_SET);
     }
 
     size_t fwrite(const void* buffer, size_t size, size_t n, FilesystemFile* file) {
@@ -114,12 +114,12 @@ static int l_Filesystem_open(lua_State *L) {
     }
     fileStruct->filePtr = new fslib::File(path_from_string(filepath), fileStruct->mode);
     
-    if (!fileStruct->filePtr->isOpen()) {
+    if (!fileStruct->filePtr->is_open()) {
         lua_pop(L, 1);
         lua_pushnil(L);
-        lua_pushstring(L, fslib::getErrorString());
+        lua_pushstring(L, fslib::error::get_string());
     } else {
-        fileStruct->size = fileStruct->filePtr->getSize();
+        fileStruct->size = fileStruct->filePtr->get_size();
         success = true;
     }
 
@@ -136,7 +136,7 @@ static int l_Filesystem_open(lua_State *L) {
 ### Core.Filesystem.fileExists
 */
 static int l_Filesystem_fileExists(lua_State *L) {
-    lua_pushboolean(L, fslib::fileExists(path_from_string(luaL_checkstring(L, 1))));
+    lua_pushboolean(L, fslib::file_exists(path_from_string(luaL_checkstring(L, 1))));
     return 1;
 }
 
@@ -147,7 +147,7 @@ static int l_Filesystem_fileExists(lua_State *L) {
 ### Core.Filesystem.directoryExists
 */
 static int l_Filesystem_directoryExists(lua_State *L) {
-    lua_pushboolean(L, fslib::directoryExists(path_from_string(luaL_checkstring(L, 1))));
+    lua_pushboolean(L, fslib::directory_exists(path_from_string(luaL_checkstring(L, 1))));
     return 1;
 }
 
@@ -159,14 +159,14 @@ static int l_Filesystem_directoryExists(lua_State *L) {
 */
 static int l_Filesystem_getDirectoryElements(lua_State *L) {
     fslib::Directory dir(path_from_string(luaL_checkstring(L, 1)));
-    if (!dir.isOpen()) {
+    if (!dir.is_open()) {
         lua_newtable(L);
         return 1;
     }
-    size_t filesCount = dir.getCount();
+    size_t filesCount = dir.get_count();
     lua_newtable(L);
     for (int i = 0; i < filesCount; i++) {
-        std::u16string_view entry = dir.getEntry(i);
+        std::u16string_view entry = dir.get_entry(i).get_filename();
         lua_pushstring(L, path_to_string(std::u16string(entry.data(), entry.size())).c_str());
         lua_rawseti(L, -2, i + 1);
     }
@@ -180,7 +180,7 @@ static int l_Filesystem_getDirectoryElements(lua_State *L) {
 ### Core.Filesystem.createDirectory
 */
 static int l_Filesystem_createDirectory(lua_State *L) {
-    lua_pushboolean(L, fslib::createDirectory(path_from_string(luaL_checkstring(L, 1))));
+    lua_pushboolean(L, fslib::create_directory(path_from_string(luaL_checkstring(L, 1))));
     return 1;
 }
 
@@ -207,12 +207,12 @@ static int l_Filesystem_File_read(lua_State *L) {
     if ((fileStruct->mode & FS_OPEN_READ) == 0)
         return luaL_error(L, "File not opened with read mode");
 
-    if (!fileStruct->filePtr->isOpen())
+    if (!fileStruct->filePtr->is_open())
         return luaL_error(L, "File closed");
 
     if (bytes == std::string::npos) {
         bytes = fileStruct->size;
-        fileStruct->filePtr->seek(0, SEEK_SET);
+        fileStruct->filePtr->seek(0, (fslib::File::Origin)SEEK_SET);
     }
     char *fileContent = new char[bytes];
     size_t bytesRead = fileStruct->filePtr->read(fileContent, bytes);
@@ -242,7 +242,7 @@ static int l_Filesystem_File_write(lua_State *L) {
     if ((fileStruct->mode & (FS_OPEN_WRITE|FS_OPEN_APPEND)) == 0)
         return luaL_error(L, "File not opened with write mode");
 
-    if (!fileStruct->filePtr->isOpen())
+    if (!fileStruct->filePtr->is_open())
         return luaL_error(L, "File closed");
     
     lua_pushboolean(L, fileStruct->filePtr->write(data, bytes) != -1);
@@ -298,7 +298,7 @@ static int l_Filesystem_File_seek(lua_State *L) {
     else
         return luaL_error(L, "Invalid seek pos");
 
-    fileStruct->filePtr->seek(offset, seekPos);
+    fileStruct->filePtr->seek(offset, (fslib::File::Origin)seekPos);
     lua_pushnumber(L, fileStruct->filePtr->tell());
     return 1;
 }
@@ -310,7 +310,7 @@ static int l_Filesystem_File_seek(lua_State *L) {
 */
 static int l_Filesystem_File_isOpen(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
-    lua_pushboolean(L, fileStruct->filePtr->isOpen());
+    lua_pushboolean(L, fileStruct->filePtr->is_open());
     return 1;
 }
 
@@ -321,7 +321,7 @@ static int l_Filesystem_File_isOpen(lua_State *L) {
 */
 static int l_Filesystem_File_isEOF(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
-    lua_pushboolean(L, fileStruct->filePtr->endOfFile());
+    lua_pushboolean(L, fileStruct->filePtr->end_of_file());
     return 1;
 }
 
@@ -331,14 +331,14 @@ static int l_Filesystem_File_isEOF(lua_State *L) {
 */
 static int l_Filesystem_File_close(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
-    if (fileStruct->filePtr->isOpen())
+    if (fileStruct->filePtr->is_open())
         fileStruct->filePtr->close();
     return 0;
 }
 
 static int l_Filesystem_File_gc(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)lua_touserdata(L, 1);
-    if (fileStruct->filePtr->isOpen())
+    if (fileStruct->filePtr->is_open())
         fileStruct->filePtr->close();
     delete fileStruct->filePtr;
     return 0;

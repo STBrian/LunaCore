@@ -100,8 +100,8 @@ namespace CTRPluginFramework
 
         if (!fslib::initialize()) abort();
 
-        if (!fslib::directoryExists(path_from_string(PLUGIN_FOLDER)))
-            fslib::createDirectory(path_from_string(PLUGIN_FOLDER));
+        if (!fslib::directory_exists(path_from_string(PLUGIN_FOLDER)))
+            fslib::create_directory(path_from_string(PLUGIN_FOLDER));
         if (!Debug::OpenLogFile(LOG_FILE))
             OSD::Notify(Utils::Format("Failed to open log file '%s'", LOG_FILE));
         Debug::LogMessage(Utils::Format("LunaCore version: %d.%d.%d", PLG_VER_MAJ, PLG_VER_MIN, PLG_VER_PAT), false);
@@ -139,7 +139,7 @@ namespace CTRPluginFramework
         // Cleanup
         Core::Debug::LogMessage("Exiting LunaCore", false);
         Core::Debug::CloseLogFile();
-        fslib::closeDevice(u"extdata");
+        fslib::close_device(u"extdata");
         fslib::exit();
         lua_close(Lua_global);
     }
@@ -150,14 +150,14 @@ namespace CTRPluginFramework
         if (!Core::Utils::checkTitle())
             return 0;
 
-        if (!fslib::directoryExists(path_from_string(PLUGIN_FOLDER"/layouts")))
-            fslib::createDirectory(path_from_string(PLUGIN_FOLDER"/layouts"));
+        if (!fslib::directory_exists(path_from_string(PLUGIN_FOLDER"/layouts")))
+            fslib::create_directory(path_from_string(PLUGIN_FOLDER"/layouts"));
 
         bool loadMenuLayout = Config::GetBoolValue(G_config, "custom_game_menu_layout", true);
         if (loadMenuLayout && patchEnabled) {
-            if ((fslib::fileExists(path_from_string(PLUGIN_FOLDER"/layouts/menu_layout.json")) 
+            if ((fslib::file_exists(path_from_string(PLUGIN_FOLDER"/layouts/menu_layout.json")) 
                 && LoadGameMenuLayout(PLUGIN_FOLDER"/layouts/menu_layout.json")) || 
-                (fslib::fileExists(path_from_string(PLUGIN_FOLDER"/LunaCore/layouts/menu_layout.json")) 
+                (fslib::file_exists(path_from_string(PLUGIN_FOLDER"/LunaCore/layouts/menu_layout.json")) 
                 && LoadGameMenuLayout(PLUGIN_FOLDER"/LunaCore/layouts/menu_layout.json"))
             )
                 PatchGameMenuLayoutFunction();

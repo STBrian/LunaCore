@@ -33,7 +33,7 @@ class alloc_ptr {
     */
     size_t getSize() {
         if (check())
-            return *((u32*)p - 3)
+            return *((u32*)ptr - 3);
         return 0;
     }
 

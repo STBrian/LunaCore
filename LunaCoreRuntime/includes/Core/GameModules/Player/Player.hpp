@@ -4,6 +4,7 @@
 #include "types.h"
 
 #include "game/Inventory.hpp"
+#include "game/memory.hpp"
 
 namespace Core {
     class Player {
@@ -40,12 +41,10 @@ namespace Core {
         static inline u32 sizeofPlayer = 0x1ce0;
         static inline Player** PlayerInstance = reinterpret_cast<Player**>(0x918958);
         static Player* getPlayerInstance() {
-            Player* plyPtr = *PlayerInstance;
-            if (plyPtr) {
-                if (*((u32*)plyPtr - 4) != 0x5544 || *((u32*)plyPtr - 3) != sizeofPlayer)
-                    plyPtr = nullptr;
-            }
-            return plyPtr;
+            gstd::alloc_ptr<Player> plyPtr(*PlayerInstance);
+            if (plyPtr.getSize() == sizeofPlayer)
+                return plyPtr.get();
+            return nullptr;
         }
 
         void setPosition(float x, float y, float z) {

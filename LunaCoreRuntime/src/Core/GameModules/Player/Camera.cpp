@@ -3,6 +3,7 @@
 #include <CTRPluginFramework.hpp>
 
 #include "game/Minecraft.hpp"
+#include "game/memory.hpp"
 #include "string_hash.hpp"
 
 namespace CTRPF = CTRPluginFramework;
@@ -12,13 +13,12 @@ enum player_camera_offsets : u32 {
 };
 
 static float* getCameraFOVPtr() {
-    u32* gPtr = *reinterpret_cast<u32**>(0xa32694); // Hard work to get this path
-    if (gPtr && (u32)gPtr > 0x30000000 && (u32)gPtr < 0x40000000 && *(gPtr - 4) == 0x5544) {
-        u32* ptr1 = *reinterpret_cast<u32**>(gPtr);
-        if (ptr1 && (u32)ptr1 > 0x30000000 && (u32)ptr1 < 0x40000000 && *(ptr1 - 4) == 0x5544) {
-            u32 ptr2 = *(ptr1 + 2);
-            if (ptr2 && (u32)ptr2 > 0x30000000 && (u32)ptr2 < 0x40000000 && *((u32*)ptr2 - 4) == 0x5544)
-                return reinterpret_cast<float*>(ptr2 + 0x118);
+    gstd::alloc_ptr<u32**> gPtr(*reinterpret_cast<u32****>(0xa32694)); // Hard work to get this path
+    if (gPtr) {
+        gstd::alloc_ptr<u32*> ptr1(*gPtr.get());
+        if (ptr1) {
+            gstd::alloc_ptr<u32> ptr2(*(ptr1 + 2));
+            if (ptr2) return reinterpret_cast<float*>((u32)ptr2.get() + 0x118);
         }
     }
     return NULL;

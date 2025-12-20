@@ -21,14 +21,10 @@ enum player_fields_offsets : u32 {
 };
 
 static u32* getHungerBarOffset() {
-    u32* hungerBarPtr = NULL;
-    u32* gPtr1 = *reinterpret_cast<u32**>(0x918968);
-    if (gPtr1 && (u32)gPtr1 > 0x30000000 && (u32)gPtr1 < 0x40000000 && *(gPtr1 - 4) == 0x5544) {
-        u32* ptr1 = *reinterpret_cast<u32**>(gPtr1 + 2);
-        if (ptr1 && (u32)ptr1 > 0x30000000 && (u32)ptr1 < 0x40000000 && *(ptr1 - 4) == 0x5544)
-            hungerBarPtr = ptr1;
-    }
-    return hungerBarPtr;
+    gstd::alloc_ptr<u32*> gPtr1(*reinterpret_cast<u32***>(0x918968));
+    if (gPtr1) 
+        return gstd::alloc_ptr<u32>(*(gPtr1 + 2)).get();
+    return nullptr;
 }
 
 // ----------------------------------------------------------------------------

@@ -47,7 +47,7 @@ class alloc_ptr {
     }
 
     explicit operator bool() const {
-        return check();
+        return CHECK_GAME_POINTER(ptr);
     }
 
     T* operator+(int o) const {

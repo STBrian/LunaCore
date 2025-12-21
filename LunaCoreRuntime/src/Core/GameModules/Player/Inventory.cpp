@@ -12,6 +12,8 @@
 #include "game/Minecraft.hpp"
 #include "game/Inventory.hpp"
 
+#include "lua_utils.hpp"
+
 namespace CTRPF = CTRPluginFramework;
 using InventorySlot = Game::Inventory::InventorySlot;
 using Item = Game::Item;
@@ -99,11 +101,17 @@ static int l_Inventory_Slot_class_newindex(lua_State *L)
 {
     InventorySlot* slotData = *(InventorySlot**)lua_touserdata(L, 1);
     if (lua_type(L, 2) != LUA_TSTRING)
-        return luaL_error(L, "Unable to set field '?' of 'InventorySlot' instance");
+        return luaL_error(L, "unable to set field '?' of 'InventorySlot' instance");
+
+    // "Safe" c++ error handler
+    LUAUTILS_INIT_TYPEERROR_HANDLER();
+    LUAUTILS_SET_TYPEERROR_MESSAGE("unable to assign to a \"%s\" field a \"%s\" value");
+
+    {
     uint32_t key = hash(lua_tostring(L, 2));
     switch (key) {
         case hash("Item"): {
-            Item *itemData = *(Item**)luaC_checkudata(L, 3, "GameItem", "unable to assign %s to %s data type");
+            Item *itemData = *(Item**)luaC_checkudata(L, 3, "GameItem", "unable to assign to a \"%s\" field a \"%s\" value");
             void* renderID = Core::Items::GetRenderIDByItemID(itemData->itemId);
             slotData->itemData = itemData;
             //if (renderID != nullptr)
@@ -111,16 +119,21 @@ static int l_Inventory_Slot_class_newindex(lua_State *L)
             break;
         }
         case hash("ItemCount"):
-            slotData->itemCount = luaC_indexchecknumber(L, 3);
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            slotData->itemCount = lua_tonumber(L, 3);
             break;
         case hash("ItemData"):
-            slotData->dataValue = luaC_indexchecknumber(L, 3);
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            slotData->dataValue = lua_tonumber(L, 3);
             break;
         default:
             luaL_error(L, "Unable to set field '%s' of 'InventorySlot' instance", lua_tostring(L, 2));
             break;
     }
     return 0;
+    }
+
+    LUAUTILS_SET_TYPEERROR_HANDLER(L);
 }
 
 // ----------------------------------------------------------------------------

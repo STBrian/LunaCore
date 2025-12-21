@@ -41,7 +41,8 @@ namespace Core {
     }
 
     static int l_Core_getModpath(lua_State* L) {
-        std::string modname(luaL_checkstring(L, 1));
+        const char* modnamec = luaL_checkstring(L, 1);
+        std::string modname(modnamec);
         Core::Utils::toLower(modname);
         if (modPaths.contains(modname))
             lua_pushstring(L, modPaths[modname].c_str());

@@ -8,6 +8,8 @@
 #include "Core/Debug.hpp"
 #include "string_hash.hpp"
 
+#include "lua_utils.hpp"
+
 namespace CTRPF = CTRPluginFramework;
 
 fslib::Path path_from_string(const std::string& str) {
@@ -95,7 +97,12 @@ namespace Filesystem {
 */
 static int l_Filesystem_open(lua_State *L) {
     const char* filepath = luaL_checkstring(L, 1);
-    std::string filemode(luaL_checkstring(L, 2));
+    const char* filemodec = luaL_checkstring(L, 2);
+
+    LUAUTILS_INIT_ERROR_HANDLER();
+
+    {
+    std::string filemode(filemodec);
 
     bool success = false;
     FilesystemFile* fileStruct = (FilesystemFile*)lua_newuserdata(L, sizeof(FilesystemFile));
@@ -110,7 +117,7 @@ static int l_Filesystem_open(lua_State *L) {
         fileStruct->mode = FS_OPEN_WRITE|FS_OPEN_READ;
     else {
         lua_pop(L, 1);
-        return luaL_error(L, "Invalid mode");
+        LUAUTILS_ERROR("Invalid mode");
     }
     fileStruct->filePtr = new fslib::File(path_from_string(filepath), fileStruct->mode);
     
@@ -127,6 +134,9 @@ static int l_Filesystem_open(lua_State *L) {
         return 1;
     else
         return 2;
+    }
+
+    LUAUTILS_SET_ERROR_HANDLER(L);
 }
 
 /*
@@ -196,8 +206,8 @@ static int l_Filesystem_File_read(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
     size_t bytes = 0;
     if (lua_type(L, 2) == LUA_TSTRING) {
-        std::string readAmount(lua_tostring(L, 2));
-        if (readAmount == "*all" || readAmount == "*a") {
+        const char* readAmount = lua_tostring(L, 2);
+        if (readAmount[0] == '*' && readAmount[1] == 'a') {
             bytes = std::string::npos;
         } else
             return luaL_error(L, "Invalid number of bytes to read. Use a number or '*all' to read whole file");
@@ -281,13 +291,17 @@ static int l_Filesystem_File_flush(lua_State *L) {
 */
 static int l_Filesystem_File_seek(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
-    std::string whence = "cur";
+    const char* whencec = "cur";
     size_t offset = 0;
     if (lua_gettop(L) > 1)
         offset = (size_t)luaL_checknumber(L, 2);
     if (lua_gettop(L) > 2)
-        whence = luaL_checkstring(L, 3);
-    
+        whencec = luaL_checkstring(L, 3);
+
+    LUAUTILS_INIT_ERROR_HANDLER();
+        
+    {
+    std::string whence(whencec);
     int seekPos;
     if (whence == "cur")
         seekPos = SEEK_CUR;
@@ -296,11 +310,14 @@ static int l_Filesystem_File_seek(lua_State *L) {
     else if (whence == "end")
         seekPos = SEEK_END;
     else
-        return luaL_error(L, "Invalid seek pos");
+        LUAUTILS_ERROR("Invalid seek pos");
 
     fileStruct->filePtr->seek(offset, (fslib::File::Origin)seekPos);
     lua_pushnumber(L, fileStruct->filePtr->tell());
     return 1;
+    }
+
+    LUAUTILS_SET_ERROR_HANDLER(L);
 }
 
 /*

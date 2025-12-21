@@ -3,7 +3,7 @@
 namespace Core {
     namespace Module {
         class Blocks {
-            static void** BlockModels;
+            inline static void** BlockModels = reinterpret_cast<void**>(0xac2ac4);
         };
     }
 }

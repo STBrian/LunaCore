@@ -63,18 +63,20 @@ static inline void* luaC_funccheckudata(lua_State *L, int narg, const char* unam
     return nullptr;
 }
 
-// The msg must be a formatted string with two %s, the first is the detected type and the second is uname
+// The msg must be a formatted string with two %s, the first is the uname and the second is detected type
 static inline void* luaC_checkudata(lua_State *L, int narg, const char* uname, const char* msg) {
+    if (msg == NULL)
+        msg = "expected \"%s\" (got \"%s\")";
     if (lua_type(L, narg) == LUA_TUSERDATA) {
         if (luaL_getmetafield(L, narg, "__name") == LUA_TNIL)
-            luaL_error(L, msg, luaL_typename(L, narg), uname);
+            luaL_error(L, msg, uname, luaL_typename(L, narg));
         else {
             if (lua_type(L, -1) != LUA_TSTRING) {
                 lua_pop(L, 1);
-                luaL_typerror(L, narg, uname);
+                luaL_error(L, "invalid type, expected \"%s\"", uname);
             }
             if (std::strcmp(uname, lua_tostring(L, -1)) != 0) {
-                lua_pushfstring(L, msg, lua_tostring(L, -1), uname);
+                lua_pushfstring(L, msg, uname, lua_tostring(L, -1));
                 lua_remove(L, -2);
                 lua_error(L);
             } else {
@@ -83,7 +85,7 @@ static inline void* luaC_checkudata(lua_State *L, int narg, const char* uname, c
             }
         }
     } else
-        luaL_error(L, msg, luaL_typename(L, narg), uname);
+        luaL_error(L, msg, uname, luaL_typename(L, narg));
     return nullptr;
 }
 

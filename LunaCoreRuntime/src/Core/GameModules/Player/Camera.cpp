@@ -6,6 +6,8 @@
 #include "game/memory.hpp"
 #include "string_hash.hpp"
 
+#include "lua_utils.hpp"
+
 namespace CTRPF = CTRPluginFramework;
 
 enum player_camera_offsets : u32 {
@@ -71,24 +73,32 @@ static int l_Camera_index(lua_State *L)
 static int l_Camera_newindex(lua_State *L)
 {
     if (lua_type(L, 2) != LUA_TSTRING)
-        return luaL_error(L, "Attempt to set unknown member of object");
+        return luaL_error(L, "attempt to set field '?' of \"Camera\"");
 
+    // "Safe" c++ error handler
+    LUAUTILS_INIT_TYPEERROR_HANDLER();
+    LUAUTILS_SET_TYPEERROR_MESSAGE("unable to assign to a \"%s\" field a \"%s\" value");
+
+    {
     uint32_t key = hash(lua_tostring(L, 2));
     bool valid_key = true;
 
     switch (key) {
         case hash("FOV"): {
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
             float* fov = getCameraFOVPtr();
             if (fov)
-                *fov = luaL_checknumber(L, 3);
+                *fov = lua_tonumber(L, 3);
             *reinterpret_cast<float*>(player_camera_offsets::itemCameraFOV) = lua_tonumber(L, 3);
             break;
         }
         case hash("Yaw"):
-            Minecraft::SetYaw(luaL_checknumber(L, 3));
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            Minecraft::SetYaw(lua_tonumber(L, 3));
             break;
         case hash("Pitch"):
-            Minecraft::SetPitch(luaL_checknumber(L, 3));
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            Minecraft::SetPitch(lua_tonumber(L, 3));
             break;
         default:
             valid_key = false;
@@ -99,6 +109,9 @@ static int l_Camera_newindex(lua_State *L)
         return 0;
     else
         return luaL_error(L, "'%s' is not a valid member of object or is read-only value", lua_tostring(L, 2));
+    }
+
+    LUAUTILS_SET_TYPEERROR_HANDLER(L);
 }
 
 // ----------------------------------------------------------------------------

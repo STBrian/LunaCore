@@ -45,7 +45,7 @@ void Scheduler::Update() {
     std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
     Scheduler& ins = Scheduler::getInstance();
 
-    for (int i = 0; i < ins.pending.size(); i++) {
+    for (int i = 0, j = 0, count = ins.pending.size(); j < count; j++) {
         auto& task = ins.pending[i];
 
         if (task.handler && task.handler->WaitIsReady()) {
@@ -56,14 +56,14 @@ void Scheduler::Update() {
             int call_result = lua_resume(T, nresults);
             checkThreadStatus(ins, ins.tasks, Lua_global, call_result, T);
             ins.pending.erase(ins.pending.begin() + i);
-            i--;
         } else if (!task.handler) {
             lua_State* T = task.thread;
             timeoutAsyncClock.Restart();
             int call_result = lua_resume(T, 0);
             checkThreadStatus(ins, ins.tasks, Lua_global, call_result, T);
             ins.pending.erase(ins.pending.begin() + i);
-            i--;
+        } else {
+            i++;
         }
     }
 }

@@ -310,9 +310,9 @@ static int l_Memory_free(lua_State *L) {
 */
 static int l_Memory_call(lua_State *L) {
     u32 foffset = (u32)luaL_checknumber(L, 1);
-    std::string typeStr(luaL_checkstring(L, 2));
-    std::string returnType(luaL_checkstring(L, 3));
-    u8 nargs = typeStr.length();
+    size_t nargs, lenreturnType;
+    const char* typeStr = luaL_checklstring(L, 2, &nargs);
+    const char* returnType = luaL_checklstring(L, 3, &lenreturnType);
     ffi_cif cif;
     ffi_type* args[nargs];
     void* values[nargs];
@@ -322,7 +322,7 @@ static int l_Memory_call(lua_State *L) {
     float floatresult = 0;
     bool returnsFloat = false;
     bool signedValue = false;
-    bool returnsValue = !returnType.empty();
+    bool returnsValue = lenreturnType != 0;
     if (returnsValue) {
         switch (returnType[0]) {
             case 'c': case 'b': case 'h': case 'i': case 'l':

@@ -8,6 +8,8 @@
 
 #include "game/Minecraft.hpp"
 
+#include "lua_utils.hpp"
+
 namespace CTRPF = CTRPluginFramework;
 
 enum player_offsets : u32 {
@@ -256,15 +258,15 @@ static int l_LocalPlayer_index(lua_State *L)
             lua_pushnumber(L, Minecraft::GetMaxHP());
             break;
         case hash("CurrentHunger"): {
-                u32* ptrHungerBar = getHungerBarOffset();
-                lua_pushnumber(L, ptrHungerBar ? *(float*)((u32)ptrHungerBar + playerFieldCurrentHunger) : 0.0f);
-            }
+            u32* ptrHungerBar = getHungerBarOffset();
+            lua_pushnumber(L, ptrHungerBar ? *(float*)((u32)ptrHungerBar + playerFieldCurrentHunger) : 0.0f);
             break;
+        }
         case hash("MaxHunger"): {
-                u32* ptrHungerBar = getHungerBarOffset();
-                lua_pushnumber(L, ptrHungerBar ? *(float*)((u32)ptrHungerBar + playerFieldMaxHunger) : 0.0f);
-            }
+            u32* ptrHungerBar = getHungerBarOffset();
+            lua_pushnumber(L, ptrHungerBar ? *(float*)((u32)ptrHungerBar + playerFieldMaxHunger) : 0.0f);
             break;
+        }
         case hash("CurrentLevel"):
             lua_pushnumber(L, Minecraft::GetCurrentLevel());
             break;
@@ -300,90 +302,118 @@ static int l_LocalPlayer_index(lua_State *L)
 static int l_LocalPlayer_newindex(lua_State *L)
 {
     if (lua_type(L, 2) != LUA_TSTRING)
-        return luaL_error(L, "Attempt to set unknown member of LocalPlayer");
+        return luaL_error(L, "attempt to set field '?' of \"LocalPlayer\"");
 
+    // "Safe" c++ error handler
+    LUAUTILS_INIT_TYPEERROR_HANDLER();
+    LUAUTILS_SET_TYPEERROR_MESSAGE("unable to assign to a \"%s\" field a \"%s\" value");
+
+    {
     uint32_t key = hash(lua_tostring(L, 2));
     bool valid_key = true;
 
     switch (key) {
         case hash("OnGround"):
+            LUAUTILS_CHECKTYPE(L, LUA_TBOOLEAN, 3);
             Minecraft::SetPlayerOnGround(lua_toboolean(L, 3));
             break;
         case hash("Sneaking"):
+            LUAUTILS_CHECKTYPE(L, LUA_TBOOLEAN, 3);
             Minecraft::SetPlayerSneaking(lua_toboolean(L, 3));
             break;
         case hash("Jumping"):
+            LUAUTILS_CHECKTYPE(L, LUA_TBOOLEAN, 3);
             Minecraft::SetPlayerJump(lua_toboolean(L, 3));
             break;
         case hash("Sprinting"):
+            LUAUTILS_CHECKTYPE(L, LUA_TBOOLEAN, 3);
             Minecraft::SetPlayerSprinting(lua_toboolean(L, 3));
             break;
         case hash("Flying"):
+            LUAUTILS_CHECKTYPE(L, LUA_TBOOLEAN, 3);
             Minecraft::SetPlayerFlying(lua_toboolean(L, 3));
             break;
         case hash("UnderWater"):
+            LUAUTILS_CHECKTYPE(L, LUA_TBOOLEAN, 3);
             Minecraft::SetPlayerUnderWater(lua_toboolean(L, 3));
             break;
         case hash("TouchingWall"):
+            LUAUTILS_CHECKTYPE(L, LUA_TBOOLEAN, 3);
             Minecraft::SetPlayerTouchingWall(lua_toboolean(L, 3));
             break;
         case hash("Invincible"):
+            LUAUTILS_CHECKTYPE(L, LUA_TBOOLEAN, 3);
             Minecraft::SetInvincible(lua_toboolean(L, 3));
             break;
         case hash("CanFly"):
+            LUAUTILS_CHECKTYPE(L, LUA_TBOOLEAN, 3);
             Minecraft::SetFlightAvailable(lua_toboolean(L, 3));
             break;
         case hash("CanConsumeItems"):
+            LUAUTILS_CHECKTYPE(L, LUA_TBOOLEAN, 3);
             Minecraft::SetItemConsumptionDisabled(!lua_toboolean(L, 3));
             break;
         case hash("BaseMoveSpeed"):
-            Minecraft::SetBaseMoveSpeed(luaL_checknumber(L, 3));
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            Minecraft::SetBaseMoveSpeed(lua_tonumber(L, 3));
             break;
         case hash("MoveSpeed"):
-            Minecraft::SetPlayerMoveSpeed(luaL_checknumber(L, 3));
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            Minecraft::SetPlayerMoveSpeed(lua_tonumber(L, 3));
             break;
         case hash("SwimSpeed"):
-            CTRPF::Process::WriteFloat(player_offsets::playerSwimSpeed, luaL_checknumber(L, 3));
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            CTRPF::Process::WriteFloat(player_offsets::playerSwimSpeed, lua_tonumber(L, 3));
             break;
         case hash("FlySpeed"):
-            Minecraft::SetFlightSpeed(luaL_checknumber(L, 3));
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            Minecraft::SetFlightSpeed(lua_tonumber(L, 3));
             break;
         case hash("CurrentHP"):
-            Minecraft::SetCurrentHP(luaL_checknumber(L, 3));
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            Minecraft::SetCurrentHP(lua_tonumber(L, 3));
             break;
         case hash("MaxHP"):
-            Minecraft::SetMaxHP(luaL_checknumber(L, 3));
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            Minecraft::SetMaxHP(lua_tonumber(L, 3));
             break;
         case hash("CurrentHunger"): {
-                u32* ptrHungerBar = getHungerBarOffset();
-                if (ptrHungerBar)
-                    *(float*)((u32)ptrHungerBar + playerFieldCurrentHunger) = luaL_checknumber(L, 3);
-            }
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            u32* ptrHungerBar = getHungerBarOffset();
+            if (ptrHungerBar)
+                *(float*)((u32)ptrHungerBar + playerFieldCurrentHunger) = lua_tonumber(L, 3);
             break;
+        }
         case hash("MaxHunger"): {
-                u32* ptrHungerBar = getHungerBarOffset();
-                if (ptrHungerBar)
-                    *(float*)((u32)ptrHungerBar + playerFieldMaxHunger) = luaL_checknumber(L, 3);
-            }
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            u32* ptrHungerBar = getHungerBarOffset();
+            if (ptrHungerBar)
+                *(float*)((u32)ptrHungerBar + playerFieldMaxHunger) = lua_tonumber(L, 3);
             break;
+        }
         case hash("CurrentLevel"):
-            Minecraft::SetCurrentLevel(luaL_checknumber(L, 3));
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            Minecraft::SetCurrentLevel(lua_tonumber(L, 3));
             break;
         case hash("LevelProgress"):
-            Minecraft::SetXPBarProgress(luaL_checknumber(L, 3));
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            Minecraft::SetXPBarProgress(lua_tonumber(L, 3));
             break;
         case hash("Gamemode"): {
-            u8 gamemode = luaL_checknumber(L, 3);
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            u8 gamemode = lua_tonumber(L, 3);
             Minecraft::SetGameMode(gamemode);
             if (gamemode == 0)
                 Minecraft::SetPlayerFlying(false);
             break;
         }
         case hash("ReachDistance"):
-            CTRPF::Process::WriteFloat(player_offsets::playerReachDistance, luaL_checknumber(L, 3));
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            CTRPF::Process::WriteFloat(player_offsets::playerReachDistance, lua_tonumber(L, 3));
             break;
         case hash("SprintDelay"):
-            Minecraft::SetSprintDelayTime(luaL_checknumber(L, 3));
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            Minecraft::SetSprintDelayTime(lua_tonumber(L, 3));
             break;
         default:
             valid_key = false;
@@ -394,6 +424,9 @@ static int l_LocalPlayer_newindex(lua_State *L)
         return 0;
     else
         return luaL_error(L, "'%s' is not a valid member of LocalPlayer or is read-only value", lua_tostring(L, 2));
+    }
+
+    LUAUTILS_SET_TYPEERROR_HANDLER(L);
 }
 
 // ----------------------------------------------------------------------------

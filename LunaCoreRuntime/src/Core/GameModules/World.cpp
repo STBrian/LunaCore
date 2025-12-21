@@ -8,6 +8,8 @@
 
 #include "game/Minecraft.hpp"
 
+#include "lua_utils.hpp"
+
 namespace CTRPF = CTRPluginFramework;
 
 enum world_offsets : u32
@@ -65,19 +67,27 @@ static int l_World_index(lua_State *L)
 static int l_World_newindex(lua_State *L)
 {
     if (lua_type(L, 2) != LUA_TSTRING)
-        return luaL_error(L, "Attempt to set unknown member of World");
+        return luaL_error(L, "attempt to set field '?' of \"World\"");
 
+    // "Safe" c++ error handler
+    LUAUTILS_INIT_TYPEERROR_HANDLER();
+    LUAUTILS_SET_TYPEERROR_MESSAGE("unable to assign to a \"%s\" field a \"%s\" value");
+
+    {
     shash key = hash(lua_tostring(L, 2));
     bool valid_key = true;
 
     switch (key) {
         case hash("Raining"):
+            LUAUTILS_CHECKTYPE(L, LUA_TBOOLEAN, 3);
             Minecraft::SetRain(lua_toboolean(L, 3));
             break;
         case hash("Thunderstorm"):
+            LUAUTILS_CHECKTYPE(L, LUA_TBOOLEAN, 3);
             Minecraft::SetThunder(lua_toboolean(L, 3));
             break;
         case hash("CloudsHeight"): {
+            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
             CTRPF::Process::WriteFloat(world_offsets::cloudsHeight, luaL_checknumber(L, 3));
             break;
         }
@@ -90,6 +100,9 @@ static int l_World_newindex(lua_State *L)
         return 0;
     else
         return luaL_error(L, "'%s' is not a valid member of World or is a read-only value", lua_tostring(L, 2));
+    }
+
+    LUAUTILS_SET_TYPEERROR_HANDLER(L);
 }
 
 // ----------------------------------------------------------------------------

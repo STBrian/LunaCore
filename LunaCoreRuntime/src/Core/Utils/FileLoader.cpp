@@ -8,13 +8,19 @@ static int l_custom_loadfile(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
 
+    {
     std::string scriptContent = Core::Utils::LoadFile(filename);
     if (scriptContent.empty()) {
-        return luaL_error(L, "cannot open %s", filename);
+        lua_pushfstring(L, "cannot open %s", filename);
+        goto __error;
     }
     if (luaL_loadbuffer(L, scriptContent.c_str(), scriptContent.size(), filename) != 0)
-        return lua_error(L);
+        goto __error;
     return 1;
+    }
+
+    __error:
+    return lua_error(L);
 }
 
 static int l_custom_dofile(lua_State *L) 
@@ -54,6 +60,7 @@ static int l_custom_loader(lua_State *L)
     const char *path_template = lua_tostring(L, -1);
     lua_pop(L, 2);
 
+    {
     std::string module_path(module_name);
     std::replace(module_path.begin(), module_path.end(), '.', '/');
 
@@ -73,7 +80,7 @@ static int l_custom_loader(lua_State *L)
             if (luaL_loadbuffer(L, scriptContent.c_str(), scriptContent.size(), path.c_str()) == 0)
                 return 1;
             else
-                return lua_error(L);
+                goto __error;
         }
 
         if (next == std::string::npos)
@@ -82,7 +89,11 @@ static int l_custom_loader(lua_State *L)
     }
 
     lua_pushstring(L, error_msgs.c_str());
-    return 1;
+    goto __error;
+    }
+
+    __error:
+    return lua_error(L);
 }
 
 bool Core::RegisterCustomFileLoader(lua_State *L)

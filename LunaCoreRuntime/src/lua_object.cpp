@@ -2,6 +2,8 @@
 
 #include <cstring>
 
+#include "lua_utils.hpp"
+
 std::unordered_map<std::string, std::unordered_map<std::string, LuaObject::ValueMetadata>> LuaObject::objsLayouts;
 std::unordered_map<std::string, std::string> LuaObject::parents;
 
@@ -31,26 +33,28 @@ void** LuaObject::CheckObject(lua_State* L, int narg, const char* objtype) {
                 lua_pop(L, 1);
                 luaL_typerror(L, narg, objtype);
             }
-            std::string* curIns = new std::string(lua_tostring(L, -1));
-            while (!curIns->empty()) {
-                if (*curIns == objtype) {
+            std::string curIns(std::string(lua_tostring(L, -1)));
+            while (!curIns.empty()) {
+                if (curIns == objtype) {
                     lua_pop(L, 1);
-                    delete curIns;
                     return (void**)lua_touserdata(L, narg);
                 }
-                if (parents.contains(*curIns))
-                    *curIns = parents[*curIns];
+                if (parents.contains(curIns))
+                    curIns = parents[curIns];
                 else
-                    curIns->clear();
+                    curIns.clear();
             }
-            delete curIns;
             lua_pop(L, 1);
             lua_pushfstring(L, "bad argument #%d (%s expected, got %s)", narg, objtype, lua_tostring(L, -1));
             lua_remove(L, -2);
-            lua_error(L);
+            goto __error_handler;
         }
     } else
         luaL_typerror(L, narg, objtype);
+    return nullptr;
+
+    __error_handler:
+    lua_error(L);
     return nullptr;
 }
 
@@ -175,24 +179,26 @@ int LuaObject::l_newindex(lua_State* L) {
     if (lua_type(L, 2) != LUA_TSTRING)
         return 0;
 
+    LUAUTILS_INIT_TYPEERROR_HANDLER();
+    LUAUTILS_SET_TYPEERROR_MESSAGE("unable to assign to a \"%s\" field a \"%s\" value");
+
+    {
     const char* key = lua_tostring(L, 2);
-    std::string* currClassPtr = new std::string(objName); // I made a ptr so I can manually delete it when doing a lua_error, maybe there is a better way of doing this
+    std::string currClass(objName); // This seems like a better way and less annoying
     bool valid = false;
-    while (!currClassPtr->empty()) {
-        if (!objsLayouts[*currClassPtr].contains(key)) {
-            if (parents.contains(*currClassPtr))
-                *currClassPtr = parents[*currClassPtr];
+    while (!currClass.empty()) {
+        if (!objsLayouts[currClass].contains(key)) {
+            if (parents.contains(currClass))
+                currClass = parents[currClass];
             else
-                currClassPtr->clear();
+                currClass.clear();
             continue;
         }
 
-        if (objsLayouts[*currClassPtr][key].access != OBJF_ACCESS_ALL) {
-            delete currClassPtr;
-            return luaL_error(L, "unable to assign value to read-only field %s", key);
-        }
-        ValueMetadata& md = objsLayouts[*currClassPtr][key];
-        delete currClassPtr;
+        if (objsLayouts[currClass][key].access != OBJF_ACCESS_ALL)
+            LUAUTILS_CUSTOMERROR(L, "unable to assign value to read-only field %s", key);
+        
+        ValueMetadata& md = objsLayouts[currClass][key];
         valid = true;
             
         u32 offset = md.offset;
@@ -204,47 +210,46 @@ int LuaObject::l_newindex(lua_State* L) {
 
         switch (md.type) {
             case OBJF_TYPE_CHAR:
-                if (lua_type(L, 3) != LUA_TNUMBER)
-                    return luaL_error(L, "unable to assign %s to %s data type", luaL_typename(L, 3), "integer");
+                LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
                 *(char*)dataOff = (char)lua_tonumber(L, 3);
                 break;
             case OBJF_TYPE_SHORT:
-                if (lua_type(L, 3) != LUA_TNUMBER)
-                    return luaL_error(L, "unable to assign %s to %s data type", luaL_typename(L, 3), "integer");
+                LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
                 *(short*)dataOff = (short)lua_tonumber(L, 3);
                 break;
             case OBJF_TYPE_INT:
-                if (lua_type(L, 3) != LUA_TNUMBER)
-                    return luaL_error(L, "unable to assign %s to %s data type", luaL_typename(L, 3), "integer");
+                LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
                 *(int*)dataOff = (int)lua_tonumber(L, 3);
                 break;
             case OBJF_TYPE_FLOAT:
-                if (lua_type(L, 3) != LUA_TNUMBER)
-                    return luaL_error(L, "unable to assign %s to %s data type", luaL_typename(L, 3), lua_typename(L, LUA_TNUMBER));
+                LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
                 *(float*)dataOff = (float)lua_tonumber(L, 3);
                 break;
             case OBJF_TYPE_DOUBLE:
-                if (lua_type(L, 3) != LUA_TNUMBER)
-                    return luaL_error(L, "unable to assign %s to %s data type", luaL_typename(L, 3), lua_typename(L, LUA_TNUMBER));
+                LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
                 *(double*)dataOff = (double)lua_tonumber(L, 3);
                 break;
             case OBJF_TYPE_STRING:
-                return luaL_error(L, "unable to assign value to constant %s data type", "string");
+                LUAUTILS_CUSTOMERROR(L, "unable to assign value to constant %s data type", "string");
                 break;
             case OBJF_TYPE_METHOD:
-                return luaL_error(L, "unable to assign value to constant %s data type", "method");
+                LUAUTILS_CUSTOMERROR(L, "unable to assign value to constant %s data type", "method");
                 break;
             case OBJF_TYPE_FUNCTION:
-                return luaL_error(L, "unable to assign value to constant %s data type", "function");
+                LUAUTILS_CUSTOMERROR(L, "unable to assign value to constant %s data type", "function");
                 break;
             case OBJF_TYPE_OBJECT: case OBJF_TYPE_OBJECT_POINTER:
-                return luaL_error(L, "unable to assign value to constant %s data type", "object");
+                LUAUTILS_CUSTOMERROR(L, "unable to assign value to constant %s data type", "object");
                 break;
         }
     }
     if (!valid)
-        return luaL_error(L, "unable to assign value to invalid field %s", key);
+        LUAUTILS_CUSTOMERROR(L, "unable to assign value to invalid field \"%s\"", key);
     return 0;
+    }
+
+    LUAUTILS_SET_TYPEERROR_HANDLER(L);
+    LUAUTILS_SET_CUSTOMERROR_HANDLER(L);
 }
 
 int LuaObject::l_eq(lua_State *L) {

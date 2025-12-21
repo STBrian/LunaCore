@@ -4,6 +4,8 @@
 #include <string>
 #endif
 
+#include "game/asserts.h"
+
 //#include "Minecraft/game_utils/game_functions.hpp"
 #include "game/gstd/gstd_string.hpp"
 #include "game/world/item/ItemInstance.hpp"
@@ -11,7 +13,7 @@
 namespace Game {
     class Item;
     
-    static Item*(*registerItem)(const char* nameId, const short& itemId) = reinterpret_cast<Item*(*)(const char*, const short&)>(0x007cdc8c);
+    static Item*(*registerItem)(const char* nameId, const short& itemId) = reinterpret_cast<decltype(registerItem)>(0x007cdc8c);
 
     class Item {
         public:
@@ -54,7 +56,7 @@ namespace Game {
         inline static ItemInstance** creativeItems = reinterpret_cast<ItemInstance**>(0x00b0d744);
         inline static ItemInstance** creativeItemsEnd = reinterpret_cast<ItemInstance**>(0x00b0d748);
 
-        inline static void (*registerItems)(void) = reinterpret_cast<void(*)(void)>(0x00563db0);
+        inline static void (*registerItems)() = reinterpret_cast<void(*)()>(0x00563db0);
 
         #ifndef NOSTDLIB_BUILD
         /* Item.itemId = itemId + 0x100 */
@@ -267,4 +269,6 @@ namespace Game {
         inline static Item*& mChorusFruit = mItemTable[186];
         inline static Item*& mChorusFruitPopped = mItemTable[187];
     };
+
+    ASSERT_SIZE(Game::Item, 0xac);
 }

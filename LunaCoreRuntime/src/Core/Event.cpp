@@ -11,14 +11,6 @@
 #include "Core/Utils/Utils.hpp"
 #include "CoreGlobals.hpp"
 
-static inline void core_newevent(lua_State* L, const char* eventname) {
-    lua_newtable(L);
-    lua_newtable(L);
-    lua_setfield(L, -2, "listeners");
-    luaC_setmetatable(L, "EventClass");
-    lua_setfield(L, -2, eventname);
-}
-
 namespace CTRPF = CTRPluginFramework;
 
 CTRPF::Clock timeoutEventClock;
@@ -36,7 +28,11 @@ void TimeoutEventHook(lua_State *L, lua_Debug *ar)
 
 // This will append the new event to the table above, so make sure there is a table
 void Core::Event::NewEvent(lua_State* L, const char* eventName) {
-    core_newevent(L, eventName);
+    lua_newtable(L);
+    lua_newtable(L);
+    lua_setfield(L, -2, "listeners");
+    luaC_setmetatable(L, "EventClass");
+    lua_setfield(L, -2, eventName);
 }
 
 void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsigned int nargs) {
@@ -61,7 +57,7 @@ void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsig
     }
 
     if (!lua_istable(L, -1)) {
-        Core::Debug::LogError(CTRPF::Utils::Format("Core internal error: Tried to trigger event '%s' with parent of type '%s", eventName.c_str(), luaL_typename(L, -1)));
+        Core::Debug::ReportInternalError("Tried to trigger event \"" + eventName + "\" with parent of type \"" + std::string(luaL_typename(L, -1)) + "\"");
         lua_settop(L, baseIdx);
         return;
     }
@@ -76,7 +72,7 @@ void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsig
             Core::Debug::LogError(eventName + " error: " + std::string(lua_tostring(L, -1)));
     }
     else
-        Core::Debug::LogError(eventName + ":Trigger error. Unexpected type");
+        Core::Debug::ReportInternalError(eventName + ":Trigger error. Unexpected type");
 
     lua_settop(L, baseIdx);
 }

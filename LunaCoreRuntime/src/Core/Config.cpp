@@ -10,7 +10,7 @@ namespace CTRPF = CTRPluginFramework;
 std::unordered_map<std::string, std::string> Core::Config::LoadConfig(const std::string &filepath) {
     std::unordered_map<std::string, std::string> config;
     if (!CTRPF::File::Exists(filepath)) {
-        Core::Debug::LogMessage("Config file not found. Using defaults", false);
+        Core::Debug::LogWarn("Config file not found. Using defaults");
         return config;
     }
     std::string fileContent = Core::Utils::LoadFile(filepath);

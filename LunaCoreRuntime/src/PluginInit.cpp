@@ -159,7 +159,7 @@ void InitMenu(PluginMenu &menu)
         if (changed) {
             MessageBox("Restart the game to apply the changes")();
             if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
-                Core::Debug::LogMessage("Failed to save configs", true);
+                Core::Debug::LogWarn("Failed to save configs");
         }
     }));
     optionsFolder->Append(new MenuEntry("Toggle Menu Layout", nullptr, [](MenuEntry *entry)
@@ -179,7 +179,7 @@ void InitMenu(PluginMenu &menu)
         if (changed) {
             MessageBox("Restart the game to apply the changes")();
             if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
-                Core::Debug::LogMessage("Failed to save configs", true);
+                Core::Debug::LogWarn("Failed to save configs");
         }
     }));
     optionsFolder->Append(new MenuEntry("Toggle Block ZL and ZR keys", nullptr, [](MenuEntry *entry)
@@ -203,7 +203,7 @@ void InitMenu(PluginMenu &menu)
         if (changed) {
             MessageBox("Restart the game to apply the changes")();
             if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
-                Core::Debug::LogMessage("Failed to save configs", true);
+                Core::Debug::LogWarn("Failed to save configs");
         }
     }));
     optionsFolder->Append(new MenuEntry("Toggle Block DPADLEFT and DPADRIGHT keys", nullptr, [](MenuEntry *entry)
@@ -223,7 +223,7 @@ void InitMenu(PluginMenu &menu)
         if (changed) {
             MessageBox("Restart the game to apply the changes")();
             if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
-                Core::Debug::LogMessage("Failed to save configs", true);
+                Core::Debug::LogWarn("Failed to save configs");
         }
     }));
     optionsFolder->Append(new MenuEntry("Show Lua memory usage", nullptr, [](MenuEntry *entry)
@@ -429,7 +429,7 @@ void InitMenu(PluginMenu &menu)
             return;
         if (!Lua_Global_Mut.try_lock())
             return
-        Core::Debug::LogMessage("Reloading Lua environment", false);
+        Core::Debug::Message("Reloading Lua environment");
         lua_close(Lua_global);
         Lua_global = luaL_newstate();
         Core::LoadLuaEnv();
@@ -442,7 +442,7 @@ void InitMenu(PluginMenu &menu)
             return;
         if (!Lua_Global_Mut.try_lock())
             return
-        Core::Debug::LogMessage("Reloading Lua environment", false);
+        Core::Debug::Message("Reloading Lua environment");
         lua_close(Lua_global);
         Lua_global = luaL_newstate();
         Core::LoadLuaEnv();

@@ -61,21 +61,26 @@ namespace Core {
                     possibleOOM = lua_gc(Lua_global, LUA_GCCOUNT, 0) >= 2000;
                 lua_close(Lua_global);
             }
-            {
-                Core::Debug::LogError("[CRITICAL] Game crashed due to an unhandled error");
-                u8 rnd = (svcGetSystemTick() & 0xF00) >> 8;
-                Core::Debug::LogRaw(CTRPF::Utils::Format("\t\"%s\"\n", errorMsg[rnd]));
-                Core::Debug::LogRaw(CTRPF::Utils::Format("\t\tPlugin state: %d\n", Core::CrashHandler::plg_state));
-                Core::Debug::LogRaw(CTRPF::Utils::Format("\t\tLast Core state: %d\n", Core::CrashHandler::core_state));
-                Core::Debug::LogRaw(CTRPF::Utils::Format("\t\tGame state: %d\n", Core::CrashHandler::game_state));
-                Core::Debug::LogRaw(CTRPF::Utils::Format("\n\tException type: %X\n", excep->type));
-                Core::Debug::LogRaw(CTRPF::Utils::Format("\tException at address: %08X\n", regs->pc));
-                Core::Debug::LogRaw(CTRPF::Utils::Format("\tR0: %08X\tR1: %08X\n", regs->r[0], regs->r[1]));
-                Core::Debug::LogRaw(CTRPF::Utils::Format("\tR2: %08X\tR3: %08X\n", regs->r[2], regs->r[3]));
-                Core::Debug::LogRaw(CTRPF::Utils::Format("\tR4: %08X\tR5: %08X\n", regs->r[4], regs->r[5]));
-                Core::Debug::LogRaw(CTRPF::Utils::Format("\tR6: %08X\tR7: %08X\n", regs->r[6], regs->r[7]));
-                Core::Debug::LogRaw(CTRPF::Utils::Format("\tR8: %08X\tR9: %08X\n", regs->r[8], regs->r[9]));
-            }
+            
+            Core::Debug::LogError("[CRITICAL] Game crashed due to an unhandled error");
+            u8 rnd = (svcGetSystemTick() & 0xF00) >> 8;
+            Core::Debug::LogRawf("\t\"%s\"\n", errorMsg[rnd]);
+            Core::Debug::LogRawf("\t\tPlugin state: %d\n", Core::CrashHandler::plg_state);
+            Core::Debug::LogRawf("\t\tLast Core state: %d\n", Core::CrashHandler::core_state);
+            Core::Debug::LogRawf("\t\tGame state: %d\n", Core::CrashHandler::game_state);
+            Core::Debug::LogRawf("\n\tException type: %X\n", excep->type);
+            Core::Debug::LogRawf("\tException at address: %08X\n", regs->pc);
+            Core::Debug::LogRawf("\tLR: %08X\n", regs->lr);
+            Core::Debug::LogRawf("\tSP: %08X\n", regs->sp);
+            Core::Debug::LogRawf("\tCPSR: %08X\n", regs->cpsr);
+            Core::Debug::LogRawf("\tR0: %08X \tR1: %08X\n", regs->r[0], regs->r[1]);
+            Core::Debug::LogRawf("\tR2: %08X \tR3: %08X\n", regs->r[2], regs->r[3]);
+            Core::Debug::LogRawf("\tR4: %08X \tR5: %08X\n", regs->r[4], regs->r[5]);
+            Core::Debug::LogRawf("\tR6: %08X \tR7: %08X\n", regs->r[6], regs->r[7]);
+            Core::Debug::LogRawf("\tR8: %08X \tR9: %08X\n", regs->r[8], regs->r[9]);
+            Core::Debug::LogRawf("\tR10: %08X\tR11: %08X\n", regs->r[10], regs->r[11]);
+            Core::Debug::LogRawf("\tR12: %08X\n", regs->r[12]);
+            
             u8 possibleError = 0;
             if (plg_state == PluginState::PLUGIN_PATCHPROCESS) possibleError = 1;
             else if (luaEnvBusy) possibleError = 2;
@@ -84,13 +89,13 @@ namespace Core {
             bool pluginFault = false;
             if (regs->pc - 0x00100000 < 0x919000) {
                 pc = regs->pc - 0x00100000;
-            } else {
+            } else if (regs->pc < 0x30000000) {
                 pc = regs->pc - 0x07000100;
                 pluginFault = true;
             }
             pc = (pc >> 2) & 0b1111111111111111111111;
             u32 errorCode = (excep->type << 30 | core_state << 27 | game_state << 25 | possibleError << 23 | pluginFault << 22 | pc);
-            Core::Debug::LogRaw(CTRPF::Utils::Format("\tError code: %08X\n", errorCode));
+            Core::Debug::LogRawf("\tError code: %08X\n", errorCode);
             Core::Debug::CloseLogFile();
             if (plg_state != PluginState::PLUGIN_MAINLOOP)
                 return CTRPF::Process::EXCB_REBOOT;
@@ -102,23 +107,21 @@ namespace Core {
             CTRPF::Screen topScreen = CTRPF::OSD::GetTopScreen();
             topScreen.DrawRect(20, 20, 360, 200, CTRPF::Color::Black, true);
             const char *titleMsg = "Oops.. Game crashed!";
-            const char *tipMsg = "See the log file for more details about the crash";
-            const char *tipMsg2 = "Press A to exit or B to continue";
             if (abort)
-                titleMsg = "Oh no... Game abort!";
+                titleMsg = "Oh no... Things got out of hand!";
             if (possibleOOM)
-                titleMsg = "Looks like we ran out of memory!";
+                titleMsg = "Game ran out of memory!";
             if (regs->pc == 0x00114A98)
-                titleMsg = "Game crashed! The game wanted to say something";
+                titleMsg = "Game crash! An unhandled game assert exception occurred";
             topScreen.DrawSysfont(titleMsg, 25, 25, CTRPF::Color::Red);
-            topScreen.DrawSysfont(tipMsg, 25, 40, CTRPF::Color::White);
-            topScreen.DrawSysfont(tipMsg2, 25, 55, CTRPF::Color::White);
+            topScreen.DrawSysfont("See the log file for more details about the crash", 25, 40, CTRPF::Color::White);
+            topScreen.DrawSysfont("Press A to exit or B to reboot", 25, 55, CTRPF::Color::White);
             topScreen.DrawSysfont(CTRPF::Utils::Format("Error code: %08X", errorCode), 25, 70, CTRPF::Color::White);
             CTRPF::OSD::SwapBuffers();
         }
         CTRPF::Controller::Update();
         if (CTRPF::Controller::IsKeyDown(CTRPF::Key::A)) return CTRPF::Process::EXCB_RETURN_HOME;
-        if (CTRPF::Controller::IsKeyDown(CTRPF::Key::B)) return CTRPF::Process::EXCB_DEFAULT_HANDLER;
+        if (CTRPF::Controller::IsKeyDown(CTRPF::Key::B)) return CTRPF::Process::EXCB_REBOOT;
         else return CTRPF::Process::EXCB_LOOP;
     }
 }

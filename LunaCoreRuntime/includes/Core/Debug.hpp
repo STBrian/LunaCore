@@ -1,6 +1,9 @@
 #pragma once
 
+#if __STDC_HOSTED__
 #include <string>
+#include <source_location>
+#endif
 
 #include "CoreGlobals.hpp"
 #include "lua_common.h"
@@ -9,37 +12,46 @@
 #define ASSERT(cond) \
     do { \
         if (!(cond)) { \
-            Core::Debug::LogError(std::string("ASSERT failed: ") + #cond + "(" + __FILE__ + ": " + std::to_string(__LINE__) + ")"); \
+            Core::Debug::LogError("ASSERT failed: " #cond "(" __FILE__ ": " __LINE__ ")"); \
             abort(); \
         } \
     } while (0)
+
 #endif
 
 namespace Core {
     namespace Debug {
-        extern const char *tab;
-        
+        #if __STDC_HOSTED__
+        void ReportInternalError(const std::string& msg, const std::source_location& location = std::source_location::current());
+
         bool OpenLogFile(const std::string& filepath);
+        #endif
 
         void CloseLogFile();
 
+        #if __STDC_HOSTED__
         void LogRaw(const std::string& msg);
+        #endif
 
-        void LogMessage(const std::string& msg, bool showOnScreen);
+        void LogRawf(const char* fmt, ...);
 
-        void LogMessage(const char* msg, bool showOnScreen);
+        #if __STDC_HOSTED__
+        void LogInfo(const std::string& msg);
+        #endif
 
+        void LogInfof(const char* fmt, ...);
+
+        #if __STDC_HOSTED__
         void LogError(const std::string& msg);
+        #endif
 
-        void LogError(const char* msg);
+        void LogErrorf(const char* fmt, ...);
+
+        #if __STDC_HOSTED__
+        void LogWarn(const std::string& msg);
 
         void Message(const std::string& msg);
-
-        void Message(const char* msg);
-
-        void Error(const std::string& msg);
-
-        void Error(const char* msg);
+        #endif
     }
 
     namespace Module {

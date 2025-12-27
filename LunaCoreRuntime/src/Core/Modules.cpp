@@ -127,9 +127,8 @@ void Core::LoadModules(lua_State *L)
         end
         getmetatable(_G).__metatable = "runtime protected"
     )";
-    if (luaL_dostring(L, lua_Code))
-    {
-        Core::Debug::LogError("Core::Load error: " + std::string(lua_tostring(L, -1)));
+    if (luaL_dostring(L, lua_Code)) {
+        Core::Debug::ReportInternalError(lua_tostring(L, -1));
         lua_pop(L, 1);
     }
 

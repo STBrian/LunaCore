@@ -7,11 +7,19 @@
 #include "Core/System.hpp"
 #include "Core/Utils/Utils.hpp"
 
+#include "stdarg.h"
+
 namespace CTRPF = CTRPluginFramework;
 
 static CTRPF::File logFile;
 
-const char* Core::Debug::tab = "    ";
+void Core::Debug::ReportInternalError(const std::string& msg, const std::source_location& location) {
+    Core::Debug::LogError("Internal core exception! \n\tAt function: " + 
+        std::string(location.function_name()) + 
+        "\n\tat line: " + std::to_string(location.line()) +
+        "\n\tError message: " + msg
+    );
+}
 
 bool Core::Debug::OpenLogFile(const std::string& filepath)
 {
@@ -31,54 +39,96 @@ void Core::Debug::CloseLogFile()
 
 void Core::Debug::LogRaw(const std::string& msg)
 {
-    std::string newMsg(msg);
-    Core::Utils::Replace(newMsg, "\t", "    ");
-    logFile.Write(newMsg.c_str(), newMsg.size());
-    logFile.Flush();
-}
-
-static void DebugWriteLog(const std::string& msg)
-{
     if (logFile.IsOpen()) {
-        std::string out_msg = "[";
-        out_msg += Core::Utils::formatTime(Core::System::getTime()) + "] " + std::string(msg);
-        Core::Debug::LogRaw(out_msg + "\n");
+        std::string newMsg(msg);
+        Core::Utils::Replace(newMsg, "\t", "    ");
+        logFile.Write(newMsg.c_str(), newMsg.size());
+        logFile.Flush();
     }
 }
 
-void Core::Debug::LogMessage(const std::string& msg, bool showOnScreen) {
-    if (showOnScreen)
-        CTRPF::OSD::Notify(msg);
-    DebugWriteLog(msg);
+void Core::Debug::LogRawf(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+
+    int size = vsnprintf(NULL, 0, fmt, args) + 1;
+    va_end(args);
+
+    va_start(args, fmt);
+
+    char* buffer = (char*)malloc(size);
+    if (buffer) {
+        vsnprintf(buffer, size, fmt, args);
+        Core::Debug::LogRaw(buffer);
+        free(buffer);
+    }
+
+    va_end(args);
 }
 
-void Core::Debug::LogMessage(const char* msg, bool showOnScreen) {
-    LogMessage(std::string(msg), showOnScreen);
+static void DebugWriteLog_impl(const std::string& msg)
+{
+    std::string out_msg = "[";
+    out_msg += Core::Utils::formatTime(Core::System::getTime()) + "] " + std::string(msg);
+    Core::Debug::LogRaw(out_msg + "\n");
+}
+
+void Core::Debug::LogInfo(const std::string& msg) {
+    DebugWriteLog_impl(msg);
+}
+
+void Core::Debug::LogInfof(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+
+    int size = vsnprintf(NULL, 0, fmt, args) + 1;
+    va_end(args);
+
+    va_start(args, fmt);
+
+    char* buffer = (char*)malloc(size);
+    if (buffer) {
+        vsnprintf(buffer, size, fmt, args);
+        DebugWriteLog_impl(buffer);
+        free(buffer);
+    }
+
+    va_end(args);
 }
 
 void Core::Debug::LogError(const std::string& msg) {
-    Core::Debug::Error(msg);
-    DebugWriteLog("[ERROR] " + msg);
+    CTRPF::OSD::Notify(msg, CTRPF::Color::Red, CTRPF::Color::Black);
+    DebugWriteLog_impl("[ERROR] " + msg);
 }
 
-void Core::Debug::LogError(const char* msg) {
-    LogError(std::string(msg));
+void Core::Debug::LogWarn(const std::string& msg) {
+    CTRPF::OSD::Notify(msg, CTRPF::Color::Yellow, CTRPF::Color::Black);
+    DebugWriteLog_impl("[WARN] " + msg);
+}
+
+void Core::Debug::LogErrorf(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+
+    int size = vsnprintf(NULL, 0, fmt, args) + 1;
+    va_end(args);
+
+    va_start(args, fmt);
+
+    char* buffer = (char*)malloc(size);
+    if (buffer) {
+        vsnprintf(buffer, size, fmt, args);
+        DebugWriteLog_impl(buffer);
+        free(buffer);
+    }
+
+    va_end(args);
 }
 
 void Core::Debug::Message(const std::string& msg) {
     CTRPF::OSD::Notify(msg);
-}
-
-void Core::Debug::Message(const char* msg) {
-    CTRPF::OSD::Notify(msg);
-}
-
-void Core::Debug::Error(const std::string& msg) {
-    CTRPF::OSD::Notify(msg, CTRPF::Color::Red, CTRPF::Color::Black);
-}
-
-void Core::Debug::Error(const char* msg) {
-    CTRPF::OSD::Notify(msg, CTRPF::Color::Red, CTRPF::Color::Black);
+    DebugWriteLog_impl(msg);
 }
 
 // ----------------------------------------------------------------------------
@@ -113,7 +163,7 @@ static int l_Debug_log(lua_State *L)
     bool showOnScreen = false;
     if (lua_type(L, 2) == LUA_TBOOLEAN)
         showOnScreen = lua_toboolean(L, 2);
-    Core::Debug::LogMessage(msg, showOnScreen);
+    Core::Debug::LogInfo(msg);
     return 0;
 }
 
@@ -134,19 +184,13 @@ static int l_Debug_logerror(lua_State *L)
 ## msg: string
 ### Core.Debug.error
 */
-static int l_Debug_error(lua_State *L)
-{
-    const char *msg = luaL_checkstring(L, 1);
-    Core::Debug::Error(msg);
-    return 0;
-}
 
 static const luaL_Reg debug_functions[] =
 {
     {"message", l_Debug_message},
     {"log", l_Debug_log},
     {"logerror", l_Debug_logerror},
-    {"error", l_Debug_error},
+    {"error", l_Debug_logerror},
     {NULL, NULL}
 };
 

@@ -192,7 +192,7 @@ static void LoadButtonData(json &j, MenuBtnData &btnData) {
 }
 
 bool LoadGameMenuLayout(const std::string& filepath) {
-    Core::Debug::LogMessage("Loading menu layout: '" + filepath + "'", false);
+    Core::Debug::LogInfo("Loading menu layout: '" + filepath + "'");
     std::string fileCont = Core::Utils::LoadFile(filepath);
     if (!fileCont.empty()) {
         json j = json::parse(std::string(fileCont), nullptr, false);
@@ -256,6 +256,6 @@ bool LoadGameMenuLayout(const std::string& filepath) {
             }
         }
     }
-    Core::Debug::LogMessage("Failed to load menu layout", true);
+    Core::Debug::LogWarn("Failed to load menu layout");
     return false;
 }

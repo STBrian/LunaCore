@@ -104,8 +104,8 @@ namespace CTRPluginFramework
             fslib::create_directory(path_from_string(PLUGIN_FOLDER));
         if (!Debug::OpenLogFile(LOG_FILE))
             OSD::Notify(Utils::Format("Failed to open log file '%s'", LOG_FILE));
-        Debug::LogMessage(Utils::Format("LunaCore version: %d.%d.%d", PLG_VER_MAJ, PLG_VER_MIN, PLG_VER_PAT), false);
-        Debug::LogMessage(Utils::Format("Loading config file '%s'", CONFIG_FILE), false);
+        Debug::LogInfof("LunaCore version: %d.%d.%d", PLG_VER_MAJ, PLG_VER_MIN, PLG_VER_PAT);
+        Debug::LogInfof("Loading config file '%s'", CONFIG_FILE);
         G_config = Config::LoadConfig(CONFIG_FILE);
 
         bool disableZLandZR = Config::GetBoolValue(G_config, "disable_zl_and_zr", false);
@@ -135,13 +135,13 @@ namespace CTRPluginFramework
     {
         ToggleTouchscreenForceOn();
         Core::CrashHandler::plg_state = Core::CrashHandler::PLUGIN_EXIT;
+        lua_close(Lua_global);
 
         // Cleanup
-        Core::Debug::LogMessage("Exiting LunaCore", false);
+        Core::Debug::LogInfo("Exiting LunaCore");
         Core::Debug::CloseLogFile();
         fslib::close_device(u"extdata");
         fslib::exit();
-        lua_close(Lua_global);
     }
 
     int main()
@@ -168,7 +168,7 @@ namespace CTRPluginFramework
 
         // Update configs
         if (!Config::SaveConfig(CONFIG_FILE, G_config))
-            Debug::LogMessage("Failed to save configs", true);
+            Debug::LogInfo("Failed to save configs");
 
         gmenu = new PluginMenu("LunaCore", PLG_VER_MAJ, PLG_VER_MIN, PLG_VER_PAT,
             "Allows to execute Lua scripts and other features", 2);
@@ -186,7 +186,7 @@ namespace CTRPluginFramework
         InitMenu(*gmenu);
 
         // Launch menu and mainloop
-        Debug::LogMessage("Starting plugin mainloop", false);
+        Debug::LogInfo("Starting plugin mainloop");
         CrashHandler::plg_state = CrashHandler::PLUGIN_MAINLOOP;
         GameState.CoreLoaded.store(true);
         gmenu->Run();

@@ -29,7 +29,7 @@ static inline void checkThreadStatus(Scheduler& ins, std::unordered_map<lua_Stat
         lua_pushstring(L, errMsg);
 
         if (lua_pcall(L, 2, 1, 0)) {
-            Core::Debug::LogError("Core internal error: " + std::string(lua_tostring(L, -1)));
+            Core::Debug::ReportInternalError(lua_tostring(L, -1));
         } else {
             std::string traceback(lua_tostring(L, -1));
             Core::Debug::LogError("Async task error: " + traceback);
@@ -45,8 +45,8 @@ void Scheduler::Update() {
     std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
     Scheduler& ins = Scheduler::getInstance();
 
-    for (int i = 0, j = 0, count = ins.pending.size(); j < count; j++) {
-        auto& task = ins.pending[i];
+    for (int i = 0, count = ins.pending.size(); count > 0; count--) {
+        auto task = ins.pending[i];
 
         if (task.handler && task.handler->WaitIsReady()) {
             lua_State* T = task.thread;

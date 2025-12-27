@@ -50,9 +50,9 @@ void Core::InitCore() {
 
     // Update configs
     if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
-        Core::Debug::LogMessage("Failed to save configs", true);
+        Core::Debug::LogWarn("Failed to save configs");
     
-    Core::Debug::LogMessage("Loading Lua environment", false);
+    Core::Debug::LogInfo("Loading Lua environment");
     Lua_global = luaL_newstate();
     Core::LoadLuaEnv();
 
@@ -60,12 +60,12 @@ void Core::InitCore() {
     Core::Utils::getRegion(region);
     u16 gameVer = CTRPF::Process::GetVersion();
     if (Core::Utils::checkCompatibility()) {
-        Core::Debug::LogMessage(CTRPF::Utils::Format("Game region is %s, version '%hu' (1.9.19) detected", region.c_str(), gameVer), false);
+        Core::Debug::LogInfo(CTRPF::Utils::Format("Game region is %s, version '%hu' (1.9.19) detected", region.c_str(), gameVer));
     } else if (CTRPF::System::IsCitra())
-        Core::Debug::LogMessage("Emulator detected, some things may work differently than on console. Patching enabled by default", true);
+        Core::Debug::LogWarn("Emulator detected, some things may work differently than on console. Patching enabled by default");
     else
-        Core::Debug::LogMessage(CTRPF::Utils::Format("Incompatible version detected: %s '%hu'! Patching disabled", region.c_str(), gameVer), true);
-    Core::Debug::LogMessage("LunaCore runtime loaded", true);
+        Core::Debug::LogWarn(CTRPF::Utils::Format("Incompatible version detected: %s '%hu'! Patching disabled", region.c_str(), gameVer));
+    Core::Debug::Message("LunaCore runtime loaded");
 
     CrashHandler::core_state = CrashHandler::CORE_LOADING_MODS;
     Core::LoadMods();
@@ -84,9 +84,9 @@ void TimeoutLoadHook(lua_State *L, lua_Debug *ar)
 
 void Core::LoadLuaEnv() {
     lua_State* L = Lua_global;
-    Core::Debug::LogMessage("Loading standard libs", false);
+    Core::Debug::LogInfo("Loading standard libs");
     luaL_openlibs(L);
-    Core::Debug::LogMessage("Loading core modules", false);
+    Core::Debug::LogInfo("Loading core modules");
     Core::LoadModules(L);
 
     // Set Lua path
@@ -99,7 +99,7 @@ void Core::LoadLuaEnv() {
     lua_pushstring(L, newPath.c_str());
     lua_setfield(L, -2, "path");
     lua_pop(L, 1);
-    Core::Debug::LogMessage("Lua environment loaded", false);
+    Core::Debug::LogInfo("Lua environment loaded");
 }
 
 bool Core::LoadBuffer(const char *buffer, size_t size, const char* name) {
@@ -174,7 +174,7 @@ bool Core::LoadScript(const std::string& fp)
     std::string fileContent = Core::Utils::LoadFile(fp);
     if (fileContent.empty())
     {
-        Core::Debug::LogMessage("Failed to open file"+fp, false);
+        Core::Debug::LogInfo("Failed to open file "+fp);
         return false;
     }
     return LoadBuffer(fileContent.c_str(), fileContent.size(), fp.c_str());
@@ -190,13 +190,13 @@ void Core::PreloadScripts()
     std::vector<std::string> files;
     dir.ListFiles(files, ".lua");
     if (files.size() > 0) {
-        Core::Debug::LogMessage("Loading scripts", false);
+        Core::Debug::LogInfo("Loading scripts");
         for (auto &file : files) {
             if (strcmp(file.c_str() + file.size() - 4, ".lua") != 0) // Double check to skip not .lua files
                 continue;
 
             std::string fullPath("sdmc:" + dir.GetFullName() + "/" + file);
-            Core::Debug::LogMessage("Loading script '"+fullPath+"'", false);
+            Core::Debug::LogInfo("Loading script '"+fullPath+"'");
             if (LoadScript(fullPath))
                 loadedScripts++;
         }
@@ -280,7 +280,7 @@ void Core::LoadMods()
     CTRPF::Directory modsDir;
     CTRPF::Directory::Open(modsDir, PLUGIN_FOLDER "/mods");
     if (!modsDir.IsOpen()) {
-        Core::Debug::LogMessage("No mods loaded", false);
+        Core::Debug::LogInfo("No mods loaded");
         return;
     }
 
@@ -325,7 +325,7 @@ void Core::LoadMods()
             modsLoadedCount++;
     }
     if (modsLoadedCount == 0)
-        Core::Debug::LogMessage("No mods loaded", false);
+        Core::Debug::LogInfo("No mods loaded");
     modsLoaded.clear();
     modsDiscarded.clear();
     modsLoading.clear();

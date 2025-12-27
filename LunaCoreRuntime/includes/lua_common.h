@@ -4,12 +4,14 @@
 extern "C" {
 #endif
 
-#include <lua.h>
-#include <lauxlib.h>
-#include <lualib.h>
+#include <lua5.1/lua.h>
+#include <lua5.1/lauxlib.h>
+#include <lua5.1/lualib.h>
 
-#include <cmath>
-#include <cstring>
+#define _GLIBCXX_INCLUDE_NEXT_C_HEADERS
+#include <math.h>
+#define _GLIBCXX_INCLUDE_NEXT_C_HEADERS
+#include <string.h>
 
 #define STRINGIFY(x) #x
 #define EXPAND_AND_STRINGIFY(x) STRINGIFY(x)
@@ -49,7 +51,7 @@ static inline void* luaC_funccheckudata(lua_State *L, int narg, const char* unam
                 lua_pop(L, 1);
                 luaL_typerror(L, narg, uname);
             }
-            if (std::strcmp(uname, lua_tostring(L, -1)) != 0) {
+            if (strcmp(uname, lua_tostring(L, -1)) != 0) {
                 lua_pushfstring(L, "bad argument #%d (%s expected, got %s)", narg, uname, lua_tostring(L, -1));
                 lua_remove(L, -2);
                 lua_error(L);
@@ -75,7 +77,7 @@ static inline void* luaC_checkudata(lua_State *L, int narg, const char* uname, c
                 lua_pop(L, 1);
                 luaL_error(L, "invalid type, expected \"%s\"", uname);
             }
-            if (std::strcmp(uname, lua_tostring(L, -1)) != 0) {
+            if (strcmp(uname, lua_tostring(L, -1)) != 0) {
                 lua_pushfstring(L, msg, uname, lua_tostring(L, -1));
                 lua_remove(L, -2);
                 lua_error(L);

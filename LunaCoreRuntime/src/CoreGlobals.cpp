@@ -1,7 +1,5 @@
 #include "CoreGlobals.hpp"
 
-Core::SharedFunctions SharedFunctions_obj;
-
 lua_State *Lua_global = NULL;
 Core::Mutex Lua_Global_Mut;
 

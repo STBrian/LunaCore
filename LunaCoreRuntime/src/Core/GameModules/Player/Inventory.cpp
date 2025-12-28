@@ -133,7 +133,7 @@ static int l_Inventory_Slot_class_newindex(lua_State *L)
     return 0;
     }
 
-    LUAUTILS_SET_TYPEERROR_HANDLER(L);
+    LUAUTILS_SET_ERROR_HANDLER(L);
 }
 
 // ----------------------------------------------------------------------------

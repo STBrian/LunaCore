@@ -111,19 +111,16 @@ static int l_Recipes_registerShapedRecipe(lua_State* L) {
     if (line1s + line2s + line3s < 1)
         return luaL_error(L, "shape is empty!");
 
-    // "Safe" c++ error handler
-    LUAUTILS_INIT_ERROR_HANDLER();
-
     {
     std::vector<Minecraft::RecipeComponentDefIns> components;
     lua_pushvalue(L, 8); // Table
     const char* errorMsg = ProcessTableKeys(L, components);
 
     if (errorMsg)
-        LUAUTILS_ERROR(errorMsg);
+        LUAUTILS_ERRORF(L, errorMsg);
 
     if (components.empty())
-        LUAUTILS_ERROR("no components were passed!");
+        LUAUTILS_ERRORF(L, "no components were passed!");
 
     gstd::vector<Minecraft::InternalRecipeElementDefinition> vec;
     Minecraft::definition(vec, components.data(), components.size());
@@ -143,7 +140,7 @@ static int l_Recipes_registerShapedRecipe(lua_State* L) {
     return 0;
     }
 
-    LUAUTILS_SET_ERROR_HANDLER(L);
+    LUAUTILS_SET_ERROR_HANDLER(L); // "Safe" c++ error handler
 }
 
 static const luaL_Reg recipes_functions[] = {

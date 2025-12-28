@@ -99,8 +99,6 @@ static int l_Filesystem_open(lua_State *L) {
     const char* filepath = luaL_checkstring(L, 1);
     const char* filemodec = luaL_checkstring(L, 2);
 
-    LUAUTILS_INIT_ERROR_HANDLER();
-
     {
     std::string filemode(filemodec);
 
@@ -117,7 +115,7 @@ static int l_Filesystem_open(lua_State *L) {
         fileStruct->mode = FS_OPEN_WRITE|FS_OPEN_READ;
     else {
         lua_pop(L, 1);
-        LUAUTILS_ERROR("Invalid mode");
+        LUAUTILS_ERRORF(L, "Invalid mode");
     }
     fileStruct->filePtr = new fslib::File(path_from_string(filepath), fileStruct->mode);
     
@@ -297,8 +295,6 @@ static int l_Filesystem_File_seek(lua_State *L) {
         offset = (size_t)luaL_checknumber(L, 2);
     if (lua_gettop(L) > 2)
         whencec = luaL_checkstring(L, 3);
-
-    LUAUTILS_INIT_ERROR_HANDLER();
         
     {
     std::string whence(whencec);
@@ -310,7 +306,7 @@ static int l_Filesystem_File_seek(lua_State *L) {
     else if (whence == "end")
         seekPos = SEEK_END;
     else
-        LUAUTILS_ERROR("Invalid seek pos");
+        LUAUTILS_ERRORF(L, "Invalid seek pos");
 
     fileStruct->filePtr->seek(offset, (fslib::File::Origin)seekPos);
     lua_pushnumber(L, fileStruct->filePtr->tell());

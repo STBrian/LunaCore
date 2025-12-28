@@ -75,7 +75,6 @@ static int l_Camera_newindex(lua_State *L)
     if (lua_type(L, 2) != LUA_TSTRING)
         return luaL_error(L, "attempt to set field '?' of \"Camera\"");
 
-    // "Safe" c++ error handler
     LUAUTILS_INIT_TYPEERROR_HANDLER();
     LUAUTILS_SET_TYPEERROR_MESSAGE("unable to assign to a \"%s\" field a \"%s\" value");
 
@@ -111,7 +110,7 @@ static int l_Camera_newindex(lua_State *L)
         return luaL_error(L, "'%s' is not a valid member of object or is read-only value", lua_tostring(L, 2));
     }
 
-    LUAUTILS_SET_TYPEERROR_HANDLER(L);
+    LUAUTILS_SET_ERROR_HANDLER(L); // "Safe" c++ error handler
 }
 
 // ----------------------------------------------------------------------------

@@ -1,26 +1,33 @@
 #include "Core/Utils/ExtensionLoader.hpp"
 
 #include <CTRPluginFramework.hpp>
+#include <FsLib/fslib.hpp>
 
 #include "Core/Debug.hpp"
 
-#include <cstdlib>
+#include "lua_utils.hpp"
+#include <stdlib.h>
 #include <new>
 
 namespace CTRPF = CTRPluginFramework;
 
 static int l_loadExtension(lua_State* L) {
     const char* filename = lua_tostring(L, 1);
+
+    {
     CTRPF::File extfile;
     CTRPF::File::Open(extfile, filename, CTRPF::File::READ);
     if (!extfile.IsOpen())
-        return luaL_error(L, "Failed to load '%s'", filename);
+        LUAUTILS_ERRORF(L, "Failed to load \"%s\"", filename);
     size_t size = extfile.GetSize();
-    char* buffer = reinterpret_cast<char*>(::operator new(size, std::align_val_t(8)));
+    char* buffer = reinterpret_cast<char*>(malloc(size));
     extfile.Read(buffer, size);
     extfile.Close();
     Core::Debug::Message(CTRPF::Utils::Format("Extension loaded at: %08X", buffer));
     return reinterpret_cast<int(*)(lua_State*)>(buffer + 0x10)(L);
+    }
+
+    LUAUTILS_SET_ERROR_HANDLER(L);
 }
 
 namespace Core {

@@ -426,7 +426,7 @@ static int l_LocalPlayer_newindex(lua_State *L)
         return luaL_error(L, "'%s' is not a valid member of LocalPlayer or is read-only value", lua_tostring(L, 2));
     }
 
-    LUAUTILS_SET_TYPEERROR_HANDLER(L);
+    LUAUTILS_SET_ERROR_HANDLER(L);
 }
 
 // ----------------------------------------------------------------------------

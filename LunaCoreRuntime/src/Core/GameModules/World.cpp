@@ -102,7 +102,7 @@ static int l_World_newindex(lua_State *L)
         return luaL_error(L, "'%s' is not a valid member of World or is a read-only value", lua_tostring(L, 2));
     }
 
-    LUAUTILS_SET_TYPEERROR_HANDLER(L);
+    LUAUTILS_SET_ERROR_HANDLER(L);
 }
 
 // ----------------------------------------------------------------------------

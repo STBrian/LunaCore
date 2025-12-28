@@ -108,5 +108,8 @@
     "Lua.workspace.library": [
         "./api_docs.lua",
         "${workspaceFolder}/../LunaCoreAPI"
+    ],
+    "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
+        "clang-analyzer-core.FixedAddressDereference"
     ]
 }

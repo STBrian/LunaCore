@@ -196,7 +196,7 @@ int LuaObject::l_newindex(lua_State* L) {
         }
 
         if (objsLayouts[currClass][key].access != OBJF_ACCESS_ALL)
-            LUAUTILS_CUSTOMERROR(L, "unable to assign value to read-only field %s", key);
+            LUAUTILS_ERRORF(L, "unable to assign value to read-only field %s", key);
         
         ValueMetadata& md = objsLayouts[currClass][key];
         valid = true;
@@ -230,26 +230,25 @@ int LuaObject::l_newindex(lua_State* L) {
                 *(double*)dataOff = (double)lua_tonumber(L, 3);
                 break;
             case OBJF_TYPE_STRING:
-                LUAUTILS_CUSTOMERROR(L, "unable to assign value to constant %s data type", "string");
+                LUAUTILS_ERRORF(L, "unable to assign value to constant %s data type", "string");
                 break;
             case OBJF_TYPE_METHOD:
-                LUAUTILS_CUSTOMERROR(L, "unable to assign value to constant %s data type", "method");
+                LUAUTILS_ERRORF(L, "unable to assign value to constant %s data type", "method");
                 break;
             case OBJF_TYPE_FUNCTION:
-                LUAUTILS_CUSTOMERROR(L, "unable to assign value to constant %s data type", "function");
+                LUAUTILS_ERRORF(L, "unable to assign value to constant %s data type", "function");
                 break;
             case OBJF_TYPE_OBJECT: case OBJF_TYPE_OBJECT_POINTER:
-                LUAUTILS_CUSTOMERROR(L, "unable to assign value to constant %s data type", "object");
+                LUAUTILS_ERRORF(L, "unable to assign value to constant %s data type", "object");
                 break;
         }
     }
     if (!valid)
-        LUAUTILS_CUSTOMERROR(L, "unable to assign value to invalid field \"%s\"", key);
+        LUAUTILS_ERRORF(L, "unable to assign value to invalid field \"%s\"", key);
     return 0;
     }
 
-    LUAUTILS_SET_TYPEERROR_HANDLER(L);
-    LUAUTILS_SET_CUSTOMERROR_HANDLER(L);
+    LUAUTILS_SET_ERROR_HANDLER(L);
 }
 
 int LuaObject::l_eq(lua_State *L) {

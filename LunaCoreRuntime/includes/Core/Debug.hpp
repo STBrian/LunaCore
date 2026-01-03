@@ -29,25 +29,23 @@ namespace Core {
 
         void CloseLogFile();
 
-        #if __STDC_HOSTED__
-        void LogRaw(const std::string& msg);
-        #endif
-
         void LogRawf(const char* fmt, ...);
-
-        #if __STDC_HOSTED__
-        void LogInfo(const std::string& msg);
-        #endif
 
         void LogInfof(const char* fmt, ...);
 
-        #if __STDC_HOSTED__
-        void LogError(const std::string& msg);
-        #endif
-
         void LogErrorf(const char* fmt, ...);
 
+        void LogWarnf(const char* fmt, ...);
+
+        void Message(const char* msg);
+
         #if __STDC_HOSTED__
+        void LogRaw(const std::string& msg);
+
+        void LogInfo(const std::string& msg);
+
+        void LogError(const std::string& msg);
+
         void LogWarn(const std::string& msg);
 
         void Message(const std::string& msg);

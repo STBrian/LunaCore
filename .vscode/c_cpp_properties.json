@@ -12,7 +12,6 @@
                 "${DEVKITPRO_HOME}/portlibs/3ds/include/**",
                 "${DEVKITPRO_HOME}/portlibs/3ds/include/lua5.1/**",
                 "${DEVKITPRO_HOME}/devkitARM/arm-none-eabi/include/**",
-                "${DEVKITPRO_HOME}/libctru/include/**",
                 "${workspaceFolder}/LunaCoreRuntime/includes/**",
                 "${DEVKITPRO_HOME}/**",
                 "${DEVKITPRO_HOME}/libctrpf/include/**"

@@ -119,7 +119,26 @@ void Core::Debug::LogErrorf(const char* fmt, ...) {
     char* buffer = (char*)malloc(size);
     if (buffer) {
         vsnprintf(buffer, size, fmt, args);
-        DebugWriteLog_impl(buffer);
+        Core::Debug::LogError(buffer);
+        free(buffer);
+    }
+
+    va_end(args);
+}
+
+void Core::Debug::LogWarnf(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+
+    int size = vsnprintf(NULL, 0, fmt, args) + 1;
+    va_end(args);
+
+    va_start(args, fmt);
+
+    char* buffer = (char*)malloc(size);
+    if (buffer) {
+        vsnprintf(buffer, size, fmt, args);
+        Core::Debug::LogWarn(buffer);
         free(buffer);
     }
 
@@ -127,6 +146,11 @@ void Core::Debug::LogErrorf(const char* fmt, ...) {
 }
 
 void Core::Debug::Message(const std::string& msg) {
+    CTRPF::OSD::Notify(msg);
+    DebugWriteLog_impl(msg);
+}
+
+void Core::Debug::Message(const char* msg) {
     CTRPF::OSD::Notify(msg);
     DebugWriteLog_impl(msg);
 }

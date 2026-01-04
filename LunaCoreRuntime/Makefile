@@ -29,7 +29,7 @@ ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -marm
 CFLAGS		:=	$(ARCH) -Os -s -mword-relocations \
 				-fdata-sections -fomit-frame-pointer -ffunction-sections -fno-strict-aliasing -fvisibility=hidden
 
-CFLAGS		+=	$(INCLUDE) -D__3DS__ -I $(PORTLIBS)/include/lua5.1 \
+CFLAGS		+=	$(INCLUDE) -D__3DS__ \
 				-DPLG_VER_MAJ=$(PLGVERMAJ) -DPLG_VER_MIN=$(PLGVERMIN) -DPLG_VER_PAT=$(PLGVERPAT)
 
 ifeq ($(EXPERIMENTAL), 1)
@@ -42,8 +42,8 @@ endif
 CXXFLAGS	:= $(CFLAGS) -g -fno-rtti -fno-exceptions -std=gnu++20
 
 ASFLAGS		:=	$(ARCH)
-LDFLAGS		:= -T $(TOPDIR)/3gx.ld $(ARCH) -L $(PORTLIBS)/lib -Os -Wl,--gc-sections,--strip-discarded,--strip-debug,-Map=lcruntime.map \
-				-Wl,--wrap=strlen,--wrap=snprintf,--wrap=vsnprintf
+LDFLAGS		:= -T $(TOPDIR)/3gx.ld $(ARCH) -L $(PORTLIBS)/lib -Os -Wl,--gc-sections,--strip-discarded,--strip-debug \
+				-T $(TOPDIR)/wrappers.ld
 
 LIBS		:=  -llua5.1 -lfslib -lctrpf -lctru -lffi
 LIBDIRS		:= 	$(CTRPFLIB) $(CTRULIB) $(PORTLIBS)

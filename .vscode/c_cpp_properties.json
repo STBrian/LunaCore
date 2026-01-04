@@ -1,20 +1,17 @@
 {
     "configurations": [
         {
-            "name": "Win32",
-            "compilerPath": "${DEVKITPRO_HOME}/devkitARM/bin/arm-none-eabi-gcc",
+            "name": "3ds-win",
+            "compilerPath": "c:/devkitPro/devkitARM/bin/arm-none-eabi-gcc",
             "compilerArgs": [
                 "-std=gnu++20"
             ],
             "includePath": [
-                "${workspaceFolder}/**",
-                "${DEVKITPRO_HOME}/libctru/include/**",
-                "${DEVKITPRO_HOME}/portlibs/3ds/include/**",
-                "${DEVKITPRO_HOME}/portlibs/3ds/include/lua5.1/**",
-                "${DEVKITPRO_HOME}/devkitARM/arm-none-eabi/include/**",
-                "${workspaceFolder}/LunaCoreRuntime/includes/**",
-                "${DEVKITPRO_HOME}/**",
-                "${DEVKITPRO_HOME}/libctrpf/include/**"
+                "c:/devkitPro/libctru/include/",
+                "c:/devkitPro/portlibs/3ds/include/",
+                "c:/devkitPro/devkitARM/arm-none-eabi/include/",
+                "${workspaceFolder}/LunaCoreRuntime/includes/",
+                "c:/devkitPro/libctrpf/include/"
             ],
             "defines": [
                 "DEBUG",
@@ -22,8 +19,7 @@
                 "_UNICODE",
                 "PLG_VER_MAJ=0",
                 "PLG_VER_MIN=1",
-                "PLG_VER_PAT=0",
-                "USE_CUSTOM_STRING"
+                "PLG_VER_PAT=0"
             ],
             "cStandard": "c11",
             "cppStandard": "gnu++20"

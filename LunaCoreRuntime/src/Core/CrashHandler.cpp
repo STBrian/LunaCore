@@ -10,8 +10,12 @@ namespace CTRPF = CTRPluginFramework;
 
 static void *reservedMemory = nullptr;
 
+extern "C" void PLGLDR__DisplayErrMessage(const char*, const char*, u32);
+
 namespace Core {
     bool CrashHandler::abort = false;
+    bool CrashHandler::coreAbort = false;
+    const char* CrashHandler::coreAbortMsg = nullptr;
     CrashHandler::PluginState CrashHandler::plg_state = CrashHandler::PLUGIN_PATCHPROCESS;
     CrashHandler::CoreState CrashHandler::core_state = CrashHandler::CORE_INIT;
     CrashHandler::GameState CrashHandler::game_state = CrashHandler::GAME_LOADING;
@@ -20,8 +24,17 @@ namespace Core {
         reservedMemory = malloc(4 * 1024);
     }
 
+    void CrashHandler::Abort(const char* errMsg, const std::source_location& location) {
+        coreAbort = true;
+        coreAbortMsg = errMsg;
+        Debug::ReportInternalError(errMsg, location);
+        *(u32*)nullptr = 0;
+        for (;;);
+    }
+
     void CrashHandler::OnAbort() {
-        abort = true;
+        if (!coreAbort)
+            abort = true;
         *(u32*)nullptr = 0;
         for (;;);
     }
@@ -62,24 +75,37 @@ namespace Core {
                 lua_close(Lua_global);
             }
             
-            Core::Debug::LogError("[CRITICAL] Game crashed due to an unhandled error");
+            if (coreAbort || abort)
+                Core::Debug::LogInfof("[CRITICAL] LunaCore crashed due to an unhandled error");
+            else
+                Core::Debug::LogInfof("[CRITICAL] Game crashed due to an unhandled error");
+            
             u8 rnd = (svcGetSystemTick() & 0xF00) >> 8;
             Core::Debug::LogRawf("\t\"%s\"\n", errorMsg[rnd]);
             Core::Debug::LogRawf("\t\tPlugin state: %d\n", Core::CrashHandler::plg_state);
             Core::Debug::LogRawf("\t\tLast Core state: %d\n", Core::CrashHandler::core_state);
             Core::Debug::LogRawf("\t\tGame state: %d\n", Core::CrashHandler::game_state);
-            Core::Debug::LogRawf("\n\tException type: %X\n", excep->type);
-            Core::Debug::LogRawf("\tException at address: %08X\n", regs->pc);
-            Core::Debug::LogRawf("\tLR: %08X\n", regs->lr);
-            Core::Debug::LogRawf("\tSP: %08X\n", regs->sp);
-            Core::Debug::LogRawf("\tCPSR: %08X\n", regs->cpsr);
-            Core::Debug::LogRawf("\tR0: %08X \tR1: %08X\n", regs->r[0], regs->r[1]);
-            Core::Debug::LogRawf("\tR2: %08X \tR3: %08X\n", regs->r[2], regs->r[3]);
-            Core::Debug::LogRawf("\tR4: %08X \tR5: %08X\n", regs->r[4], regs->r[5]);
-            Core::Debug::LogRawf("\tR6: %08X \tR7: %08X\n", regs->r[6], regs->r[7]);
-            Core::Debug::LogRawf("\tR8: %08X \tR9: %08X\n", regs->r[8], regs->r[9]);
-            Core::Debug::LogRawf("\tR10: %08X\tR11: %08X\n", regs->r[10], regs->r[11]);
-            Core::Debug::LogRawf("\tR12: %08X\n", regs->r[12]);
+            if (coreAbort) {
+                Core::Debug::LogRawf("\n\tException type: Core abort\n");
+                Core::Debug::LogRawf("\tError message:\n");
+                Core::Debug::LogRawf("\t\t%s\n", coreAbortMsg);
+            } else if (abort) {
+                Core::Debug::LogRawf("\n\tException type: Core abort\n");
+                Core::Debug::LogRawf("\tAn unhandled core abort ocurred\n");
+            } else {
+                Core::Debug::LogRawf("\n\tException type: %X\n", excep->type);
+                Core::Debug::LogRawf("\tException at address: %08X\n", regs->pc);
+                Core::Debug::LogRawf("\tLR: %08X\n", regs->lr);
+                Core::Debug::LogRawf("\tSP: %08X\n", regs->sp);
+                Core::Debug::LogRawf("\tCPSR: %08X\n", regs->cpsr);
+                Core::Debug::LogRawf("\tR0: %08X \tR1: %08X\n", regs->r[0], regs->r[1]);
+                Core::Debug::LogRawf("\tR2: %08X \tR3: %08X\n", regs->r[2], regs->r[3]);
+                Core::Debug::LogRawf("\tR4: %08X \tR5: %08X\n", regs->r[4], regs->r[5]);
+                Core::Debug::LogRawf("\tR6: %08X \tR7: %08X\n", regs->r[6], regs->r[7]);
+                Core::Debug::LogRawf("\tR8: %08X \tR9: %08X\n", regs->r[8], regs->r[9]);
+                Core::Debug::LogRawf("\tR10: %08X\tR11: %08X\n", regs->r[10], regs->r[11]);
+                Core::Debug::LogRawf("\tR12: %08X\n", regs->r[12]);
+            }
             
             u8 possibleError = 0;
             if (plg_state == PluginState::PLUGIN_PATCHPROCESS) possibleError = 1;
@@ -97,9 +123,13 @@ namespace Core {
             u32 errorCode = (excep->type << 30 | core_state << 27 | game_state << 25 | possibleError << 23 | pluginFault << 22 | pc);
             Core::Debug::LogRawf("\tError code: %08X\n", errorCode);
             Core::Debug::CloseLogFile();
-            if (plg_state != PluginState::PLUGIN_MAINLOOP)
+            if (plg_state != PluginState::PLUGIN_MAINLOOP) {
+                if (coreAbortMsg != nullptr)
+                    PLGLDR__DisplayErrMessage("Fatal core exception", (std::string(coreAbortMsg) + "\nThe console will reboot now").c_str(), errorCode);
+                else 
+                    PLGLDR__DisplayErrMessage("Fatal core exception", "An unhandled exception ocurred.\nThe console will reboot now", errorCode);
                 return CTRPF::Process::EXCB_REBOOT;
-            else {
+            } else {
                 fslib::close_device(u"extdata");
                 fslib::exit();
             }
@@ -109,10 +139,13 @@ namespace Core {
             const char *titleMsg = "Oops.. Game crashed!";
             if (abort)
                 titleMsg = "Oh no... Things got out of hand!";
+            else if (coreAbort)
+                titleMsg = "Core crashed!";
+
             if (possibleOOM)
                 titleMsg = "Game ran out of memory!";
             if (regs->pc == 0x00114A98)
-                titleMsg = "Game crash! An unhandled game assert exception occurred";
+                titleMsg = "Game crashed! An unhandled game assert exception occurred";
             topScreen.DrawSysfont(titleMsg, 25, 25, CTRPF::Color::Red);
             topScreen.DrawSysfont("See the log file for more details about the crash", 25, 40, CTRPF::Color::White);
             topScreen.DrawSysfont("Press A to exit or B to reboot", 25, 55, CTRPF::Color::White);

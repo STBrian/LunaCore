@@ -1,11 +1,14 @@
 #pragma once
 
 #include <CTRPluginFramework.hpp>
+#include <source_location>
 
 namespace Core {
     class CrashHandler {
         public:
             static bool abort;
+            static bool coreAbort;
+            static const char* coreAbortMsg;
 
             enum PluginState {
                 PLUGIN_PATCHPROCESS = 0,
@@ -33,6 +36,8 @@ namespace Core {
             static GameState game_state;
 
             static void ReserveMemory();
+
+            static void Abort(const char* errMsg, const std::source_location& location = std::source_location::current());
 
             __attribute__((noreturn)) static void OnAbort();
 

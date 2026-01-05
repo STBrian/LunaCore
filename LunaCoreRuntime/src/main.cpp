@@ -98,7 +98,7 @@ namespace CTRPluginFramework
         Process::ThrowOldExceptionOnCallbackException = true;
         CrashHandler::ReserveMemory();
 
-        if (!fslib::initialize()) abort();
+        if (!fslib::initialize()) Core::Abort("Failed to initialize fs");
 
         if (!fslib::directory_exists(path_from_string(PLUGIN_FOLDER)))
             fslib::create_directory(path_from_string(PLUGIN_FOLDER));
@@ -171,7 +171,8 @@ namespace CTRPluginFramework
             Debug::LogInfo("Failed to save configs");
 
         gmenu = new PluginMenu("LunaCore", PLG_VER_MAJ, PLG_VER_MIN, PLG_VER_PAT,
-            "Allows to execute Lua scripts and other features", 2);
+            "Allows to execute Lua scripts and other features.\n" 
+            "Build " __TIMESTAMP__ " (CST)", 2);
         std::string& title = gmenu->Title();
         title.assign("LunaCore Plugin Menu");
 

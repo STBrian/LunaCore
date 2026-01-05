@@ -5,6 +5,8 @@
 #include <source_location>
 #endif
 
+#include "Core/CrashHandler.hpp"
+
 #include "CoreGlobals.hpp"
 #include "lua_common.h"
 
@@ -20,6 +22,10 @@
 #endif
 
 namespace Core {
+    inline void Abort(const char* errMsg, const std::source_location& location = std::source_location::current()) {
+        CrashHandler::Abort(errMsg, location);
+    }
+
     namespace Debug {
         #if __STDC_HOSTED__
         void ReportInternalError(const std::string& msg, const std::source_location& location = std::source_location::current());

@@ -3,12 +3,15 @@
 #include "lua_common.h"
 #include "types.h"
 
-#include "game/Inventory.hpp"
+#include "game/world/actor/player/Inventory.hpp"
 #include "game/memory.hpp"
 
-namespace Core {
+namespace Minecraft {
     class Player {
-        using InventorySlot = Game::Inventory::InventorySlot;
+        private:
+        using InventorySlot = Minecraft::Inventory::InventorySlot;
+        static inline Player** PlayerInstance = reinterpret_cast<Player**>(0x918958);
+
         typedef struct {
             float x, y, z;
         } coordsComponents;
@@ -39,7 +42,7 @@ namespace Core {
         char padding9[0x1ce0 - 0x1a28 - sizeof(u8)];
 
         static inline u32 sizeofPlayer = 0x1ce0;
-        static inline Player** PlayerInstance = reinterpret_cast<Player**>(0x918958);
+
         static Player* getPlayerInstance() {
             gstd::alloc_ptr<Player> plyPtr(*PlayerInstance);
             if (plyPtr.getSize() == sizeofPlayer)
@@ -61,8 +64,4 @@ namespace Core {
             this->coords5.z = z;
         }
     };
-
-    namespace Module {
-        bool RegisterLocalPlayerModule(lua_State *L);
-    }
 }

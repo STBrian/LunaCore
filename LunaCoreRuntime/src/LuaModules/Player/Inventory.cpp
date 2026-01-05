@@ -1,21 +1,19 @@
-#include "Core/GameModules/Player/Inventory.hpp"
+#include "LuaModules.hpp"
 
 #include <vector>
-
 #include <CTRPluginFramework.hpp>
 
-#include "Core/GameModules/Items.hpp"
 #include "string_hash.hpp"
-
+#include "lua_utils.hpp"
 #include "lua_object.hpp"
 
 #include "game/Minecraft.hpp"
-#include "game/Inventory.hpp"
+#include "game/world/actor/player/Inventory.hpp"
 
-#include "lua_utils.hpp"
+#include "Core/Utils/ItemUtils.hpp"
 
 namespace CTRPF = CTRPluginFramework;
-using InventorySlot = Game::Inventory::InventorySlot;
+using InventorySlot = Minecraft::Inventory::InventorySlot;
 using Item = Game::Item;
 
 // ----------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-#include "Core/GameModules/Player/Camera.hpp"
+#include "LuaModules.hpp"
 
 #include <CTRPluginFramework.hpp>
 

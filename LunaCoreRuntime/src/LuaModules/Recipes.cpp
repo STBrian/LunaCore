@@ -1,4 +1,4 @@
-#include "Core/GameModules/Recipes.hpp"
+#include "LuaModules.hpp"
 
 #include <string>
 #include <vector>
@@ -10,7 +10,7 @@
 #include "Core/Event.hpp"
 #include "Core/Debug.hpp"
 
-#include "game/world/item/Recipes.hpp"
+#include "game/world/item/crafting/Recipes.hpp"
 
 #include "lua_utils.hpp"
 

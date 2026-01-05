@@ -19,7 +19,7 @@ BUILD		:= 	Build
 INCLUDES	:= 	includes
 SOURCES 	:= 	src src/Helpers src/Core src/game \
 				src/Core/Graphics src/Core/Utils src/Core/Hooks \
-				src/Core/GameModules src/Core/GameModules/Player
+				src/LuaModules src/LuaModules/Player
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -116,6 +116,7 @@ $(OUTPUT).elf : $(OFILES)
 #---------------------------------------------------------------------------------
 	@echo creating $(notdir $@)
 	@3gxtool -s $(word 1, $^) $(TOPDIR)/$(PLGINFO) $@
+	@rm main.d main.o
 
 -include $(DEPENDS)
 

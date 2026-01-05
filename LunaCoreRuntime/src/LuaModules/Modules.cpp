@@ -1,4 +1,4 @@
-#include "Core/Modules.hpp"
+#include "LuaModules.hpp"
 
 #include <CTRPluginFramework.hpp>
 
@@ -12,13 +12,6 @@
 #include "Core/Memory.hpp"
 #include "Core/Event.hpp"
 #include "Core/Graphics/Graphics.hpp"
-
-#include "Core/GameModules/Gamepad.hpp"
-#include "Core/GameModules/World.hpp"
-#include "Core/GameModules/Entity.hpp"
-#include "Core/GameModules/Player/Player.hpp"
-#include "Core/GameModules/Items.hpp"
-#include "Core/GameModules/Recipes.hpp"
 
 #include "Core/Utils/Utils.hpp"
 #include "Core/Utils/FileLoader.hpp"

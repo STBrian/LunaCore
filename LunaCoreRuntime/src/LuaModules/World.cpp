@@ -1,4 +1,4 @@
-#include "Core/GameModules/World.hpp"
+#include "LuaModules.hpp"
 
 #include <CTRPluginFramework.hpp>
 
@@ -12,8 +12,7 @@
 
 namespace CTRPF = CTRPluginFramework;
 
-enum world_offsets : u32
-{
+enum world_offsets : u32 {
     cloudsHeight = 0x3C5398
 };
 

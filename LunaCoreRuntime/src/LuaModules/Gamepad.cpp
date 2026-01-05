@@ -1,4 +1,4 @@
-#include "Core/GameModules/Gamepad.hpp"
+#include "LuaModules.hpp"
 
 #include <3ds.h>
 #include <CTRPluginFramework.hpp>

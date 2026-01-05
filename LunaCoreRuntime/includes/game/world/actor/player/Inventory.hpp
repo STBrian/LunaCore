@@ -4,7 +4,7 @@
 
 #include "game/world/item/Item.hpp"
 
-namespace Game {
+namespace Minecraft {
     class Inventory {
         using Item = Game::Item;
         

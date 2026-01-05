@@ -13,11 +13,11 @@
 
 #include "Core/Debug.hpp"
 #include "Core/Utils/Utils.hpp"
-#include "Core/Modules.hpp"
 #include "Core/CrashHandler.hpp"
 #include "Core/Config.hpp"
 #include "Core/Event.hpp"
 
+#include "LuaModules.hpp"
 #include "CoreConstants.hpp"
 #include "CoreGlobals.hpp"
 

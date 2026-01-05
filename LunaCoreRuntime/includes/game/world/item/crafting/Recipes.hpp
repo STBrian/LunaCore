@@ -3,7 +3,7 @@
 #include "game/gstd/gstd_vector.hpp"
 #include "game/gstd/gstd_string.hpp"
 #include "game/world/item/Item.hpp"
-#include "game/world/item/Block.hpp"
+#include "game/world/level/block/Block.hpp"
 
 namespace Minecraft {
     using Item = Game::Item;
@@ -31,27 +31,36 @@ namespace Minecraft {
 
     // Item
     void definition(gstd::vector<InternalRecipeElementDefinition>& vec, char itemchr, Item* item) {
-        //InternalRecipeElementDefinition itemDef;
-        //itemDef.item = item;
-        //itemDef.id = itemchr;
-        //reinterpret_cast<void(*)(gstd::vector<InternalRecipeElementDefinition>&, InternalRecipeElementDefinition&)>(0x008ff20c)(vec, itemDef); // emplace_back
+        #if __STDC_HOSTED__
         vec.push_back((InternalRecipeElementDefinition){.item=item, .id=itemchr});
+        #else
+        InternalRecipeElementDefinition itemDef;
+        itemDef.item = item;
+        itemDef.id = itemchr;
+        reinterpret_cast<void(*)(gstd::vector<InternalRecipeElementDefinition>&, InternalRecipeElementDefinition&)>(0x008ff20c)(vec, itemDef); // emplace_back
+        #endif
     }
 
     // ItemInstance
     void definition(gstd::vector<InternalRecipeElementDefinition>& vec, char itemchr, ItemInstance* item) {
-        //InternalRecipeElementDefinition itemDef = {nullptr, nullptr, ItemInstance(item), itemchr};
-        //reinterpret_cast<void(*)(gstd::vector<InternalRecipeElementDefinition>&, InternalRecipeElementDefinition&)>(0x008ff20c)(vec, itemDef); // emplace_back
+        #if __STDC_HOSTED__
         vec.push_back((InternalRecipeElementDefinition){.ins=item, .id=itemchr});
+        #else
+        InternalRecipeElementDefinition itemDef = {nullptr, nullptr, ItemInstance(item), itemchr};
+        reinterpret_cast<void(*)(gstd::vector<InternalRecipeElementDefinition>&, InternalRecipeElementDefinition&)>(0x008ff20c)(vec, itemDef); // emplace_back
+        #endif
     }
 
     // Block
     void definition(gstd::vector<InternalRecipeElementDefinition>& vec, char blockchr, Block* block) {
-        //InternalRecipeElementDefinition blockDef;
-        //blockDef.block = block;
-        //blockDef.id = blockchr;
-        //reinterpret_cast<void(*)(gstd::vector<InternalRecipeElementDefinition>&, InternalRecipeElementDefinition&)>(0x008ff20c)(vec, blockDef); // emplace_back
+        #if __STDC_HOSTED__
         vec.push_back((InternalRecipeElementDefinition){.block=block, .id=blockchr});
+        #else
+        InternalRecipeElementDefinition blockDef;
+        blockDef.block = block;
+        blockDef.id = blockchr;
+        reinterpret_cast<void(*)(gstd::vector<InternalRecipeElementDefinition>&, InternalRecipeElementDefinition&)>(0x008ff20c)(vec, blockDef); // emplace_back
+        #endif       
     }
 
     // Item, Block

@@ -1,12 +1,11 @@
 #pragma once
 
-#ifndef NOSTDLIB_BUILD
+#if __STDC_HOSTED__
 #include <string>
 #endif
 
 #include "game/asserts.h"
 
-//#include "Minecraft/game_utils/game_functions.hpp"
 #include "game/gstd/gstd_string.hpp"
 #include "game/world/item/ItemInstance.hpp"
 
@@ -58,7 +57,7 @@ namespace Game {
 
         inline static void (*registerItems)() = reinterpret_cast<void(*)()>(0x00563db0);
 
-        #ifndef NOSTDLIB_BUILD
+        #if __STDC_HOSTED__
         /* Item.itemId = itemId + 0x100 */
         Item(const std::string& nameId, short itemId) {
             reinterpret_cast<void*(*)(Item*, const gstd::string&, short)>(0x005790a4)(this, nameId, itemId);

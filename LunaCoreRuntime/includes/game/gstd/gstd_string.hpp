@@ -3,7 +3,7 @@
 #include "game/gstdio.h"
 #include "game/types.h"
 
-#ifndef NOSTDLIB_BUILD
+#if __STDC_HOSTED__
 #include <string>
 #endif
 
@@ -18,12 +18,6 @@ namespace gstd { // to follow rairai's implementation
         string() {
             reinterpret_cast<char**(*)(char**, const char*)>(0x2ff220|1)(&data, "");
         }
-
-        #ifndef NOSTDLIB_BUILD
-        string(const std::string& str) {
-            reinterpret_cast<char**(*)(char**, const char*)>(0x2ff220|1)(&data, str.c_str());
-        }
-        #endif
 
         string(const char* str) {
             reinterpret_cast<char**(*)(char**, const char*)>(0x2ff220|1)(&data, str);
@@ -45,7 +39,20 @@ namespace gstd { // to follow rairai's implementation
             return data;
         }
 
-        #ifndef NOSTDLIB_BUILD
+        bool operator==(const char* rhs) {
+            return strncmp(data, rhs, length()) == 0 && rhs[length()] == '\0';
+        }
+
+        bool operator==(const string& rhs) const {
+            return length() == rhs.length() && memcmp(data, rhs.data, length()) == 0;
+        }
+
+        // If not in freestanding attempt to extend functionallity
+        #if __STDC_HOSTED__
+        string(const std::string& str) {
+            reinterpret_cast<char**(*)(char**, const char*)>(0x2ff220|1)(&data, str.c_str());
+        }
+
         std::string to_std() {
             return std::string(data, length());
         }
@@ -58,14 +65,6 @@ namespace gstd { // to follow rairai's implementation
             return length() == rhs.length() && memcmp(data, rhs.data(), length()) == 0;
         }
         #endif
-
-        bool operator==(const char* rhs) {
-            return strncmp(data, rhs, length()) == 0 && rhs[length()] == '\0';
-        }
-
-        bool operator==(const string& rhs) const {
-            return length() == rhs.length() && memcmp(data, rhs.data, length()) == 0;
-        }
     };
 
     inline gstd::string format(const char* fmt, ...) {

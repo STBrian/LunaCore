@@ -1,12 +1,11 @@
-#include "Core/GameModules/Player/Player.hpp"
+#include "LuaModules.hpp"
 
 #include <CTRPluginFramework.hpp>
 #include "string_hash.hpp"
 
-#include "Core/GameModules/Player/Camera.hpp"
-#include "Core/GameModules/Player/Inventory.hpp"
-
 #include "game/Minecraft.hpp"
+#include "game/memory.hpp"
+#include "game/world/actor/player/Player.hpp"
 
 #include "lua_utils.hpp"
 
@@ -203,7 +202,7 @@ static int l_LocalPlayer_index(lua_State *L)
     uint32_t key = hash(lua_tostring(L, 2));
     bool valid_key = true;
 
-    Core::Player* ply = Core::Player::getPlayerInstance();
+    Minecraft::Player* ply = Minecraft::Player::getPlayerInstance();
 
     switch (key) {
         case hash("OnGround"):

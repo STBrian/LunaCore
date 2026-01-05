@@ -5,8 +5,11 @@
 
 #pragma once
 
-#include <type_traits>
+#if __STDC_HOSTED__
 #include <vector>
+#endif
+
+#include <type_traits>
 #include "game/types.h"
 #include "game/gstdlib.h"
 
@@ -18,24 +21,7 @@ class GenericVector {
     void* field3 = nullptr;
 };
 
-/* 
-I'll leave this class for historical purposes but looks like std::vector works
-fine with the game using its allocator
-*/
-template <typename T>
-class gvector {
-    public:
-    GenericVector gvector;
-
-    // This includes a destructor
-    ~gvector() {
-        if constexpr (!std::is_trivially_destructible_v<T>) {
-            for (u32* current = (u32*)gvector.field1; current != (u32*)gvector.field2; current = (u32*)((u32)current + sizeof(T))) {
-                reinterpret_cast<T*>(current)->~T();
-            }
-        }
-    }
-};
+#if __STDC_HOSTED__
 
 template <typename T>
 class allocator {
@@ -57,4 +43,27 @@ class allocator {
 template <typename T>
 using vector = std::vector<T, gstd::allocator<T>>;
 
+#else
+
+/* 
+I'll leave this class for historical purposes but looks like std::vector works
+fine with the game using its allocator.
+Also fallback if using in freestanding
+*/
+template <typename T>
+class vector {
+    public:
+    GenericVector gvector;
+
+    // This includes a destructor
+    ~gvector() {
+        if constexpr (!std::is_trivially_destructible_v<T>) {
+            for (u32* current = (u32*)gvector.field1; current != (u32*)gvector.field2; current = (u32*)((u32)current + sizeof(T))) {
+                reinterpret_cast<T*>(current)->~T();
+            }
+        }
+    }
+};
+
+#endif
 }

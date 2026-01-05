@@ -17,7 +17,7 @@
 #include "CoreInit.hpp"
 
 #include "game/world/item/Item.hpp"
-#include "game/world/entity/Entity.hpp"
+#include "game/entity/Entity.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 

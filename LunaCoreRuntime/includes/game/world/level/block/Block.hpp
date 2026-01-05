@@ -9,5 +9,6 @@ namespace Minecraft {
         u8 blockId;
 
         inline static Block** mBlocks = reinterpret_cast<Block**>(0x00b10520);
+        inline static void** BlockModels = reinterpret_cast<void**>(0xac2ac4);
     };
 }

@@ -1,8 +1,8 @@
-#include "Core/GameModules/Entity.hpp"
+#include "LuaModules.hpp"
 
 #include "lua_object.hpp"
 
-#include "game/world/entity/Entity.hpp"
+#include "game/entity/Entity.hpp"
 
 using Entity = Game::Entity;
 

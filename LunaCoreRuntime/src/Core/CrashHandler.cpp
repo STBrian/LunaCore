@@ -11,11 +11,24 @@ namespace CTRPF = CTRPluginFramework;
 static void *reservedMemory = nullptr;
 
 extern "C" void PLGLDR__DisplayErrMessage(const char*, const char*, u32);
+extern "C" void __real_abort(void);
+
+static bool internalAbort = false;
+static void* internalAbortLr = nullptr;
+
+extern "C" void __wrap_abort() {
+    if (!reservedMemory)
+        __real_abort();
+    internalAbort = true;
+    internalAbortLr = __builtin_return_address(0);
+    *(u32*)nullptr = 0;
+    for (;;);
+}
 
 namespace Core {
-    bool CrashHandler::abort = false;
-    bool CrashHandler::coreAbort = false;
-    const char* CrashHandler::coreAbortMsg = nullptr;
+    static bool coreAbort = false;
+    static const char* coreAbortMsg = nullptr;
+
     CrashHandler::PluginState CrashHandler::plg_state = CrashHandler::PLUGIN_PATCHPROCESS;
     CrashHandler::CoreState CrashHandler::core_state = CrashHandler::CORE_INIT;
     CrashHandler::GameState CrashHandler::game_state = CrashHandler::GAME_LOADING;
@@ -28,13 +41,6 @@ namespace Core {
         coreAbort = true;
         coreAbortMsg = errMsg;
         Debug::ReportInternalError(errMsg, location);
-        *(u32*)nullptr = 0;
-        for (;;);
-    }
-
-    void CrashHandler::OnAbort() {
-        if (!coreAbort)
-            abort = true;
         *(u32*)nullptr = 0;
         for (;;);
     }
@@ -75,8 +81,8 @@ namespace Core {
                 lua_close(Lua_global);
             }
             
-            if (coreAbort || abort)
-                Core::Debug::LogInfof("[CRITICAL] LunaCore crashed due to an unhandled error");
+            if (coreAbort || internalAbort)
+                Core::Debug::LogInfof("[CRITICAL] LunaCore aborted due to an unhandled error");
             else
                 Core::Debug::LogInfof("[CRITICAL] Game crashed due to an unhandled error");
             
@@ -87,11 +93,11 @@ namespace Core {
             Core::Debug::LogRawf("\t\tGame state: %d\n", Core::CrashHandler::game_state);
             if (coreAbort) {
                 Core::Debug::LogRawf("\n\tException type: Core abort\n");
-                Core::Debug::LogRawf("\tError message:\n");
+                Core::Debug::LogRawf("\tAbort message:\n");
                 Core::Debug::LogRawf("\t\t%s\n", coreAbortMsg);
-            } else if (abort) {
+            } else if (internalAbort) {
                 Core::Debug::LogRawf("\n\tException type: Core abort\n");
-                Core::Debug::LogRawf("\tAn unhandled core abort ocurred\n");
+                Core::Debug::LogRawf("\tAn unhandled core abort ocurred at %08X\n", (u32)internalAbortLr);
             } else {
                 Core::Debug::LogRawf("\n\tException type: %X\n", excep->type);
                 Core::Debug::LogRawf("\tException at address: %08X\n", regs->pc);
@@ -137,10 +143,8 @@ namespace Core {
             CTRPF::Screen topScreen = CTRPF::OSD::GetTopScreen();
             topScreen.DrawRect(20, 20, 360, 200, CTRPF::Color::Black, true);
             const char *titleMsg = "Oops.. Game crashed!";
-            if (abort)
+            if (internalAbort || coreAbort)
                 titleMsg = "Oh no... Things got out of hand!";
-            else if (coreAbort)
-                titleMsg = "Core crashed!";
 
             if (possibleOOM)
                 titleMsg = "Game ran out of memory!";

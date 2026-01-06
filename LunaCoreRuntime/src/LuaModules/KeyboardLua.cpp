@@ -1,4 +1,4 @@
-#include "Core/Keyboard.hpp"
+#include "LuaModules.hpp"
 
 #include <CTRPluginFramework.hpp>
 
@@ -29,15 +29,13 @@ static int l_Keyboard_getString(lua_State *L) {
         keyboard.DisplayTopScreen = true;
     }
     std::string inputText;
-    if (keyboard.Open(inputText) == 0) {
-        Core::EventRestartClock();
-        timeoutAsyncClock.Restart();
+    int res = keyboard.Open(inputText);
+    Core::EventRestartClock();
+    Core::AsyncRestartClock();
+    if (res == 0)
         lua_pushstring(L, inputText.c_str());
-    } else {
-        Core::EventRestartClock();
-        timeoutAsyncClock.Restart();
+    else
         lua_pushnil(L);
-    }
     return 1;
 }
 
@@ -56,15 +54,13 @@ static int l_Keyboard_getNumber(lua_State *L) {
         keyboard.DisplayTopScreen = true;
     }
     float inputNumber;
-    if (keyboard.Open(inputNumber) == 0) {
-        Core::EventRestartClock();
-        timeoutAsyncClock.Restart();
+    int res = keyboard.Open(inputNumber);
+    Core::EventRestartClock();
+    Core::AsyncRestartClock();
+    if (res == 0)
         lua_pushnumber(L, inputNumber);
-    } else {
-        Core::EventRestartClock();
-        timeoutAsyncClock.Restart();
+    else
         lua_pushnil(L);
-    }
     return 1;
 }
 
@@ -83,15 +79,13 @@ static int l_Keyboard_getInteger(lua_State *L) {
         keyboard.DisplayTopScreen = true;
     }
     u32 inputNumber;
-    if (keyboard.Open(inputNumber) == 0) {
-        Core::EventRestartClock();
-        timeoutAsyncClock.Restart();
+    int res = keyboard.Open(inputNumber);
+    Core::EventRestartClock();
+    Core::AsyncRestartClock();
+    if (res == 0)
         lua_pushnumber(L, inputNumber);
-    } else {
-        Core::EventRestartClock();
-        timeoutAsyncClock.Restart();
+    else
         lua_pushnil(L);
-    }
     return 1;
 }
 
@@ -111,15 +105,13 @@ static int l_Keyboard_getHex(lua_State *L) {
     }
     u32 inputNumber;
     keyboard.IsHexadecimal(true);
-    if (keyboard.Open(inputNumber) == 0) {
-        Core::EventRestartClock();
-        timeoutAsyncClock.Restart();
+    int res = keyboard.Open(inputNumber);
+    Core::EventRestartClock();
+    Core::AsyncRestartClock();
+    if (res == 0)
         lua_pushnumber(L, inputNumber);
-    } else {
-        Core::EventRestartClock();
-        timeoutAsyncClock.Restart();
+    else
         lua_pushnil(L);
-    }
     return 1;
 }
 

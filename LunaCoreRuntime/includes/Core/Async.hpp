@@ -6,6 +6,8 @@
 #include "Core/Scheduler.hpp"
 
 namespace Core {
+    void AsyncRestartClock();
+
     bool RegisterAsyncModule(lua_State *L);
 
     class AsyncWaitHandler : public SchedulerWaitHandler {

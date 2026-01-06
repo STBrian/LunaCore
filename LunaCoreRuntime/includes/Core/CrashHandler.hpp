@@ -6,10 +6,6 @@
 namespace Core {
     class CrashHandler {
         public:
-            static bool abort;
-            static bool coreAbort;
-            static const char* coreAbortMsg;
-
             enum PluginState {
                 PLUGIN_PATCHPROCESS = 0,
                 PLUGIN_MAIN,
@@ -37,9 +33,7 @@ namespace Core {
 
             static void ReserveMemory();
 
-            static void Abort(const char* errMsg, const std::source_location& location = std::source_location::current());
-
-            __attribute__((noreturn)) static void OnAbort();
+            NORETURN static void Abort(const char* errMsg, const std::source_location& location = std::source_location::current());
 
             static CTRPluginFramework::Process::ExceptionCallbackState ExceptionCallback(ERRF_ExceptionInfo *excep, CpuRegisters *regs);
     };

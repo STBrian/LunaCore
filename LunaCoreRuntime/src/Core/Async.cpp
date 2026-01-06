@@ -7,11 +7,18 @@
 #include "Core/Utils/Utils.hpp"
 #include "CoreGlobals.hpp"
 
+#include "Helpers/Timer.hpp"
+
 namespace CTRPF = CTRPluginFramework;
 
-static void TimeoutAsyncHook(lua_State *L, lua_Debug *ar)
-{
-    if (timeoutAsyncClock.HasTimePassed(CTRPluginFramework::Milliseconds(5000)))
+static Core::Timer timeoutAsyncTimer(CTRPF::Milliseconds(5000));
+
+void Core::AsyncRestartClock() {
+    timeoutAsyncTimer.Restart();
+}
+
+static void TimeoutAsyncHook(lua_State *L, lua_Debug *ar) {
+    if (timeoutAsyncTimer.Expired())
         luaL_error(L, "Async coroutine exceeded execution time (5000 ms)");
 }
 

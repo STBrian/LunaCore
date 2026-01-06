@@ -57,8 +57,4 @@ namespace Core {
         void Message(const std::string& msg);
         #endif
     }
-
-    namespace Module {
-        bool RegisterDebugModule(lua_State *L);
-    }
 }

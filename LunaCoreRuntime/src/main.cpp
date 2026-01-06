@@ -93,7 +93,6 @@ namespace CTRPluginFramework
             return;
         settings.UseGameHidMemory = true;
         ToggleTouchscreenForceOn();
-        System::OnAbort = CrashHandler::OnAbort;
         Process::exceptionCallback = CrashHandler::ExceptionCallback;
         Process::ThrowOldExceptionOnCallbackException = true;
         CrashHandler::ReserveMemory();
@@ -101,9 +100,11 @@ namespace CTRPluginFramework
         if (!fslib::initialize()) Core::Abort("Failed to initialize fs");
 
         if (!fslib::directory_exists(path_from_string(PLUGIN_FOLDER)))
-            fslib::create_directory(path_from_string(PLUGIN_FOLDER));
+            !fslib::create_directory(path_from_string(PLUGIN_FOLDER));
+
         if (!Debug::OpenLogFile(LOG_FILE))
             OSD::Notify(Utils::Format("Failed to open log file '%s'", LOG_FILE));
+
         Debug::LogInfof("LunaCore version: %d.%d.%d", PLG_VER_MAJ, PLG_VER_MIN, PLG_VER_PAT);
         Debug::LogInfof("Loading config file '%s'", CONFIG_FILE);
         G_config = Config::LoadConfig(CONFIG_FILE);
@@ -195,6 +196,7 @@ namespace CTRPluginFramework
         delete gmenu;
 
         // Exit plugin
+        Process::ReturnToHomeMenu();
         return 0;
     }
 }

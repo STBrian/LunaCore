@@ -7,6 +7,16 @@ namespace Core {
 }
 
 namespace Core::Module {
+    bool RegisterDebugModule(lua_State *L);
+
+    bool RegisterSystemModule(lua_State *L);
+
+    bool RegisterFilesystemModule(lua_State *L);
+
+    bool RegisterMemoryModule(lua_State *L);
+
+    bool RegisterKeyboardModule(lua_State *L);
+
     bool RegisterLocalPlayerModule(lua_State *L);
 
     namespace LocalPlayer {

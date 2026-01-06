@@ -13,7 +13,7 @@
 
 namespace CTRPF = CTRPluginFramework;
 
-CTRPF::Clock timeoutEventClock;
+static CTRPF::Clock timeoutEventClock;
 extern std::atomic<bool> graphicsIsTop;
 
 void Core::EventRestartClock() {

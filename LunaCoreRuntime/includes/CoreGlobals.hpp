@@ -33,6 +33,4 @@ typedef struct {
 } GameState_s;
 
 extern GameState_s GameState;
-
-extern CTRPluginFramework::Clock timeoutAsyncClock;
 #endif

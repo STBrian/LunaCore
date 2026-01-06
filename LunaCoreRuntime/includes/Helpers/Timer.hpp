@@ -3,6 +3,8 @@
 #include <CTRPluginFramework.hpp>
 
 namespace Core {
+
+/* Class wrapper for CTRPluginFramework::Clock */
 class Timer {
     public:
     Timer(const CTRPluginFramework::Time& time) {

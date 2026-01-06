@@ -1,8 +1,6 @@
-#include "Core/System.hpp"
+#include "LuaModules.hpp"
 
-time_t Core::System::getTime() {
-    return time(NULL);
-}
+#include <time.h>
 
 // ----------------------------------------------------------------------------
 
@@ -17,7 +15,7 @@ time_t Core::System::getTime() {
 */
 static int l_System_getTime(lua_State *L)
 {
-    lua_pushnumber(L, Core::System::getTime());
+    lua_pushnumber(L, time(NULL));
     return 1;
 }
 

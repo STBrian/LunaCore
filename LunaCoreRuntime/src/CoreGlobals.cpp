@@ -11,5 +11,3 @@ std::unordered_map<std::string, std::string> G_config;
 std::unordered_map<std::string, std::string> modPaths;
 
 GameState_s GameState;
-
-CTRPluginFramework::Clock timeoutAsyncClock;

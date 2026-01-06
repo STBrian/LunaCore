@@ -4,6 +4,8 @@
 #include <mutex>
 
 #include "Core/Debug.hpp"
+#include "Core/Async.hpp"
+
 #include "CoreGlobals.hpp"
 #include "Helpers/Timer.hpp"
 #include "Helpers/Mutex.hpp"
@@ -52,13 +54,13 @@ void Scheduler::Update() {
             lua_State* T = task.thread;
             int nresults = task.handler->PushValues(T);
             delete task.handler;
-            timeoutAsyncClock.Restart();
+            Core::AsyncRestartClock();
             int call_result = lua_resume(T, nresults);
             checkThreadStatus(ins, ins.tasks, Lua_global, call_result, T);
             ins.pending.erase(ins.pending.begin() + i);
         } else if (!task.handler) {
             lua_State* T = task.thread;
-            timeoutAsyncClock.Restart();
+            Core::AsyncRestartClock();
             int call_result = lua_resume(T, 0);
             checkThreadStatus(ins, ins.tasks, Lua_global, call_result, T);
             ins.pending.erase(ins.pending.begin() + i);

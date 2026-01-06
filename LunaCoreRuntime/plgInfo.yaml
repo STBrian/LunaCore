@@ -1,0 +1,31 @@
+Author: STBUniverse
+
+Version: # Plugin version
+    Major: 0
+    Minor: 14
+    Revision: 0
+
+Targets: # Low TitleId of games which are compatibles with this plugin (0 for all)
+    - 0x001B8700
+    - 0x0017CA00
+    - 0x0017FD00
+
+Title: LunaCore
+
+Summary: A plugin to execute scripts to modify in-game mechanics
+
+Description: |
+  LunaCore is a tool that allows to execute 
+  scripts to modify in-game mechanics in runtime
+  and add custom content to the game
+
+  Features:
+    - Execute Lua scripts
+    - Load mods for custom content
+    - Load custom game layouts
+
+Compatibility: Any
+
+MemorySize: 5MiB
+
+UsePrivateMemory: true

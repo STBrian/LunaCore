@@ -11,6 +11,14 @@
 #include "lua_common.h"
 #include "Helpers/Mutex.hpp"
 
+namespace Core {
+struct __core_ver {
+    u8 major, minor, patch;
+};
+
+extern struct __core_ver Version;
+}
+
 extern lua_State *Lua_global;
 extern Core::Mutex Lua_Global_Mut;
 

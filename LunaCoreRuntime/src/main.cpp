@@ -33,8 +33,21 @@ namespace CTRPF = CTRPluginFramework;
 using namespace Core;
 
 CTRPF::PluginMenu *gmenu;
+std::string plgAuthor, plgSummary, plgDescription, plgTitle;
 
 // Note Linux: using commit 14f1aff3
+
+extern "C" Result  PLGLDR__GetPluginPath(char *path);
+
+static void readString(fslib::File& file, std::string& line) {
+    s8 chr;
+    while ((chr = file.get_byte()) != '\0' && chr != -1) {
+        line += chr;
+        file.seek(1, fslib::File::CURRENT);
+    }
+    file.seek(1, fslib::File::CURRENT);
+    return;
+}
 
 namespace CTRPluginFramework
 {
@@ -105,7 +118,27 @@ namespace CTRPluginFramework
         if (!Debug::OpenLogFile(LOG_FILE))
             OSD::Notify(Utils::Format("Failed to open log file '%s'", LOG_FILE));
 
-        Debug::LogInfof("LunaCore version: %d.%d.%d", PLG_VER_MAJ, PLG_VER_MIN, PLG_VER_PAT);
+        /* I was looking into how to get plugin info from plugin loader or framework
+         but apparently the loader just ignore them, so... manual work */
+        char path[255] = {0};
+        PLGLDR__GetPluginPath(path);
+        std::string fullPath = "sdmc:" + std::string(path);
+        fslib::File pluginFile(path_from_string(fullPath), FS_OPEN_READ);
+        if (!pluginFile.is_open()) Core::Abort(("Failed to open: " + fullPath).c_str());
+
+        pluginFile.seek(0x94, fslib::File::BEGINNING);
+        readString(pluginFile, plgTitle);
+        readString(pluginFile, plgAuthor);
+        readString(pluginFile, plgSummary);
+        readString(pluginFile, plgDescription);
+        pluginFile.close();
+
+        u32 ver = settings.Header->version;
+        
+        Core::Version.major = (ver >> 24);
+        Core::Version.minor = (ver >> 16) & 0xFF;
+        Core::Version.patch = (ver >> 8) & 0xFF;
+        Debug::LogInfof("LunaCore version: %d.%d.%d", Core::Version.major, Core::Version.minor, Core::Version.patch);
         Debug::LogInfof("Loading config file '%s'", CONFIG_FILE);
         G_config = Config::LoadConfig(CONFIG_FILE);
 
@@ -171,11 +204,8 @@ namespace CTRPluginFramework
         if (!Config::SaveConfig(CONFIG_FILE, G_config))
             Debug::LogInfo("Failed to save configs");
 
-        gmenu = new PluginMenu("LunaCore", PLG_VER_MAJ, PLG_VER_MIN, PLG_VER_PAT,
-            "Allows to execute Lua scripts and other features.\n" 
-            "Build " __TIMESTAMP__ " (CST)", 2);
-        std::string& title = gmenu->Title();
-        title.assign("LunaCore Plugin Menu");
+        gmenu = new PluginMenu("LunaCore Plugin Menu", Core::Version.major, Core::Version.minor, Core::Version.patch,
+            plgSummary + "\n\n" + plgDescription + "\nCompiled: " __TIMESTAMP__ " (CST)", 2);
 
         // Synnchronize the menu with frame event
         gmenu->SynchronizeWithFrame(true);

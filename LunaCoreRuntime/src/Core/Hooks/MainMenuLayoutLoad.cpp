@@ -188,7 +188,7 @@ static void LoadButtonData(json &j, MenuBtnData &btnData) {
             btnData.iconH = icon[3];
     }
     if (btnData.text.find("%d.%d.%d") != std::string::npos) 
-        btnData.text = CTRPF::Utils::Format(btnData.text.c_str(), PLG_VER_MAJ, PLG_VER_MIN, PLG_VER_PAT);
+        btnData.text = CTRPF::Utils::Format(btnData.text.c_str(), Core::Version.major, Core::Version.minor, Core::Version.patch);
 }
 
 bool LoadGameMenuLayout(const std::string& filepath) {

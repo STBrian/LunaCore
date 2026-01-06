@@ -10,10 +10,7 @@ include $(DEVKITARM)/3ds_rules
 CTRPFLIB	?=	$(DEVKITPRO)/libctrpf
 
 TARGET		:= 	LunaCore
-PLGINFO 	:= 	CTRPluginFramework.plgInfo
-PLGVERMAJ	:=	0
-PLGVERMIN	:=	14
-PLGVERPAT	:=	0
+PLGINFO 	:= 	plgInfo.yaml
 
 BUILD		:= 	Build
 INCLUDES	:= 	includes
@@ -26,11 +23,8 @@ SOURCES 	:= 	src src/Helpers src/Core src/game \
 #---------------------------------------------------------------------------------
 ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -marm
 
-CFLAGS		:=	$(ARCH) -Os -s -mword-relocations \
+CFLAGS		:=	$(ARCH) $(INCLUDE) -D__3DS__ -Os -s -mword-relocations \
 				-fdata-sections -fomit-frame-pointer -ffunction-sections -fno-strict-aliasing -fvisibility=hidden
-
-CFLAGS		+=	$(INCLUDE) -D__3DS__ \
-				-DPLG_VER_MAJ=$(PLGVERMAJ) -DPLG_VER_MIN=$(PLGVERMIN) -DPLG_VER_PAT=$(PLGVERPAT)
 
 ifeq ($(EXPERIMENTAL), 1)
 	CFLAGS		+=	-DEXPERIMENTAL
@@ -116,7 +110,7 @@ $(OUTPUT).elf : $(OFILES)
 #---------------------------------------------------------------------------------
 	@echo creating $(notdir $@)
 	@3gxtool -s $(word 1, $^) $(TOPDIR)/$(PLGINFO) $@
-	@rm main.d main.o
+	@rm main.d main.o 
 
 -include $(DEPENDS)
 

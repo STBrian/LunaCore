@@ -3,9 +3,9 @@
 #if __STDC_HOSTED__
 #include <string>
 #include <source_location>
-#endif
 
 #include "Core/CrashHandler.hpp"
+#endif
 
 #include "CoreGlobals.hpp"
 #include "lua_common.h"
@@ -22,9 +22,11 @@
 #endif
 
 namespace Core {
+    #if __STDC_HOSTED__
     inline void Abort(const char* errMsg, const std::source_location& location = std::source_location::current()) {
         CrashHandler::Abort(errMsg, location);
     }
+    #endif
 
     namespace Debug {
         #if __STDC_HOSTED__

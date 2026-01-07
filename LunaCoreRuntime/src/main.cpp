@@ -51,6 +51,8 @@ static void readString(fslib::File& file, std::string& line) {
 
 namespace CTRPluginFramework
 {
+    extern FS_Archive  _sdmcArchive;
+
     // This patch the NFC disabling the touchscreen when scanning an amiibo, which prevents ctrpf to be used
     static void    ToggleTouchscreenForceOn(void)
     {
@@ -110,7 +112,9 @@ namespace CTRPluginFramework
         Process::ThrowOldExceptionOnCallbackException = true;
         CrashHandler::ReserveMemory();
 
-        if (!fslib::initialize()) Core::Abort("Failed to initialize fs");
+        // Not needed as CTRPluginFrameworks does this first
+        // if (!fslib::initialize()) Core::Abort("Failed to initialize fs");
+        fslib::map_archive(u"sdmc", _sdmcArchive); // Map from framework archive
 
         if (!fslib::directory_exists(path_from_string(PLUGIN_FOLDER)))
             !fslib::create_directory(path_from_string(PLUGIN_FOLDER));
@@ -175,7 +179,6 @@ namespace CTRPluginFramework
         Core::Debug::LogInfo("Exiting LunaCore");
         Core::Debug::CloseLogFile();
         fslib::close_device(u"extdata");
-        fslib::exit();
     }
 
     int main()

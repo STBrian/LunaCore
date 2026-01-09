@@ -3,6 +3,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include "types.h"
 
 #include <lua5.1/lua.h>
 #include <lua5.1/lauxlib.h>

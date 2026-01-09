@@ -37,7 +37,7 @@ CXXFLAGS	:= $(CFLAGS) -g -fno-rtti -fno-exceptions -std=gnu++20
 
 ASFLAGS		:=	$(ARCH)
 LDFLAGS		:= -T $(TOPDIR)/3gx.ld $(ARCH) -L $(PORTLIBS)/lib -Os -Wl,--gc-sections,--strip-discarded,--strip-debug,-Map=lunacore.map \
-				-T $(TOPDIR)/wrappers.ld -Wl,--wrap=abort
+				-T $(TOPDIR)/linker_symbols.ld -Wl,--wrap=abort
 
 LIBS		:=  -llua5.1 -lfslib -lctrpf -lctru -lffi
 LIBDIRS		:= 	$(CTRPFLIB) $(CTRULIB) $(PORTLIBS)

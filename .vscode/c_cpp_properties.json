@@ -20,6 +20,27 @@
             ],
             "cStandard": "c11",
             "cppStandard": "gnu++20"
+        },
+        {
+            "name": "3ds-linux",
+            "compilerPath": "/opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc",
+            "compilerArgs": [
+                "-std=gnu++20"
+            ],
+            "includePath": [
+                "/opt/devkitpro/libctru/include/",
+                "/opt/devkitpro/portlibs/3ds/include/",
+                "/opt/devkitpro/devkitARM/arm-none-eabi/include/",
+                "${workspaceFolder}/LunaCoreRuntime/includes/",
+                "/opt/devkitpro/libctrpf/include/"
+            ],
+            "defines": [
+                "DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "cStandard": "c11",
+            "cppStandard": "gnu++20"
         }
     ],
     "version": 4

@@ -15,12 +15,13 @@ extern "C" void __real_abort(void);
 
 static bool internalAbort = false;
 static void* internalAbortLr = nullptr;
+static void* coreAbortLr = nullptr;
 
 extern "C" void __wrap_abort() {
+    internalAbortLr = __builtin_return_address(0);
     if (!reservedMemory)
         __real_abort();
     internalAbort = true;
-    internalAbortLr = __builtin_return_address(0);
     *(u32*)nullptr = 0;
     for (;;);
 }
@@ -38,10 +39,11 @@ namespace Core {
     }
 
     void CrashHandler::Abort(const char* errMsg, const std::source_location& location) {
+        coreAbortLr = __builtin_return_address(0);
         coreAbort = true;
         coreAbortMsg = errMsg;
         Debug::ReportInternalError(errMsg, location);
-        *(u32*)nullptr = 0;
+        CrashHandler::ExceptionCallback(nullptr, nullptr);
         for (;;);
     }
 
@@ -118,15 +120,25 @@ namespace Core {
             else if (luaEnvBusy) possibleError = 2;
             else if (possibleOOM) possibleError = 3;
             u32 pc = 0;
+            u32 pcOriginal = 0;
+            ERRF_ExceptionType errtype = ERRF_EXCEPTION_PREFETCH_ABORT;
             bool pluginFault = false;
-            if (regs->pc - 0x00100000 < 0x919000) {
-                pc = regs->pc - 0x00100000;
-            } else if (regs->pc < 0x30000000) {
-                pc = regs->pc - 0x07000100;
+            if (regs == nullptr || excep == nullptr) {
                 pluginFault = true;
+                pcOriginal = (u32)(coreAbortLr ? coreAbortLr : internalAbortLr);
+                pc = pcOriginal - 0x07000100;
+            } else {
+                if (regs->pc - 0x00100000 < 0x919000) {
+                    pc = regs->pc - 0x00100000;
+                } else if (regs->pc < 0x30000000) {
+                    pc = regs->pc - 0x07000100;
+                    pluginFault = true;
+                }
+                pcOriginal = regs->pc;
+                errtype = excep->type;
             }
             pc = (pc >> 2) & 0b1111111111111111111111;
-            u32 errorCode = (excep->type << 30 | core_state << 27 | game_state << 25 | possibleError << 23 | pluginFault << 22 | pc);
+            u32 errorCode = (errtype << 30 | core_state << 27 | game_state << 25 | possibleError << 23 | pluginFault << 22 | pc);
             Core::Debug::LogRawf("\tError code: %08X\n", errorCode);
             Core::Debug::CloseLogFile();
             if (plg_state != PluginState::PLUGIN_MAINLOOP) {
@@ -134,31 +146,30 @@ namespace Core {
                     PLGLDR__DisplayErrMessage("Fatal core exception", (std::string(coreAbortMsg) + "\nThe console will reboot now").c_str(), errorCode);
                 else 
                     PLGLDR__DisplayErrMessage("Fatal core exception", "An unhandled exception ocurred.\nThe console will reboot now", errorCode);
-                return CTRPF::Process::EXCB_REBOOT;
+                CTRPF::System::Reboot();
+            } 
+            fslib::close_device(u"extdata");
+            fslib::exit();
+
+            if (regs == nullptr || excep == nullptr) {
+                if (coreAbortMsg != nullptr)
+                    PLGLDR__DisplayErrMessage("Fatal core exception", (std::string(coreAbortMsg) + "\nThe game will exit now").c_str(), errorCode);
+                else 
+                    PLGLDR__DisplayErrMessage("Fatal core exception", "An unhandled exception ocurred.\nThe game will exit now", errorCode);
+                CTRPF::Process::ReturnToHomeMenu();
             } else {
-                fslib::close_device(u"extdata");
-                fslib::exit();
+                const char *titleMsg = "Oops.. Game crashed!";
+                if (internalAbort || coreAbort)
+                    titleMsg = "Oh no... Things got out of hand!";
+
+                if (possibleOOM)
+                    titleMsg = "Core ran out of memory!";
+                if (pcOriginal == 0x00114A98)
+                    titleMsg = "Game crashed! A game assert exception occurred";
+                PLGLDR__DisplayErrMessage(titleMsg, "An unhandled exception ocurred.\nThe game will exit now", errorCode);
+                CTRPF::Process::ReturnToHomeMenu();
             }
-
-            CTRPF::Screen topScreen = CTRPF::OSD::GetTopScreen();
-            topScreen.DrawRect(20, 20, 360, 200, CTRPF::Color::Black, true);
-            const char *titleMsg = "Oops.. Game crashed!";
-            if (internalAbort || coreAbort)
-                titleMsg = "Oh no... Things got out of hand!";
-
-            if (possibleOOM)
-                titleMsg = "Game ran out of memory!";
-            if (regs->pc == 0x00114A98)
-                titleMsg = "Game crashed! An unhandled game assert exception occurred";
-            topScreen.DrawSysfont(titleMsg, 25, 25, CTRPF::Color::Red);
-            topScreen.DrawSysfont("See the log file for more details about the crash", 25, 40, CTRPF::Color::White);
-            topScreen.DrawSysfont("Press A to exit or B to reboot", 25, 55, CTRPF::Color::White);
-            topScreen.DrawSysfont(CTRPF::Utils::Format("Error code: %08X", errorCode), 25, 70, CTRPF::Color::White);
-            CTRPF::OSD::SwapBuffers();
         }
-        CTRPF::Controller::Update();
-        if (CTRPF::Controller::IsKeyDown(CTRPF::Key::A)) return CTRPF::Process::EXCB_RETURN_HOME;
-        if (CTRPF::Controller::IsKeyDown(CTRPF::Key::B)) return CTRPF::Process::EXCB_REBOOT;
-        else return CTRPF::Process::EXCB_LOOP;
+        return CTRPF::Process::EXCB_LOOP;
     }
 }

@@ -109,12 +109,12 @@ namespace CTRPluginFramework
         settings.UseGameHidMemory = true;
         ToggleTouchscreenForceOn();
         Process::exceptionCallback = CrashHandler::ExceptionCallback;
-        Process::ThrowOldExceptionOnCallbackException = true;
+        Process::ThrowOldExceptionOnCallbackException = false;
         CrashHandler::ReserveMemory();
 
         // Not needed as CTRPluginFrameworks does this first
-        // if (!fslib::initialize()) Core::Abort("Failed to initialize fs");
-        fslib::map_archive(u"sdmc", _sdmcArchive); // Map from framework archive
+        if (!fslib::initialize()) Core::Abort("Failed to initialize fs");
+        //fslib::map_archive(u"sdmc", _sdmcArchive); // Map from framework archive
 
         if (!fslib::directory_exists(path_from_string(PLUGIN_FOLDER)))
             !fslib::create_directory(path_from_string(PLUGIN_FOLDER));

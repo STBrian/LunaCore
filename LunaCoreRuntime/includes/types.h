@@ -39,6 +39,11 @@ typedef volatile s16 vs16; ///< 16-bit volatile signed integer.
 typedef volatile s32 vs32; ///< 32-bit volatile signed integer.
 typedef volatile s64 vs64; ///< 64-bit volatile signed integer.
 
+typedef u8 undefined1;
+typedef u16 undefined2;
+typedef u32 undefined4;
+typedef u64 undefined8;
+
 typedef u32 Handle;                 ///< Resource handle.
 typedef s32 Result;                 ///< Function result.
 typedef void (*ThreadFunc)(void *); ///< Thread entrypoint function.

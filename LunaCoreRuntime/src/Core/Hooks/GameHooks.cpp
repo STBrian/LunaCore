@@ -18,6 +18,7 @@
 
 #include "game/world/item/Item.hpp"
 #include "game/entity/Entity.hpp"
+#include "game/gstd/gstd_string.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 
@@ -37,7 +38,7 @@ static __attribute__((naked)) void hookBody() {
         "str r2, [r4, #0x14]\n"
         "str r3, [r4, #0x18]\n"
         "str lr, [r4, #0x1c]\n"
-        "str r5, [r4, #0x20]\n" // Store current sp
+        "str sp, [r4, #0x20]\n"
         "ldr r6, [r4, #0x4]\n" // Load callback function address
         "bl lc_setCoreHookState\n"
         "mov r0, r4\n" // Copy hookCtxPtr to r0 (arg 1)
@@ -46,6 +47,10 @@ static __attribute__((naked)) void hookBody() {
         "add r6, r4, #0x24\n"
         "bx r6" // Jump to restoreIns and return normal flow
     );
+}
+
+u32 getStackPointerFromCtx(CoreHookContext *ctx) {
+    return ctx->sp + 4 * 14;
 }
 
 __attribute__((naked)) void hookReturnOverwrite(CoreHookContext *ctx, u32 returnCallback) {
@@ -234,12 +239,65 @@ static void RegisterRecipes(CoreHookContext* ctx) {
     hookReturnOverwrite(ctx, (u32)RegisterRecipesOverwriteReturn);
 }
 
+#define MAX_CALLS 10
+#define WINDOW_MS 1000
+#define BAN_MS 10000
+
+static u64 window_start = 0;
+static u64 ban_until = 0;
+static int call_count = 0;
+static bool allow_call(void) {
+    u64 now = osGetTime();
+    if (now < ban_until)
+        return false;
+    if (now - window_start > WINDOW_MS) {
+        window_start = now;
+        call_count = 0;
+    }
+    call_count++;
+    if (call_count >= MAX_CALLS) {
+        ban_until = now + BAN_MS;
+        return false;
+    }
+    return true;
+}
+
+extern "C" void GameDebugLogfHandler(u32 ukn1, u32 ukn2, const char* author, u32 ukn3, const char* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+
+    if (allow_call() && strcmp(author, "BuildGeometry") != 0 && strcmp(author, "loadChunk") != 0) {
+        char buffer[0x200] = {0};
+        int res = vsnprintf(buffer, sizeof(buffer), fmt, ap);
+        if (buffer[res-1] == '\n') // Remove the new line cause Log already adds it
+            buffer[res-1] = '\0';
+        //Core::Debug::Message(CTRPF::Utils::Format("%X, %X, %X", ukn1, ukn2, ukn3));
+        if (ukn2 == 2)
+            Core::Debug::LogInfo("[Game.Info] " + std::string(author) + ": " + buffer);
+        else if (ukn2 == 8)
+            Core::Debug::LogInfo("[Game.Warn] " + std::string(author) + ": " + buffer);
+        else
+            Core::Debug::LogInfo(' ' + std::string(author) + ": " + buffer);
+    }
+
+    va_end(ap);
+    return;
+}
+
+static __attribute__((naked)) void GameDebugLogfHook(CoreHookContext* ctx) {
+    asm volatile (
+        "ldmia sp!, {r0-r12, lr}\n" // We will just overwrite the whole function
+        "b GameDebugLogfHandler\n"
+    );
+}
+
 void hookSomeFunctions() {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOKING;
     hookFunction(0x0056c2a0, (u32)RegisterItemsHook);
     hookFunction(0x0056de70, (u32)RegisterItemsTexturesHook);
     hookFunction(0x00578358, (u32)RegisterCreativeItemsHook);
     hookFunction(0x001b4898, (u32)RegisterRecipes);
+    hookFunction(0x00114f50, (u32)GameDebugLogfHook);
     //hookFunction(0x004df688, (u32)EntitySpawnStartHook); disabled as there is a weird memory leak ? idk why
     //hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
 }

@@ -39,23 +39,27 @@ namespace Core {
 
         void LogRawf(const char* fmt, ...);
 
+        /* Logs to file */
         void LogInfof(const char* fmt, ...);
 
         void LogErrorf(const char* fmt, ...);
 
         void LogWarnf(const char* fmt, ...);
 
+        /* Prints the message on screen and writes to log file */
         void Message(const char* msg);
 
         #if __STDC_HOSTED__
         void LogRaw(const std::string& msg);
 
+        /* Logs to file */
         void LogInfo(const std::string& msg);
 
         void LogError(const std::string& msg);
 
         void LogWarn(const std::string& msg);
 
+        /* Prints the message on screen and writes to log file */
         void Message(const std::string& msg);
         #endif
     }

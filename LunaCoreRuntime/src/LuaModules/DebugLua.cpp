@@ -18,7 +18,7 @@ static int l_Debug_message(lua_State *L)
 {
     const char *msg = lua_tostring(L, 1);
 
-    Core::Debug::Message(msg);
+    CTRPluginFramework::OSD::Notify(msg);
     return 0;
 }
 
@@ -35,6 +35,8 @@ static int l_Debug_log(lua_State *L)
     if (lua_type(L, 2) == LUA_TBOOLEAN)
         showOnScreen = lua_toboolean(L, 2);
     Core::Debug::LogInfo(msg);
+    if (showOnScreen)
+        CTRPluginFramework::OSD::Notify(msg);
     return 0;
 }
 

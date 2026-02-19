@@ -224,10 +224,10 @@ static int l_Graphics_Drawable_setColor(lua_State* L) {
 
 /*
 - Destroys the reference. Do NOT use the object after calling this
-### GRect:destroy
+### Drawable:destroy
 */
-static int l_Graphics_GRect_gc(lua_State* L) {
-    Core::Rect** obj = (Core::Rect**)LuaObject::CheckObject(L, 1, "GRect");
+static int l_Graphics_Drawable_gc(lua_State* L) {
+    Core::Drawable** obj = (Core::Drawable**)LuaObject::CheckObject(L, 1, "Drawable");
     if (*obj != nullptr) {
         Core::GraphicsManager& ins = Core::GraphicsManager::getInstance();
         ins.removeObject(*obj);
@@ -267,21 +267,6 @@ static int l_Graphics_GRect_setSize(lua_State* L) {
 
     obj->width = width;
     obj->height = height;
-    return 0;
-}
-
-/*
-- Destroys the reference. Do NOT use the object after calling this
-### GLabel:destroy
-*/
-static int l_Graphics_GLabel_gc(lua_State* L) {
-    Core::Label** obj = (Core::Label**)LuaObject::CheckObject(L, 1, "GLabel");
-    if (*obj != nullptr) {
-        Core::GraphicsManager& ins = Core::GraphicsManager::getInstance();
-        ins.removeObject(*obj);
-        delete *obj;
-        *obj = nullptr;
-    }
     return 0;
 }
 
@@ -339,14 +324,14 @@ static const LuaObjectField DrawableFields[] = {
 };
 
 static const LuaObjectField GRectFields[] = {
-    {"destroy", OBJF_TYPE_METHOD, (u32)l_Graphics_GRect_gc},
+    {"destroy", OBJF_TYPE_METHOD, (u32)l_Graphics_Drawable_gc},
     {"setFilled", OBJF_TYPE_METHOD, (u32)l_Graphics_GRect_setFilled},
     {"setSize", OBJF_TYPE_METHOD, (u32)l_Graphics_GRect_setSize},
     {NULL, OBJF_TYPE_NIL, 0}
 };
 
 static const LuaObjectField GLabelFields[] = {
-    {"destroy", OBJF_TYPE_METHOD, (u32)l_Graphics_GLabel_gc},
+    {"destroy", OBJF_TYPE_METHOD, (u32)l_Graphics_Drawable_gc},
     {"setSystemFont", OBJF_TYPE_METHOD, (u32)l_Graphics_GLabel_setSystemFont},
     {"setBgColor", OBJF_TYPE_METHOD, (u32)l_Graphics_GLabel_setBgColor},
     {"setText", OBJF_TYPE_METHOD, (u32)l_Graphics_GLabel_setText},
@@ -361,11 +346,11 @@ bool Core::Module::RegisterGraphicsModule(lua_State *L)
 
     LuaObject::RegisterNewObject(L, "GRect", GRectFields);
     LuaObject::SetParent("GRect", "Drawable");
-    LuaObject::SetGCObjectField(L, "GRect", l_Graphics_GRect_gc);
+    LuaObject::SetGCObjectField(L, "GRect", l_Graphics_Drawable_gc);
 
     LuaObject::RegisterNewObject(L, "GLabel", GLabelFields);
     LuaObject::SetParent("GLabel", "Drawable");
-    LuaObject::SetGCObjectField(L, "GLabel", l_Graphics_GLabel_gc);
+    LuaObject::SetGCObjectField(L, "GLabel", l_Graphics_Drawable_gc);
 
     lua_getglobal(L, "Core");
     luaC_register_field(L, graphics_functions, "Graphics");

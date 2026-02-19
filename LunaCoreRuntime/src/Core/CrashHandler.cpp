@@ -26,6 +26,36 @@ extern "C" void __wrap_abort() {
     for (;;);
 }
 
+static const char* exceptionStr [] = {
+    "Prefetch abort",
+    "Data abort",
+    "Undefined instruction",
+    "VFP (floating point) exception"
+};
+
+static const char* pluginStateStr[] = {
+    "Patch process",
+    "Main",
+    "Mainloop",
+    "Exit"
+};
+
+static const char* coreStateStr[] = {
+    "Core startup",
+    "Loading Lua runtime",
+    "Loading scripts",
+    "Loading mods",
+    "Event triggered",
+    "Executing a hook in a game function",
+    "Setting up hooks"
+};
+
+static const char* gameStateStr[] = {
+    "Loading",
+    "Menu",
+    "World"
+};
+
 namespace Core {
     static bool coreAbort = false;
     static const char* coreAbortMsg = nullptr;
@@ -90,9 +120,9 @@ namespace Core {
             
             u8 rnd = (svcGetSystemTick() & 0xF00) >> 8;
             Core::Debug::LogRawf("\t\"%s\"\n", errorMsg[rnd]);
-            Core::Debug::LogRawf("\t\tPlugin state: %d\n", Core::CrashHandler::plg_state);
-            Core::Debug::LogRawf("\t\tLast Core state: %d\n", Core::CrashHandler::core_state);
-            Core::Debug::LogRawf("\t\tGame state: %d\n", Core::CrashHandler::game_state);
+            Core::Debug::LogRawf("\t\tPlugin state: %s\n", pluginStateStr[plg_state]);
+            Core::Debug::LogRawf("\t\tLast Core state: %s\n", coreStateStr[core_state]);
+            Core::Debug::LogRawf("\t\tGame state: %s\n", gameStateStr[game_state]);
             if (coreAbort) {
                 Core::Debug::LogRawf("\n\tException type: Core abort\n");
                 Core::Debug::LogRawf("\tAbort message:\n");
@@ -101,7 +131,7 @@ namespace Core {
                 Core::Debug::LogRawf("\n\tException type: Core abort\n");
                 Core::Debug::LogRawf("\tAn unhandled core abort ocurred at %08X\n", (u32)internalAbortLr);
             } else {
-                Core::Debug::LogRawf("\n\tException type: %X\n", excep->type);
+                Core::Debug::LogRawf("\n\tException type: %s\n", exceptionStr[excep->type]);
                 Core::Debug::LogRawf("\tException at address: %08X\n", regs->pc);
                 Core::Debug::LogRawf("\tLR: %08X\n", regs->lr);
                 Core::Debug::LogRawf("\tSP: %08X\n", regs->sp);

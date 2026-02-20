@@ -551,18 +551,17 @@ static const LuaObjectField DrawableFields[] = {
     {"setScreens", OBJF_TYPE_METHOD, (u32)l_Graphics_Drawable_setScreens},
     {"setPosition", OBJF_TYPE_METHOD, (u32)l_Graphics_Drawable_setPosition},
     {"setColor", OBJF_TYPE_METHOD, (u32)l_Graphics_Drawable_setColor},
+    {"destroy", OBJF_TYPE_METHOD, (u32)l_Graphics_Drawable_gc},
     {NULL, OBJF_TYPE_NIL, 0}
 };
 
 static const LuaObjectField GRectFields[] = {
-    {"destroy", OBJF_TYPE_METHOD, (u32)l_Graphics_Drawable_gc},
     {"setFilled", OBJF_TYPE_METHOD, (u32)l_Graphics_GRect_setFilled},
     {"setSize", OBJF_TYPE_METHOD, (u32)l_Graphics_GRect_setSize},
     {NULL, OBJF_TYPE_NIL, 0}
 };
 
 static const LuaObjectField GLabelFields[] = {
-    {"destroy", OBJF_TYPE_METHOD, (u32)l_Graphics_Drawable_gc},
     {"setSystemFont", OBJF_TYPE_METHOD, (u32)l_Graphics_GLabel_setSystemFont},
     {"setBgColor", OBJF_TYPE_METHOD, (u32)l_Graphics_GLabel_setBgColor},
     {"setText", OBJF_TYPE_METHOD, (u32)l_Graphics_GLabel_setText},

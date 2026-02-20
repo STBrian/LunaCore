@@ -32,7 +32,6 @@
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
 
-CTRPF::PluginMenu *gmenu;
 std::string plgAuthor, plgSummary, plgDescription, plgTitle;
 
 // Note Linux: using commit 14f1aff3

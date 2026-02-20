@@ -23,9 +23,45 @@ static int l_Menu_getMenuFolder(lua_State* L) {
     return 1;
 }
 
+/*
+- Allows to show a message in the menu
+## msg: string
+### Core.Menu.showMessageBox
+*/
+static int l_Menu_showMessageBox(lua_State* L) {
+    const char* msg = luaL_checkstring(L, 1);
+    CTRPluginFramework::MessageBox(msg, CTRPluginFramework::DialogType::DialogOk)();
+    return 0;
+}
+
+/*
+- When used, an ask message box will appear on screen. Returns the user selection as boolean
+## msg: string
+## return: boolean
+### Core.Menu.showAskMessageBox
+*/
+static int l_Menu_showAskMessageBox(lua_State* L) {
+    const char* msg = luaL_checkstring(L, 1);
+    lua_pushboolean(L, CTRPluginFramework::MessageBox(msg, CTRPluginFramework::DialogType::DialogYesNo)());
+    return 1;
+}
+
+/*
+- Returns if the plugin menu is currently open. This won't be useful, only in specific cases
+## return: boolean
+### Core.Menu.isOpen
+*/
+static int l_Menu_isOpen(lua_State* L) {
+    lua_pushboolean(L, gmenu->IsOpen());
+    return 1;
+}
+
 static const luaL_Reg menu_functions[] =
 {
     {"getMenuFolder", l_Menu_getMenuFolder},
+    {"showMessageBox", l_Menu_showMessageBox},
+    {"showAskMessageBox", l_Menu_showAskMessageBox},
+    {"isOpen", l_Menu_isOpen},
     {NULL, NULL}
 };
 

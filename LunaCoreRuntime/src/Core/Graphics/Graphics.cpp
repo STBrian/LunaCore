@@ -15,7 +15,6 @@ namespace CTRPF = CTRPluginFramework;
 using GraphicsFrameCallback = void(*)(void);
 using GraphicsExitCallback = void(*)(void);
 
-extern CTRPF::PluginMenu *gmenu;
 static int lua_callback = LUA_NOREF;
 static bool graphicsOpen = false;
 static bool shouldGraphicsClose = false;
@@ -28,7 +27,10 @@ static void processEventHandler(CTRPF::Process::Event event) {
         shouldGraphicsClose = true;
 }
 
+/* TODO: This graphic API is pretty bad, so it need to be fully changed */
 void GraphicsHandlerMainloop() {
+    if (gmenu->IsOpen())
+        return; // wait until closed
     CTRPF::Process::Pause();
     CTRPF::Process::SetProcessEventCallback(processEventHandler);
 
@@ -53,7 +55,7 @@ void GraphicsHandlerMainloop() {
         CTRPF::OSD::SwapBuffers();
         CTRPF::OSD::Unlock();
 
-        if (CTRPF::Controller::IsKeyReleased(CTRPF::Key::Select)) {
+        if (CTRPF::Controller::IsKeyPressed(CTRPF::Key::Select)) {
             exit = true;
             gmenu->ForceOpen();
         }
@@ -115,7 +117,7 @@ static void LuaGraphicsExitCallback() {
 
 /*
 - Stops the game and allows to draw on screen. Until Core.Graphics.close is called the function will be executed every frame
-- Other events and async tasks will continue running
+- Other events and async tasks will continue running. If plugin menu is open, this will wait until it is closed
 ## func: function
 ### Core.Graphics.open
 */

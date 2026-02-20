@@ -41,6 +41,7 @@ typedef struct {
 } GameState_s;
 
 extern GameState_s GameState;
+extern CTRPluginFramework::PluginMenu *gmenu;
 
 extern CTRPluginFramework::MenuFolder* MenuModsFolder;
 

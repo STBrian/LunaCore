@@ -28,7 +28,7 @@ static float* getCameraFOVPtr() {
 
 // ----------------------------------------------------------------------------
 
-//!include LunaCoreRuntime/src/Core/Game/Player/Player.cpp
+//!include LunaCoreRuntime/src/LuaModules/Player/Player.cpp
 //$Game.LocalPlayer.Camera
 
 // ----------------------------------------------------------------------------

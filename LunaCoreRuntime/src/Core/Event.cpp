@@ -113,6 +113,7 @@ void Core::EventHandlerCallback()
 
 // ----------------------------------------------------------------------------
 
+//!include LunaCoreRuntime/src/LuaModules/LoadModules.cpp
 //$Core.Event
 
 // ----------------------------------------------------------------------------

@@ -24,25 +24,6 @@ function Core.getModpath(modname) end
 ---@return string
 function Core.getTitleId() end
 
-Core.Debug = {}
-
----Displays a notification on screen
----@param msg string
-function Core.Debug.message(msg) end
-
----Appends the message to log file. Optionally shows the message on screen
----@param msg string
----@param showOnScreen boolean?
-function Core.Debug.log(msg, showOnScreen) end
-
----Appends the error message to log file and shows it on screen
----@param msg string
-function Core.Debug.logerror(msg) end
-
----Show error on screen
----@param msg string
-function Core.Debug.error(msg) end
-
 Core.Event = {}
 
 ---@class EventClass
@@ -68,6 +49,144 @@ Core.Event.OnGameEntitySpawnStart = {}
 
 ---@class OnGameEntitySpawn: EventClass
 Core.Event.OnGameEntitySpawn = {}
+
+Core.Graphics = {}
+
+---@class Drawable
+local Drawable = {}
+
+---@class GRect: Drawable
+GRect = {}
+
+---@class GLabel: Drawable
+GLabel = {}
+
+---Returns the pixel width of the string
+---@param text string
+---@return integer
+function Core.Graphics.getTextWidth(text) end
+
+---Returns a color with the r, g, b values
+---@param r integer
+---@param g integer
+---@param b integer
+---@return integer
+function Core.Graphics.colorRGB(r, g, b) end
+
+---Returns a color with the r, g, b, a values
+---@param r integer
+---@param g integer
+---@param b integer
+---@param a integer
+---@return integer
+function Core.Graphics.colorRGBA(r, g, b, a) end
+
+---Creates a new instance of a rectangle drawable object
+---@param x integer
+---@param y integer
+---@param width integer
+---@param height integer
+---@return GRect
+function Core.Graphics.newRect(x, y, width, height) end
+
+---Creates a new instance of a label drawable object
+---@param x integer
+---@param y integer
+---@param text string
+---@return GLabel
+function Core.Graphics.newLabel(x, y, text) end
+
+---Adds a Drawable object to render on screen
+---@param obj Drawable
+function Core.Graphics.add(obj) end
+
+---Remove a Drawable object from the render
+---@param obj Drawable
+function Core.Graphics.remove(obj) end
+
+---Sets if the object should be drawn
+---@param visible boolean
+function Drawable:setVisible(visible) end
+
+---Sets in which screen should be drawn
+---@param top boolean
+---@param bottom boolean
+function Drawable:setScreens(top, bottom) end
+
+---Sets the position of the object in screen
+---@param x integer
+---@param y integer
+function Drawable:setPosition(x, y) end
+
+---Set the main color of the object
+---@param color integer
+function Drawable:setColor(color) end
+
+---Destroys the reference. Do NOT use the object after calling this
+function Drawable:destroy() end
+
+---Sets if the rect should be filled
+---@param filled boolean
+function GRect:setFilled(filled) end
+
+---Set the width and height of the rect
+---@param width integer
+---@param height integer
+function GRect:setSize(width, height) end
+
+---Set if the label should use SystemFont. Enabling it will disable background
+---@param useSystemFont boolean
+function GLabel:setSystemFont(useSystemFont) end
+
+---Set the bg color that will be used if the label doesn't use system font
+---@param color integer
+function GLabel:setBgColor(color) end
+
+---Set the label text
+---@param text string
+function GLabel:setText(text) end
+
+---@class OnNewFrame: EventClass
+Core.Graphics.OnNewFrame = {}
+
+Core.Debug = {}
+
+---Displays a notification on screen
+---@param msg string
+function Core.Debug.message(msg) end
+
+---Appends the message to log file. Optionally shows the message on screen
+---@param msg string
+---@param showOnScreen boolean?
+function Core.Debug.log(msg, showOnScreen) end
+
+---Appends the error message to log file and shows it on screen
+---@param msg string
+function Core.Debug.logerror(msg) end
+
+---Show error on screen
+---@param msg string
+function Core.Debug.error(msg) end
+
+---@class GameEntity
+local GameEntity = {}
+
+---@class GameSpawnCoords
+local GameSpawnCoords = {}
+
+GameEntity.X = 0.0
+
+GameEntity.Y = 0.0
+
+GameEntity.Z = 0.0
+
+GameEntity.EntityID = 0
+
+GameSpawnCoords.X = 0.0
+
+GameSpawnCoords.Y = 0.0
+
+GameSpawnCoords.Z = 0.0
 
 Core.Filesystem = {}
 
@@ -136,26 +255,6 @@ function FilesystemFile:isEOF() end
 
 ---Closes the file
 function FilesystemFile:close() end
-
----@class GameEntity
-local GameEntity = {}
-
----@class GameSpawnCoords
-local GameSpawnCoords = {}
-
-GameEntity.X = 0.0
-
-GameEntity.Y = 0.0
-
-GameEntity.Z = 0.0
-
-GameEntity.EntityID = 0
-
-GameSpawnCoords.X = 0.0
-
-GameSpawnCoords.Y = 0.0
-
-GameSpawnCoords.Z = 0.0
 
 Game.Gamepad = {}
 
@@ -320,6 +419,147 @@ Game.Items.OnRegisterItemsTextures = {}
 ---@class OnRegisterCreativeItems: EventClass
 Game.Items.OnRegisterCreativeItems = {}
 
+Core.Keyboard = {}
+
+---Opens the keyboard and returns the user input as string
+---@param message string?
+---@return string?
+function Core.Keyboard.getString(message) end
+
+---Opens the keyboard and returns the user input as number
+---@param message string?
+---@return number?
+function Core.Keyboard.getNumber(message) end
+
+---Opens the keyboard and returns the user input as unsigned integer
+---@param message string?
+---@return integer?
+function Core.Keyboard.getInteger(message) end
+
+---Opens the keyboard and returns the user input as hexadecimal
+---@param message string?
+---@return integer?
+function Core.Keyboard.getHex(message) end
+
+Core.Memory = {}
+
+---Reads an unsigned integer of 32 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readU32(offset) end
+
+---Reads a signed integer of 32 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readS32(offset) end
+
+---Reads an unsigned integer of 16 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readU16(offset) end
+
+---Reads a signed integer of 16 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readS16(offset) end
+
+---Reads an unsigned integer of 8 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readU8(offset) end
+
+---Reads a signed integer of 8 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readS8(offset) end
+
+---Reads a float from memory
+---@param offset integer
+---@return number?
+function Core.Memory.readFloat(offset) end
+
+---Reads a double from memory
+---@param offset integer
+---@return number?
+function Core.Memory.readDouble(offset) end
+
+---Reads a string from memory
+---@param offset integer
+---@param size integer
+---@return string?
+function Core.Memory.readString(offset, size) end
+
+---Writes a signed integer of 32 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeS32(offset, value) end
+
+---Writes an unsigned integer of 32 bits to memory offset
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeU32(offset, value) end
+
+---Writes a signed integer of 16 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeS16(offset, value) end
+
+---Writes an unsigned integer of 16 bits to memory offset
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeU16(offset, value) end
+
+---Writes a signed integer of 8 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeS8(offset, value) end
+
+---Writes an unsigned integer of 8 bits to memory offset
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeU8(offset, value) end
+
+---Writes a float to memory offset
+---@param offset integer
+---@param value number
+---@return boolean
+function Core.Memory.writeFloat(offset, value) end
+
+---Writes a double to memory offset
+---@param offset integer
+---@param value number
+---@return boolean
+function Core.Memory.writeDouble(offset, value) end
+
+---Writes a string to memory offset
+---@param offset integer
+---@param s string
+---@param size integer
+---@return boolean
+function Core.Memory.writeString(offset, s, size) end
+
+---Allocates memory and returns the start offset
+---@param size integer
+---@return integer?
+function Core.Memory.malloc(size) end
+
+---Free memory allocated with malloc
+---@param offset integer
+function Core.Memory.free(offset) end
+
+---Allows to call a function from memory
+---@param foffset integer
+---@param argstype string
+---@param returntype string
+---@return number
+function Core.Memory.call(foffset, argstype, returntype, ...) end
+
 Game.LocalPlayer = {}
 
 Game.LocalPlayer.Position = {}
@@ -472,6 +712,17 @@ function Game.Recipes.registerShapedRecipe(recipesTable, resultItem, categoryId,
 ---@class OnRegisterRecipes: EventClass
 Game.Recipes.OnRegisterRecipes = {}
 
+Game.Resources = {}
+
+---Forces the game to reload the current locale
+function Game.Resources.reloadLocale() end
+
+Core.System = {}
+
+---Returns UNIX time
+---@return number
+function Core.System.getTime() end
+
 Game.World = {}
 
 Game.World.Loaded = false
@@ -487,278 +738,3 @@ Game.World.OnWorldJoin = {}
 
 ---@class OnWorldLeave: EventClass
 Game.World.OnWorldLeave = {}
-
-Core.Graphics = {}
-
----@class Drawable
-local Drawable = {}
-
----@class GRect: Drawable
-GRect = {}
-
----@class GLabel: Drawable
-GLabel = {}
-
----Returns if Graphics are open
-function Core.Graphics.isOpen() end
-
----Draws a rect on screen. Only can be used when Core.Graphics.open was called
----@param x integer
----@param y integer
----@param width integer
----@param height integer
----@param color integer
-function Core.Graphics.drawRect(x, y, width, height, color) end
-
----Draws a solid rect on screen. Only can be used when Core.Graphics.open was called
----@param x integer
----@param y integer
----@param width integer
----@param height integer
----@param color integer
-function Core.Graphics.drawRectFill(x, y, width, height, color) end
-
----Draws a text on screen. Only can be used when Core.Graphics.open was called
----@param text string
----@param x integer
----@param y integer
----@param color integer
-function Core.Graphics.drawText(text, x, y, color) end
-
----Returns the pixel width of the string
----@param text string
----@return integer
-function Core.Graphics.getTextWidth(text) end
-
----Returns a color with the r, g, b values
----@param r integer
----@param g integer
----@param b integer
----@return integer
-function Core.Graphics.colorRGB(r, g, b) end
-
----Returns a color with the r, g, b, a values
----@param r integer
----@param g integer
----@param b integer
----@param a integer
----@return integer
-function Core.Graphics.colorRGBA(r, g, b, a) end
-
----Creates a new instance of a rectangle drawable object
----@param x integer
----@param y integer
----@param width integer
----@param height integer
----@return GRect
-function Core.Graphics.newRect(x, y, width, height) end
-
----Creates a new instance of a label drawable object
----@param x integer
----@param y integer
----@param text string
----@return GLabel
-function Core.Graphics.newLabel(x, y, text) end
-
----Adds a Drawable object to render on screen
----@param obj Drawable
-function Core.Graphics.add(obj) end
-
----Remove a Drawable object from the render
----@param obj Drawable
-function Core.Graphics.remove(obj) end
-
----Sets if the object should be drawn
----@param visible boolean
-function Drawable:setVisible(visible) end
-
----Sets in which screen should be drawn
----@param top boolean
----@param bottom boolean
-function Drawable:setScreens(top, bottom) end
-
----Sets the position of the object in screen
----@param x integer
----@param y integer
-function Drawable:setPosition(x, y) end
-
----Set the main color of the object
----@param color integer
-function Drawable:setColor(color) end
-
----Destroys the reference. Do NOT use the object after calling this
-function GRect:destroy() end
-
----Sets if the rect should be filled
----@param filled boolean
-function GRect:setFilled(filled) end
-
----Set the width and height of the rect
----@param width integer
----@param height integer
-function GRect:setSize(width, height) end
-
----Destroys the reference. Do NOT use the object after calling this
-function GLabel:destroy() end
-
----Set if the label should use SystemFont. Enabling it will disable background
----@param useSystemFont boolean
-function GLabel:setSystemFont(useSystemFont) end
-
----Set the bg color that will be used if the label doesn't use system font
----@param color integer
-function GLabel:setBgColor(color) end
-
----Set the label text
----@param text string
-function GLabel:setText(text) end
-
----@class OnNewFrame: EventClass
-Core.Graphics.OnNewFrame = {}
-
-Core.Keyboard = {}
-
----Opens the keyboard and returns the user input as string
----@param message string?
----@return string?
-function Core.Keyboard.getString(message) end
-
----Opens the keyboard and returns the user input as number
----@param message string?
----@return number?
-function Core.Keyboard.getNumber(message) end
-
----Opens the keyboard and returns the user input as unsigned integer
----@param message string?
----@return integer?
-function Core.Keyboard.getInteger(message) end
-
----Opens the keyboard and returns the user input as hexadecimal
----@param message string?
----@return integer?
-function Core.Keyboard.getHex(message) end
-
-Core.Memory = {}
-
----Reads an unsigned integer of 32 bits from memory
----@param offset integer
----@return integer?
-function Core.Memory.readU32(offset) end
-
----Reads a signed integer of 32 bits from memory
----@param offset integer
----@return integer?
-function Core.Memory.readS32(offset) end
-
----Reads an unsigned integer of 16 bits from memory
----@param offset integer
----@return integer?
-function Core.Memory.readU16(offset) end
-
----Reads a signed integer of 16 bits from memory
----@param offset integer
----@return integer?
-function Core.Memory.readS16(offset) end
-
----Reads an unsigned integer of 8 bits from memory
----@param offset integer
----@return integer?
-function Core.Memory.readU8(offset) end
-
----Reads a signed integer of 8 bits from memory
----@param offset integer
----@return integer?
-function Core.Memory.readS8(offset) end
-
----Reads a float from memory
----@param offset integer
----@return number?
-function Core.Memory.readFloat(offset) end
-
----Reads a double from memory
----@param offset integer
----@return number?
-function Core.Memory.readDouble(offset) end
-
----Reads a string from memory
----@param offset integer
----@param size integer
----@return string?
-function Core.Memory.readString(offset, size) end
-
----Writes a signed integer of 32 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
----@param offset integer
----@param value integer
----@return boolean
-function Core.Memory.writeS32(offset, value) end
-
----Writes an unsigned integer of 32 bits to memory offset
----@param offset integer
----@param value integer
----@return boolean
-function Core.Memory.writeU32(offset, value) end
-
----Writes a signed integer of 16 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
----@param offset integer
----@param value integer
----@return boolean
-function Core.Memory.writeS16(offset, value) end
-
----Writes an unsigned integer of 16 bits to memory offset
----@param offset integer
----@param value integer
----@return boolean
-function Core.Memory.writeU16(offset, value) end
-
----Writes a signed integer of 8 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
----@param offset integer
----@param value integer
----@return boolean
-function Core.Memory.writeS8(offset, value) end
-
----Writes an unsigned integer of 8 bits to memory offset
----@param offset integer
----@param value integer
----@return boolean
-function Core.Memory.writeU8(offset, value) end
-
----Writes a float to memory offset
----@param offset integer
----@param value number
----@return boolean
-function Core.Memory.writeFloat(offset, value) end
-
----Writes a double to memory offset
----@param offset integer
----@param value number
----@return boolean
-function Core.Memory.writeDouble(offset, value) end
-
----Writes a string to memory offset
----@param offset integer
----@param s string
----@param size integer
----@return boolean
-function Core.Memory.writeString(offset, s, size) end
-
----Allocates memory and returns the start offset
----@param size integer
----@return integer?
-function Core.Memory.malloc(size) end
-
----Free memory allocated with malloc
----@param offset integer
-function Core.Memory.free(offset) end
-
----Allows to call a function from memory
----@param foffset integer
----@param argstype string
----@param returntype string
----@return number
-function Core.Memory.call(foffset, argstype, returntype, ...) end
-
-Core.System = {}
-
----Returns UNIX time
----@return number
-function Core.System.getTime() end

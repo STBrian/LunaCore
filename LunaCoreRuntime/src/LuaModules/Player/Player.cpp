@@ -30,7 +30,7 @@ static u32* getHungerBarOffset() {
 
 // ----------------------------------------------------------------------------
 
-//!include LunaCoreRuntime/src/Modules.cpp
+//!include LunaCoreRuntime/src/LuaModules/LoadModules.cpp
 //$Game.LocalPlayer
 
 // ----------------------------------------------------------------------------

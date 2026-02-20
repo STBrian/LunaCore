@@ -4,7 +4,7 @@
 
 // ----------------------------------------------------------------------------
 
-//!include LunaCoreRuntime/src/Modules.cpp
+//!include LunaCoreRuntime/src/LuaModules/LoadModules.cpp
 //$Core.Debug
 
 // ----------------------------------------------------------------------------

@@ -735,6 +735,25 @@ InventoryArmorSlot.ItemData = 0
 
 InventoryArmorSlot.ItemName = ""
 
+Core.Menu = {}
+
+---@class MenuFolder
+local MenuFolder = {}
+
+---Returns a reference to the mods plugin menu folder
+---@return MenuFolder
+function Core.Menu.getMenuFolder() end
+
+---Creates and appends a new folder to the current folder, and then it returns a reference to the new folder
+---@param name string
+---@return MenuFolder
+function MenuFolder:newFolder(name) end
+
+---Creates and appends a new entry to the current folder. When selected in menu it will execute the callback function
+---@param name string
+---@param callback function
+function MenuFolder:newEntry(name, callback) end
+
 Game.Recipes = {}
 
 ---@class RecipesTable
@@ -764,6 +783,10 @@ Core.System = {}
 ---Returns UNIX time
 ---@return number
 function Core.System.getTime() end
+
+---Returns current state of the 3D Slider
+---@return number
+function Core.System.get3DSliderState() end
 
 Game.World = {}
 

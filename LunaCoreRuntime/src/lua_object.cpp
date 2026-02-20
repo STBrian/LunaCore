@@ -24,6 +24,8 @@ void LuaObject::RegisterNewObject(lua_State* L, const char* name, const LuaObjec
         objsLayouts[name][f->key] = {f->offset, f->type, f->access, f->flags, f->objtype};
 }
 
+/* Returns a pointer to the original pointer. To access the original object, dereference.
+This is done in this way so you can invalid the object data at some point */
 void** LuaObject::CheckObject(lua_State* L, int narg, const char* objtype) {
     if (lua_type(L, narg) == LUA_TUSERDATA) {
         if (luaL_getmetafield(L, narg, "__name") == LUA_TNIL)

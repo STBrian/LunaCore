@@ -17,6 +17,8 @@ namespace Core::Module {
 
     bool RegisterKeyboardModule(lua_State *L);
 
+    bool RegisterMenuModule(lua_State *L);
+
     bool RegisterResourcesModule(lua_State *L);
 
     bool RegisterLocalPlayerModule(lua_State *L);

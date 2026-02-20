@@ -452,6 +452,7 @@ void InitMenu(PluginMenu &menu)
         MessageBox("Lua environment reloaded")();
         Lua_Global_Mut.unlock();
     }));
+    menu.Append(MenuModsFolder);
     menu.Append(optionsFolder);
     menu.Append(devFolder);
 }

@@ -76,6 +76,7 @@ namespace Core {
         Core::Module::RegisterFilesystemModule(L);
         Core::Module::RegisterGraphicsModule(L);
         Core::Module::RegisterMemoryModule(L);
+        Core::Module::RegisterMenuModule(L);
         return true;
     }
 }

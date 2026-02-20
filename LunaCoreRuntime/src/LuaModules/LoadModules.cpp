@@ -13,24 +13,16 @@
 #include "Core/Utils/FileLoader.hpp"
 #include "Core/Utils/ExtensionLoader.hpp"
 
-#include "game/lang.hpp"
-
 namespace Core {
-    static int l_Game_reloadLang(lua_State* L) {
-        Minecraft::Lang::reloadLang;
-        return 0;
-    }
-
     //Use global Game as entry point related to all game functions
     //$Game
     bool RegisterGameModule(lua_State *L)
     {
         lua_newtable(L);
-        lua_pushcfunction(L, l_Game_reloadLang);
-        lua_setfield(L, -2, "reloadLanguage");
         lua_setglobal(L, "Game");
         Core::Module::RegisterGamepadModule(L);
         Core::Module::RegisterWorldModule(L);
+        Module::RegisterResourcesModule(L);
         Core::Module::RegisterLocalPlayerModule(L);
         Core::Module::RegisterItemsModule(L);
         Core::Module::RegisterEntityModule(L);

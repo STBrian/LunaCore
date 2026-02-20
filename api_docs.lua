@@ -2,9 +2,17 @@
 
 Async = {}
 
----Adds the function to the queue that will run apart from the game until the functions ends
+---@class AsyncTask
+local AsyncTask = {}
+
+---Returns a new task with the given function that can be connected to game events
 ---@param func function
+---@return AsyncTask
 function Async.create(func) end
+
+---Adds the function to the queue that will run alongside the game until the functions ends
+---@param func function
+function Async.run(func) end
 
 ---Yeilds the current task until time has passed. Always returns true
 ---@param seconds number?
@@ -30,7 +38,7 @@ Core.Event = {}
 local EventClass = {}
 
 ---Adds a function to call when this events fires. It also returns the function
----@param func function
+---@param func function|AsyncTask
 ---@return function
 function EventClass:Connect(func) end
 
@@ -60,6 +68,40 @@ GRect = {}
 
 ---@class GLabel: Drawable
 GLabel = {}
+
+---Stops the game and allows to draw on screen. Until Core.Graphics.close is called the function will be executed every frame
+---Other events and async tasks will continue running
+---@param func function
+function Core.Graphics.open(func) end
+
+---Resumes the game, the callback function will no longer be called and draw functions will not work
+function Core.Graphics.close() end
+
+---Returns if Graphics are open
+function Core.Graphics.isOpen() end
+
+---Draws a rect on screen. Only can be used when Core.Graphics.open was called
+---@param x integer
+---@param y integer
+---@param width integer
+---@param height integer
+---@param color integer
+function Core.Graphics.drawRect(x, y, width, height, color) end
+
+---Draws a solid rect on screen. Only can be used when Core.Graphics.open was called
+---@param x integer
+---@param y integer
+---@param width integer
+---@param height integer
+---@param color integer
+function Core.Graphics.drawRectFill(x, y, width, height, color) end
+
+---Draws a text on screen. Only can be used when Core.Graphics.open was called
+---@param text string
+---@param x integer
+---@param y integer
+---@param color integer
+function Core.Graphics.drawText(text, x, y, color) end
 
 ---Returns the pixel width of the string
 ---@param text string

@@ -10,6 +10,7 @@
 #include "Core/CrashHandler.hpp"
 #include "Core/Utils/Utils.hpp"
 #include "CoreGlobals.hpp"
+#include "Core/Async.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 
@@ -114,6 +115,7 @@ void Core::EventHandlerCallback()
 // ----------------------------------------------------------------------------
 
 //!include LunaCoreRuntime/src/LuaModules/LoadModules.cpp
+//!include LunaCoreRuntime/src/Core/Async.cpp
 //$Core.Event
 
 // ----------------------------------------------------------------------------
@@ -122,7 +124,7 @@ void Core::EventHandlerCallback()
 
 /*
 - Adds a function to call when this events fires. It also returns the function
-## func: function
+## func: function|AsyncTask
 ## return: function
 ### EventClass:Connect
 */
@@ -174,6 +176,28 @@ static int l_Event_BaseEvent_Trigger(lua_State *L)
     for (int i = len; i >= 1; --i) {
         lua_rawgeti(L, listenersIdx, i);
         if (!lua_isfunction(L, -1)) {
+            if (lua_istable(L, -1)) { // AsyncTask
+                if (luaL_getmetafield(L, -1, "__name") != LUA_TNIL) {
+                    if (!lua_isstring(L, -1))
+                        lua_pop(L, 1);
+                    else {
+                        if (std::string(lua_tostring(L, -1)) == "AsyncTask") {
+                            lua_pop(L, 1);
+                            lua_pushstring(L, "_taskF");
+                            lua_rawget(L, -2);
+                            
+                            lua_State *co = lua_newthread(L);
+                            lua_pushvalue(L, -2);
+                            lua_xmove(L, co, 1);
+
+                            lua_sethook(co, Core::_TimeoutAsyncHook, LUA_MASKCOUNT, 100);
+
+                            Core::Scheduler::getInstance().AddTask(L, -1);
+                            lua_pop(L, 2); // pop co and taskF
+                        }
+                    }
+                }
+            }
             lua_pop(L, 1);
             continue;
         }

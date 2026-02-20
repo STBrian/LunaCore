@@ -43,6 +43,7 @@ static inline int luaC_invalid_newindex(lua_State *L) {
     return luaL_error(L, "Attempt to modify read-only table");
 }
 
+/* Helper to check userdata name type. Error formatted as function argument error */
 static inline void* luaC_funccheckudata(lua_State *L, int narg, const char* uname) {
     if (lua_type(L, narg) == LUA_TUSERDATA) {
         if (luaL_getmetafield(L, narg, "__name") == LUA_TNIL)

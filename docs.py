@@ -2,7 +2,7 @@ from glob import iglob
 from pathlib import Path
 
 DOCS_FILE = open("./api_docs.lua", "w", encoding="utf-8")
-DEF_CLASSES = ["number", "integer", "table", "nil", "userdata", "lightuserdata", "string", "boolean", "function", "any"]
+DEF_CLASSES = ["number", "integer", "table", "nil", "userdata", "lightuserdata", "string", "boolean", "function", "any", "thread"]
 LOADED_FILES = []
 DEF_GLOBALS = {}
 
@@ -141,8 +141,14 @@ def process_lines(path: str, lines: list, segpos: int):
                 if argType.endswith("?"):
                     optional = True
                     argType = argType[:-1]
-                if not argType in DEF_CLASSES:
-                    raise Exception(f"Undefined type '{argType}': '{doc_line}' on {path} at line {segpos + j}")
+                if "|" not in argType:
+                    if not argType in DEF_CLASSES:
+                        raise Exception(f"Undefined type '{argType}': '{doc_line}' on {path} at line {segpos + j}")
+                else:
+                    typesNames = argType.split("|")
+                    for tname in typesNames:
+                        if not tname.strip() in DEF_CLASSES:
+                            raise Exception(f"Undefined type '{tname.strip()}': '{doc_line}' on {path} at line {segpos + j}")
                 args.append({"name": argName, "type": argType if not optional else f"{argType}?"})
 
         elif doc_line.startswith("@@") and len(doc_line) > 2:

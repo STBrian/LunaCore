@@ -225,7 +225,6 @@ namespace CTRPluginFramework
         delete gmenu;
 
         // Exit plugin
-        Process::ReturnToHomeMenu();
         return 0;
     }
 }

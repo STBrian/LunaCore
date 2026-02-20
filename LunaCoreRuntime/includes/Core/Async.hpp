@@ -6,6 +6,9 @@
 #include "Core/Scheduler.hpp"
 
 namespace Core {
+    /* Only use to hook on a lua thread */
+    void _TimeoutAsyncHook(lua_State *L, lua_Debug *ar);
+
     void AsyncRestartClock();
 
     bool RegisterAsyncModule(lua_State *L);

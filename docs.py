@@ -15,10 +15,10 @@ def verify_fmt(string: str, allow_dots: bool):
             if char == "." or char == ":":
                 if last_char == "." or last_char == ":":
                     return False
-            if not (char.isalnum() or char == "." or char == ":") or char == " ":
+            if not (char.isalnum() or char == "." or char == ":" or char == "_") or char == " ":
                 return False
         else:
-            if not char.isalnum() or char == " ":
+            if not (char.isalnum() or char == "_") or char == " ":
                 return False
         last_char = char
     return True

@@ -32,6 +32,8 @@ function Core.getModpath(modname) end
 ---@return string
 function Core.getTitleId() end
 
+Core._VERSION = "LunaCore 0.15.0"
+
 Core.Event = {}
 
 ---@class EventClass

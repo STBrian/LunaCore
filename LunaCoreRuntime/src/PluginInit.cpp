@@ -304,24 +304,27 @@ void InitMenu(PluginMenu &menu)
             return;
         }
 
-        if (Lua_Global_Mut.try_lock() && Core::LoadBuffer(buffer.get(), size, ("net:/" + std::string(namebuf.get()).substr(0, fnameSize-1)).c_str())) {
-            MessageBox("Script loaded")();
-            if (MessageBox("Do you want to save this script to the sd card?", DialogType::DialogYesNo)()) {
-                if (!Directory::IsExists(PLUGIN_FOLDER "/scripts/"))
-                    Directory::Create(PLUGIN_FOLDER "/scripts/");
-                File scriptOut;
-                File::Open(scriptOut, PLUGIN_FOLDER "/scripts/" + std::string(namebuf.get()).substr(0, fnameSize-1), File::WRITE|File::CREATE);
-                if (!scriptOut.IsOpen()) {
-                    MessageBox("Failed to write to sd card")();
-                } else {
-                    scriptOut.Clear();
-                    scriptOut.Write(buffer.get(), size);
-                    scriptOut.Flush();
+        if (!Lua_Global_Mut.try_lock())
+            MessageBox("Error executing the script. Failed to lock lua")();
+        else {
+            if (Core::LoadBuffer(buffer.get(), size, ("net:/" + std::string(namebuf.get()).substr(0, fnameSize-1)).c_str())) {
+                MessageBox("Script loaded")();
+                if (MessageBox("Do you want to save this script to the sd card?", DialogType::DialogYesNo)()) {
+                    if (!Directory::IsExists(PLUGIN_FOLDER "/scripts/"))
+                        Directory::Create(PLUGIN_FOLDER "/scripts/");
+                    File scriptOut;
+                    File::Open(scriptOut, PLUGIN_FOLDER "/scripts/" + std::string(namebuf.get()).substr(0, fnameSize-1), File::WRITE|File::CREATE);
+                    if (!scriptOut.IsOpen()) {
+                        MessageBox("Failed to write to sd card")();
+                    } else {
+                        scriptOut.Clear();
+                        scriptOut.Write(buffer.get(), size);
+                        scriptOut.Flush();
+                    }
                 }
-            }
+            } else
+                MessageBox("Error executing the script")();
             Lua_Global_Mut.unlock();
-        } else {
-            MessageBox("Error executing the script")();
         }
     }));
 

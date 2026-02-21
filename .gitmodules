@@ -1,0 +1,3 @@
+[submodule "LunaCoreRuntime/externals/MC3DSPluginFramework"]
+	path = LunaCoreRuntime/externals/MC3DSPluginFramework
+	url = https://github.com/rairai6895/MC3DSPluginFramework.git

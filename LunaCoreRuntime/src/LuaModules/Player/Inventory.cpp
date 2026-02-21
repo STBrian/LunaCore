@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <CTRPluginFramework.hpp>
+#include "MC3DSPluginFramework.hpp"
 
 #include "string_hash.hpp"
 #include "lua_utils.hpp"
@@ -9,6 +10,7 @@
 
 #include "game/Minecraft.hpp"
 #include "game/world/actor/player/Inventory.hpp"
+#include "game/world/item/ItemInstance.hpp"
 
 #include "Core/Utils/ItemUtils.hpp"
 
@@ -97,7 +99,7 @@ static int l_Inventory_Slot_class_index(lua_State *L)
 
 static int l_Inventory_Slot_class_newindex(lua_State *L)
 {
-    InventorySlot* slotData = *(InventorySlot**)lua_touserdata(L, 1);
+    auto* slotData = *(MC3DSPluginFramework::ItemInstance**)lua_touserdata(L, 1);
     if (lua_type(L, 2) != LUA_TSTRING)
         return luaL_error(L, "unable to set field '?' of 'InventorySlot' instance");
 
@@ -110,19 +112,16 @@ static int l_Inventory_Slot_class_newindex(lua_State *L)
     switch (key) {
         case hash("Item"): {
             Item *itemData = *(Item**)luaC_checkudata(L, 3, "GameItem", "unable to assign to a \"%s\" field a \"%s\" value");
-            void* renderID = Core::Items::GetRenderIDByItemID(itemData->itemId);
-            slotData->itemData = itemData;
-            //if (renderID != nullptr)
-                //slotData->renderID = renderID;
+            slotData->init((MC3DSPluginFramework::ItemId)itemData->itemId, slotData->mCount, 0);
             break;
         }
         case hash("ItemCount"):
             LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
-            slotData->itemCount = lua_tonumber(L, 3);
+            slotData->mCount = lua_tonumber(L, 3);
             break;
         case hash("ItemData"):
             LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
-            slotData->dataValue = lua_tonumber(L, 3);
+            slotData->mDataValue = lua_tonumber(L, 3);
             break;
         default:
             luaL_error(L, "Unable to set field '%s' of 'InventorySlot' instance", lua_tostring(L, 2));

@@ -14,7 +14,7 @@ PLGINFO 	:= 	plgInfo.yaml
 
 BUILD		:= 	Build
 INCLUDES	:= 	includes externals/MC3DSPluginFramework/Includes
-SOURCES 	:= 	src #externals/MC3DSPluginFramework/Sources
+SOURCES 	:= 	src externals/MC3DSPluginFramework/Sources
 
 #---------------------------------------------------------------------------------
 # options for code generation

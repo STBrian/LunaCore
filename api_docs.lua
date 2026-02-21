@@ -70,7 +70,7 @@ GRect = {}
 GLabel = {}
 
 ---Stops the game and allows to draw on screen. Until Core.Graphics.close is called the function will be executed every frame
----Other events and async tasks will continue running
+---Other events and async tasks will continue running. If plugin menu is open, this will wait until it is closed
 ---@param func function
 function Core.Graphics.open(func) end
 
@@ -743,6 +743,19 @@ local MenuFolder = {}
 ---Returns a reference to the mods plugin menu folder
 ---@return MenuFolder
 function Core.Menu.getMenuFolder() end
+
+---Allows to show a message in the menu
+---@param msg string
+function Core.Menu.showMessageBox(msg) end
+
+---When used, an ask message box will appear on screen. Returns the user selection as boolean
+---@param msg string
+---@return boolean
+function Core.Menu.showAskMessageBox(msg) end
+
+---Returns if the plugin menu is currently open. This won't be useful, only in specific cases
+---@return boolean
+function Core.Menu.isOpen() end
 
 ---Creates and appends a new folder to the current folder, and then it returns a reference to the new folder
 ---@param name string

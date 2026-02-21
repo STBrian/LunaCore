@@ -11,7 +11,8 @@
                 "c:/devkitPro/portlibs/3ds/include/",
                 "c:/devkitPro/devkitARM/arm-none-eabi/include/",
                 "${workspaceFolder}/LunaCoreRuntime/includes/",
-                "c:/devkitPro/libctrpf/include/"
+                "c:/devkitPro/libctrpf/include/",
+                "${workspaceFolder}/LunaCoreRuntime/externals/MC3DSPluginFramework/Includes"
             ],
             "defines": [
                 "DEBUG",

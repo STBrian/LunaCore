@@ -4,3 +4,6 @@
 /src/game/fsuser.c
 /includes/game/fsuser.h
 /includes/game/imports.h
+
+*.d
+*.o

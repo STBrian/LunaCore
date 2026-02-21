@@ -13,10 +13,8 @@ TARGET		:= 	LunaCore
 PLGINFO 	:= 	plgInfo.yaml
 
 BUILD		:= 	Build
-INCLUDES	:= 	includes
-SOURCES 	:= 	src src/Helpers src/Core src/game \
-				src/Core/Graphics src/Core/Utils src/Core/Hooks \
-				src/LuaModules src/LuaModules/Player
+INCLUDES	:= 	includes externals/MC3DSPluginFramework/Includes
+SOURCES 	:= 	src #externals/MC3DSPluginFramework/Sources
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -56,8 +54,8 @@ export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
 
 export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 
-CFILES			:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-CPPFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+CFILES			:=	$(addprefix ../,$(shell find $(SOURCES) -name "*.c"))
+CPPFILES		:=	$(addprefix ../,$(shell find $(SOURCES) -name "*.cpp"))
 SFILES			:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 
 export LD 		:= 	$(CXX)
@@ -80,7 +78,7 @@ $(BUILD):
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ... 
-	@rm -fr $(BUILD) $(OUTPUT).3gx $(OUTPUT).elf
+	@rm -fr $(BUILD) $(shell find $(SOURCES) -name "*.o") $(shell find $(SOURCES) -name "*.d") $(OUTPUT).3gx $(OUTPUT).elf
 
 re: clean all
 
@@ -110,7 +108,7 @@ $(OUTPUT).elf : $(OFILES)
 #---------------------------------------------------------------------------------
 	@echo creating $(notdir $@)
 	@3gxtool -s $(word 1, $^) $(TOPDIR)/$(PLGINFO) $@
-	@rm main.d main.o 
+	@rm ../src/main.d ../src/main.o 
 
 -include $(DEPENDS)
 

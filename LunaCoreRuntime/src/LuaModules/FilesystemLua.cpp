@@ -41,7 +41,7 @@ static int l_Filesystem_open(lua_State *L) {
     else if (filemode == "a")
         fileStruct->mode = FS_OPEN_APPEND;
     else if (filemode == "rw" || filemode == "wr" || filemode == "r+" || filemode == "w+")
-        fileStruct->mode = FS_OPEN_WRITE|FS_OPEN_READ;
+        fileStruct->mode = FS_OPEN_WRITE|FS_OPEN_READ|FS_OPEN_CREATE;
     else {
         lua_pop(L, 1);
         LUAUTILS_ERRORF(L, "Invalid mode");
@@ -118,6 +118,31 @@ static int l_Filesystem_getDirectoryElements(lua_State *L) {
 */
 static int l_Filesystem_createDirectory(lua_State *L) {
     lua_pushboolean(L, fslib::create_directory(path_from_string(luaL_checkstring(L, 1))));
+    return 1;
+}
+
+/*
+- To delete a file. Returns true on success
+## file: string
+## return: boolean
+### Core.Filesystem.deleteFile
+*/
+static int l_Filesystem_deleteFile(lua_State *L) {
+    lua_pushboolean(L, fslib::delete_file(path_from_string(luaL_checkstring(L, 1))));
+    return 1;
+}
+
+/*
+- To rename a file. Only accepts two paths on the same device. Returns true on success
+## oldPath: string
+## newPath: string
+## return: boolean
+### Core.Filesystem.renameFile
+*/
+static int l_Filesystem_renameFile(lua_State *L) {
+    const char* oldPath = luaL_checkstring(L, 1);
+    const char* newPath = luaL_checkstring(L, 2);
+    lua_pushboolean(L, fslib::rename_file(path_from_string(oldPath), path_from_string(newPath)));
     return 1;
 }
 
@@ -268,6 +293,17 @@ static int l_Filesystem_File_isEOF(lua_State *L) {
 }
 
 /*
+- Returns the size of the file
+## return: integer
+### FilesystemFile:getSize
+*/
+static int l_Filesystem_File_getSize(lua_State *L) {
+    FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
+    lua_pushnumber(L, fileStruct->filePtr->get_size());
+    return 1;
+}
+
+/*
 - Closes the file
 ### FilesystemFile:close
 */
@@ -294,6 +330,7 @@ static const luaL_Reg filesystem_file_methods[] = {
     {"seek", l_Filesystem_File_seek},
     {"isOpen", l_Filesystem_File_isOpen},
     {"isEOF", l_Filesystem_File_isEOF},
+    {"getSize", l_Filesystem_File_getSize},
     {"close", l_Filesystem_File_close},
     {NULL, NULL}
 };
@@ -318,6 +355,8 @@ static const luaL_Reg filesystem_functions[] = {
     {"directoryExists", l_Filesystem_directoryExists},
     {"getDirectoryElements", l_Filesystem_getDirectoryElements},
     {"createDirectory", l_Filesystem_createDirectory},
+    {"deleteFile", l_Filesystem_deleteFile},
+    {"renameFile", l_Filesystem_renameFile},
     {NULL, NULL}
 };
 

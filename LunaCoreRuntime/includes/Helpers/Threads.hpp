@@ -76,7 +76,7 @@ namespace Core {
             }
             ctx->stackPtr = stackPtr;
             ctx->stackPtrTop = stackPtr + 0x800;
-            ctx->callback = (ThreadFunc)func;
+            ctx->callback = func;
             ctx->passValue = value;
             svcCreateThread(&this->threadHndl, (ThreadFunc)threadBodyFunction<T>, (u32)ctx, (u32*)ctx->stackPtrTop, 0x30, -2);
             this->started = true;

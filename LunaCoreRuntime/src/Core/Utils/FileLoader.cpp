@@ -3,18 +3,21 @@
 #include <algorithm>
 
 #include "Core/Utils/Utils.hpp"
+#include "CoreConstants.hpp"
 
 static int l_custom_loadfile(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
 
     {
+    std::string strippedFilename = filename;
     std::string scriptContent = Core::Utils::LoadFile(filename);
     if (scriptContent.empty()) {
         lua_pushfstring(L, "cannot open %s", filename);
         goto __error;
     }
-    if (luaL_loadbuffer(L, scriptContent.c_str(), scriptContent.size(), filename) != 0)
+    Core::Utils::Replace(strippedFilename, PLUGIN_FOLDER "/", ""); // To remove the prefix if in an known directory
+    if (luaL_loadbuffer(L, scriptContent.c_str(), scriptContent.size(), strippedFilename.c_str()) != 0)
         goto __error;
     return 1;
     }

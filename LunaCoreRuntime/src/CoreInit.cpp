@@ -168,7 +168,7 @@ bool Core::LoadBuffer(const char *buffer, size_t size, const char* name) {
     return success;
 }
 
-bool Core::LoadScript(const std::string& fp)
+bool Core::LoadScript(const std::string& fp, const std::string& name)
 {
     lua_State* L = Lua_global;
     std::string fileContent = Core::Utils::LoadFile(fp);
@@ -177,7 +177,7 @@ bool Core::LoadScript(const std::string& fp)
         Core::Debug::LogInfo("Failed to open file "+fp);
         return false;
     }
-    return LoadBuffer(fileContent.c_str(), fileContent.size(), fp.c_str());
+    return LoadBuffer(fileContent.c_str(), fileContent.size(), name.c_str());
 }
 
 void Core::PreloadScripts()
@@ -197,7 +197,7 @@ void Core::PreloadScripts()
 
             std::string fullPath("sdmc:" + dir.GetFullName() + "/" + file);
             Core::Debug::LogInfo("Loading script '"+fullPath+"'");
-            if (LoadScript(fullPath))
+            if (LoadScript(fullPath, "scripts/" + file))
                 loadedScripts++;
         }
         lua_gc(Lua_global, LUA_GCCOLLECT, 0); // If needed collect all garbage
@@ -262,7 +262,7 @@ bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& 
         return false;
     }
     modPaths[modName] = PLUGIN_FOLDER "/mods/" + modsAvailable[modName];
-    if (!Core::LoadScript(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/init.lua")) {
+    if (!Core::LoadScript(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/init.lua", "mods/" + modsAvailable[modName] + "/init.lua")) {
         Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to load 'init.lua'", modName.c_str()));
         modsDiscarded.emplace_back(hash(modName.c_str()));
         modPaths.erase(modName);

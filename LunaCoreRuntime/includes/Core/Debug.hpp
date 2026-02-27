@@ -10,6 +10,13 @@
 #include "CoreGlobals.hpp"
 #include "lua_common.h"
 
+#ifdef DEBUG
+#define LCLOGDEBUG(fmt, ...) \
+    Core::Debug::LogRawf("[DEBUG] " fmt ". [%s:%d]\n", ##__VA_ARGS__, __FILE__, __LINE__)
+#else
+#define LCLOGDEBUG(fmt, ...) 
+#endif
+
 #ifndef ASSERT
 #define ASSERT(cond) \
     do { \

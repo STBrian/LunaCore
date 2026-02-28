@@ -357,8 +357,8 @@ static const luaL_Reg filesystem_functions[] = {
     {"directoryExists", l_Filesystem_directoryExists},
     {"getDirectoryElements", l_Filesystem_getDirectoryElements},
     {"createDirectory", l_Filesystem_createDirectory},
-    {"deleteFile", l_Filesystem_deleteFile},
-    {"renameFile", l_Filesystem_renameFile},
+    //{"deleteFile", l_Filesystem_deleteFile}, I'm not sure to include a lot of freedom in the filesystem
+    //{"renameFile", l_Filesystem_renameFile},
     {NULL, NULL}
 };
 

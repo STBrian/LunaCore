@@ -9,6 +9,7 @@
 #include "CoreGlobals.hpp"
 #include "Helpers/Timer.hpp"
 #include "Helpers/Mutex.hpp"
+#include "Helpers/Allocation.hpp"
 
 using namespace Core;
 namespace CTRPF = CTRPluginFramework;
@@ -53,7 +54,7 @@ void Scheduler::Update() {
         if (task.handler && task.handler->WaitIsReady()) {
             lua_State* T = task.thread;
             int nresults = task.handler->PushValues(T);
-            delete task.handler;
+            Core::dealloc(task.handler);
             Core::AsyncRestartClock();
             int call_result = lua_resume(T, nresults);
             checkThreadStatus(ins, ins.tasks, Lua_global, call_result, T);

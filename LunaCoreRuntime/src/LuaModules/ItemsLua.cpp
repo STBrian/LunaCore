@@ -8,8 +8,10 @@
 #include "Core/Utils/ItemUtils.hpp"
 
 #include "game/Minecraft.hpp"
+#include "Helpers/Allocation.hpp"
 
 namespace CTRPF = CTRPluginFramework;
+using namespace Core;
 using Item = Game::Item;
 using ItemInstance = Game::ItemInstance;
 
@@ -128,7 +130,7 @@ static int l_Items_getItemInstance(lua_State *L) {
     Item *itemData = *(Item**)LuaObject::CheckObject(L, 1, "GameItem");
     u16 count = luaL_checkinteger(L, 2);
     u16 data = luaL_checkinteger(L, 3);
-    ItemInstance* ins = new ItemInstance(itemData, count, data);
+    ItemInstance* ins = alloc<ItemInstance>(itemData, count, data);
     LuaObject::NewObject(L, "GameItemInstance", ins);
     return 1;
 }
@@ -163,7 +165,7 @@ static const LuaObjectField GameItemFields[] = {
 
 static int l_gc_GameItemInstance(lua_State* L) {
     ItemInstance* ptr = *(ItemInstance**)LuaObject::CheckObject(L, 1, "GameItemInstance");
-    delete ptr;
+    Core::dealloc(ptr);
     return 0;
 }
 

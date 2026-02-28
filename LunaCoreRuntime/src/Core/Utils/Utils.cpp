@@ -5,6 +5,7 @@
 #include <CTRPluginFramework.hpp>
 
 #include "Core/Debug.hpp"
+#include "Helpers/Allocation.hpp"
 
 #define USA_REG 0x00040000001B8700LL
 #define EUR_REG 0x000400000017CA00LL
@@ -15,6 +16,7 @@
 #define IS_TARGET_ID(id) ((id) == USA_REG || (id) == EUR_REG || (id) == JPN_REG)
 
 namespace CTRPF = CTRPluginFramework;
+using namespace Core;
 
 namespace Core::Utils {
     bool checkTitle() {
@@ -81,22 +83,21 @@ namespace Core::Utils {
 
     std::string LoadFile(const std::string& filepath) {
         std::string content;
-        if (!CTRPF::File::Exists(filepath))
-            return content;
+        if (!CTRPF::File::Exists(filepath)) return content;
+        
         CTRPF::File file_ptr;
         CTRPF::File::Open(file_ptr, filepath, CTRPF::File::READ);
-        if (!file_ptr.IsOpen())
-            return content;
+        if (!file_ptr.IsOpen()) return content;
+
         file_ptr.Seek(0, CTRPF::File::SeekPos::END);
         size_t fileSize = file_ptr.Tell();
         file_ptr.Seek(0, CTRPF::File::SeekPos::SET);
-        char *fileContent = new char[fileSize + 1];
-        if (fileContent == NULL) 
-            return content;
-        file_ptr.Read(fileContent, fileSize);
-        fileContent[fileSize] = '\0';
-        content = std::string(fileContent);
-        free(fileContent);
+        auto fileContent = UniqueAlloc::alloc_array_raw<char>(fileSize + 1);
+        if (!fileContent) return content;
+
+        file_ptr.Read(fileContent.get(), fileSize);
+        fileContent.get()[fileSize] = '\0';
+        content = std::string(fileContent.get());
         return content;
     }
 }

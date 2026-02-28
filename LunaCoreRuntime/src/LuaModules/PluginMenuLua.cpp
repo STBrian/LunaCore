@@ -5,6 +5,11 @@
 
 #include "Core/Debug.hpp"
 
+#include "Helpers/Allocation.hpp"
+
+namespace CTRPF = CTRPluginFramework;
+using namespace Core;
+
 // ----------------------------------------------------------------------------
 
 //!include LunaCoreRuntime/src/LuaModules/LoadModules.cpp
@@ -30,7 +35,7 @@ static int l_Menu_getMenuFolder(lua_State* L) {
 */
 static int l_Menu_showMessageBox(lua_State* L) {
     const char* msg = luaL_checkstring(L, 1);
-    CTRPluginFramework::MessageBox(msg, CTRPluginFramework::DialogType::DialogOk)();
+    CTRPF::MessageBox(msg, CTRPF::DialogType::DialogOk)();
     return 0;
 }
 
@@ -42,7 +47,7 @@ static int l_Menu_showMessageBox(lua_State* L) {
 */
 static int l_Menu_showAskMessageBox(lua_State* L) {
     const char* msg = luaL_checkstring(L, 1);
-    lua_pushboolean(L, CTRPluginFramework::MessageBox(msg, CTRPluginFramework::DialogType::DialogYesNo)());
+    lua_pushboolean(L, CTRPF::MessageBox(msg, CTRPF::DialogType::DialogYesNo)());
     return 1;
 }
 
@@ -72,9 +77,9 @@ static const luaL_Reg menu_functions[] =
 ### MenuFolder:newFolder
 */
 static int l_MenuFolder_newFolder(lua_State* L) {
-    auto* obj = *(CTRPluginFramework::MenuFolder**)LuaObject::CheckObject(L, 1, "MenuFolder");
+    auto* obj = *(CTRPF::MenuFolder**)LuaObject::CheckObject(L, 1, "MenuFolder");
     const char* name = luaL_checkstring(L, 2);
-    auto folder = new CTRPluginFramework::MenuFolder(name);
+    auto folder = alloc<CTRPF::MenuFolder>(name);
     LuaObject::NewObject(L, "MenuFolder", folder);
     obj->Append(folder);
     return 1;
@@ -87,14 +92,14 @@ static int l_MenuFolder_newFolder(lua_State* L) {
 ### MenuFolder:newEntry
 */
 static int l_MenuFolder_newEntry(lua_State* L) {
-    auto* obj = *(CTRPluginFramework::MenuFolder**)LuaObject::CheckObject(L, 1, "MenuFolder");
+    auto* obj = *(CTRPF::MenuFolder**)LuaObject::CheckObject(L, 1, "MenuFolder");
     const char* name = luaL_checkstring(L, 2);
     if (!lua_isfunction(L, 3)) {
         return luaL_error(L, "expected function");
     }
     lua_pushvalue(L, 3);
     int ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    auto entry = new CTRPluginFramework::MenuEntry(name, nullptr, [](CTRPluginFramework::MenuEntry* entry) {
+    auto entry = alloc<CTRPF::MenuEntry>(name, nullptr, [](CTRPF::MenuEntry* entry) {
         int funref = (int)entry->GetArg();
         if (!Lua_Global_Mut.try_lock())
             return;

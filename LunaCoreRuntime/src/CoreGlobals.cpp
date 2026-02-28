@@ -17,4 +17,4 @@ std::unordered_map<std::string, std::string> modPaths;
 GameState_s GameState;
 CTRPluginFramework::PluginMenu *gmenu;
 
-CTRPluginFramework::MenuFolder* MenuModsFolder = new CTRPluginFramework::MenuFolder("Mods");
+CTRPluginFramework::MenuFolder* MenuModsFolder;

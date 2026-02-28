@@ -2,10 +2,11 @@
 
 #include <concepts>
 #include <type_traits>
-#include <new>
 
-#include <malloc.h>
 #include <3ds.h>
+
+#include "Core/Debug.hpp"
+#include "Helpers/Allocation.hpp"
 
 namespace Core {
     template<typename F, typename T>
@@ -38,8 +39,8 @@ namespace Core {
         static void threadBodyFunction(threadCtx<T>* ctx) {
             ctx->callback(ctx->passValue);
             u8* stackStart = ctx->stackPtr;
-            delete ctx;
-            free(stackStart);
+            dealloc(ctx);
+            dealloc_array(stackStart);
             svcExitThread();
         }
 
@@ -47,38 +48,30 @@ namespace Core {
 
         public:
         Thread(ThreadEmptyFunc func) {
-            u8* stackPtr = (u8*)memalign(0x8, 0x800);
-            if (!stackPtr)
-                return;
-            threadCtx<void*>* ctx = new (std::nothrow) threadCtx<void*>;
-            if (!ctx) {
-                free(stackPtr);
-                return;
-            }
-            ctx->stackPtr = stackPtr;
-            ctx->stackPtrTop = stackPtr + 0x800;
+            auto stackPtr = UniqueAlloc::alloc_array_raw<u8>(0x800);
+            auto ctx = UniqueAlloc::alloc_raw<threadCtx<void*>>();
+            if (!stackPtr || !ctx) return;
+            ctx->stackPtr = stackPtr.release();
+            u8* stackPtrTop = ctx->stackPtr + 0x800;
+            ctx->stackPtrTop = stackPtrTop;
             ctx->callback = (ThreadFunc)func;
             ctx->passValue = nullptr;
-            svcCreateThread(&this->threadHndl, (ThreadFunc)threadBodyFunction<void*>, (u32)ctx, (u32*)ctx->stackPtrTop, 0x30, -2);
+            svcCreateThread(&this->threadHndl, (ThreadFunc)threadBodyFunction<void*>, (u32)ctx.release(), (u32*)stackPtrTop, 0x30, -2);
             this->started = true;
         }
 
         template<typename F, typename T>
         requires VoidFunctionOneArg<F, T> && PrimitiveOrPointer<T>
         Thread(F func, T value) {
-            u8* stackPtr = (u8*)memalign(0x8, 0x800);
-            if (!stackPtr)
-                return;
-            threadCtx<T>* ctx = new (std::nothrow) threadCtx<T>;
-            if (!ctx) {
-                free(stackPtr);
-                return;
-            }
-            ctx->stackPtr = stackPtr;
-            ctx->stackPtrTop = stackPtr + 0x800;
+            auto stackPtr = UniqueAlloc::alloc_array_raw<u8>(0x800);
+            auto ctx = UniqueAlloc::alloc_raw<threadCtx<T>>();
+            if (!stackPtr || !ctx) return;
+            ctx->stackPtr = stackPtr.release();
+            u8* stackPtrTop = ctx->stackPtr + 0x800;
+            ctx->stackPtrTop = stackPtrTop;
             ctx->callback = func;
             ctx->passValue = value;
-            svcCreateThread(&this->threadHndl, (ThreadFunc)threadBodyFunction<T>, (u32)ctx, (u32*)ctx->stackPtrTop, 0x30, -2);
+            svcCreateThread(&this->threadHndl, (ThreadFunc)threadBodyFunction<T>, (u32)ctx.release(), (u32*)stackPtrTop, 0x30, -2);
             this->started = true;
         }
 

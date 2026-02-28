@@ -15,6 +15,7 @@
 #include "Core/Filesystem.hpp"
 
 #include "Helpers/TCPConnection.hpp"
+#include "Helpers/Allocation.hpp"
 
 using namespace CTRPluginFramework;
 
@@ -89,35 +90,31 @@ void PCConnectionThreadFunction(Core::Network::TCPServer* tcp) {
             case 3: { // storfile
                 u32 dstPathLen, fileSize;
                 tcp->recv(&dstPathLen, 4);
-                char* pathData = new (std::nothrow) char[dstPathLen];
-                if (pathData) {
-                    tcp->recv(pathData, dstPathLen);
-                    pathData[dstPathLen-1] = '\0';
-                    std::string pathName(pathData);
-                    delete pathData;
-                    tcp->recv(&fileSize, 4);
-                    fslib::File dstFile;
-                    dstFile.open(path_from_string(pathName), FS_OPEN_WRITE|FS_OPEN_CREATE);
-                    char* buffer = new (std::nothrow) char[0x100];
-                    if (buffer) {
-                        u32 currentRecv = 0;
-                        while (currentRecv < fileSize) {
-                            u32 toRecv = fileSize - currentRecv > 0x100 ? 0x100 : fileSize - currentRecv;
-                            tcp->recv(buffer, toRecv);
-                            dstFile.write(buffer, toRecv);
-                            currentRecv += toRecv;
-                        }
-                        dstFile.flush();
-                        delete buffer;
-                    }
-                    dstFile.close();
+                char* pathData = Core::alloc_array<char>(dstPathLen);
+                tcp->recv(pathData, dstPathLen);
+                pathData[dstPathLen-1] = '\0';
+                std::string pathName(pathData);
+                Core::dealloc_array(pathData);
+                
+                tcp->recv(&fileSize, 4);
+                fslib::File dstFile;
+                dstFile.open(path_from_string(pathName), FS_OPEN_WRITE|FS_OPEN_CREATE);
+                char buffer[0x100];
+                u32 currentRecv = 0;
+                while (currentRecv < fileSize) {
+                    u32 toRecv = fileSize - currentRecv > 0x100 ? 0x100 : fileSize - currentRecv;
+                    tcp->recv(buffer, toRecv);
+                    dstFile.write(buffer, toRecv);
+                    currentRecv += toRecv;
                 }
+                dstFile.flush();
+                dstFile.close();
                 break;
             }
         }
     }
 
-    delete tcp;
+    Core::dealloc(tcp);
 }
 
 struct _pair {
@@ -139,10 +136,10 @@ void InitMenu(PluginMenu &menu)
 
         MessageBox("UA", body)();
     });*/
-    auto optionsFolder = new MenuFolder("Options");
-    auto devFolder = new MenuFolder("Developer");
+    auto optionsFolder = Core::alloc<MenuFolder>("Options");
+    auto devFolder = Core::alloc<MenuFolder>("Developer");
 
-    optionsFolder->Append(new MenuEntry("Toggle Script Loader", nullptr, [](MenuEntry *entry)
+    optionsFolder->Append(Core::alloc<MenuEntry>("Toggle Script Loader", nullptr, [](MenuEntry *entry)
     {
         bool changed = false;
         if (G_config["enable_scripts"] == "true") {
@@ -162,7 +159,7 @@ void InitMenu(PluginMenu &menu)
                 Core::Debug::LogWarn("Failed to save configs");
         }
     }));
-    optionsFolder->Append(new MenuEntry("Toggle Menu Layout", nullptr, [](MenuEntry *entry)
+    optionsFolder->Append(Core::alloc<MenuEntry>("Toggle Menu Layout", nullptr, [](MenuEntry *entry)
     {
         bool changed = false;
         if (G_config["custom_game_menu_layout"] == "true") {
@@ -182,7 +179,7 @@ void InitMenu(PluginMenu &menu)
                 Core::Debug::LogWarn("Failed to save configs");
         }
     }));
-    optionsFolder->Append(new MenuEntry("Toggle Block ZL and ZR keys", nullptr, [](MenuEntry *entry)
+    optionsFolder->Append(Core::alloc<MenuEntry>("Toggle Block ZL and ZR keys", nullptr, [](MenuEntry *entry)
     {
         bool changed = false;
         if (G_config["disable_zl_and_zr"] == "true") {
@@ -206,7 +203,7 @@ void InitMenu(PluginMenu &menu)
                 Core::Debug::LogWarn("Failed to save configs");
         }
     }));
-    optionsFolder->Append(new MenuEntry("Toggle Block DPADLEFT and DPADRIGHT keys", nullptr, [](MenuEntry *entry)
+    optionsFolder->Append(Core::alloc<MenuEntry>("Toggle Block DPADLEFT and DPADRIGHT keys", nullptr, [](MenuEntry *entry)
     {
         bool changed = false;
         if (G_config["disable_zl_and_zr"] == "true") {
@@ -226,30 +223,27 @@ void InitMenu(PluginMenu &menu)
                 Core::Debug::LogWarn("Failed to save configs");
         }
     }));
-    optionsFolder->Append(new MenuEntry("Show Lua memory usage", nullptr, [](MenuEntry *entry)
-    {
+    optionsFolder->Append(Core::alloc<MenuEntry>("Show Lua memory usage", nullptr, [](MenuEntry *entry) {
         static bool enabled = false;
-        if (!enabled)
-            OSD::Run(DrawMonitors);
-        else
-            OSD::Stop(DrawMonitors);
+        if (!enabled) OSD::Run(DrawMonitors);
+        else OSD::Stop(DrawMonitors);
         enabled = !enabled;
     }));
-    devFolder->Append(new MenuEntry("Init network", nullptr, [](MenuEntry *entry) {
+    devFolder->Append(Core::alloc<MenuEntry>("Init network", nullptr, [](MenuEntry *entry) {
         if (socBuffer == NULL) {
             initSockets();
             MessageBox("Network started")();
         } else
             MessageBox("Network already started")();
     }));
-    devFolder->Append(new MenuEntry("Exit network", nullptr, [](MenuEntry *entry) {
+    devFolder->Append(Core::alloc<MenuEntry>("Exit network", nullptr, [](MenuEntry *entry) {
         if (socBuffer != NULL) {
             exitSockets();
             MessageBox("Network exited")();
         } else
             MessageBox("Network is not started")();
     }));
-    devFolder->Append(new MenuEntry("Load script from network", nullptr, [](MenuEntry *entry) {
+    devFolder->Append(Core::alloc<MenuEntry>("Load script from network", nullptr, [](MenuEntry *entry) {
         if (socBuffer == NULL) {
             MessageBox("Network is not started")();
             return;
@@ -267,8 +261,7 @@ void InitMenu(PluginMenu &menu)
 
         // Wait for a connection
         if (!tcp.waitConnection(CancelOperationCallback)) {
-            if (!tcp.aborted)
-                MessageBox("Connection error")();
+            if (!tcp.aborted) MessageBox("Connection error")();
             return;
         } 
 
@@ -278,7 +271,7 @@ void InitMenu(PluginMenu &menu)
             MessageBox("Failed to get filename size")();
             return;
         }
-        std::unique_ptr<char[]> namebuf(new (std::nothrow) char[fnameSize]);
+        auto namebuf = Core::UniqueAlloc::alloc_array_raw<char>(fnameSize);
         if (!namebuf) {
             MessageBox("Memory error")();
             return;
@@ -294,7 +287,7 @@ void InitMenu(PluginMenu &menu)
             MessageBox("Failed to get file size")();
             return;
         }
-        std::unique_ptr<char[]> buffer(new (std::nothrow) char[size]);
+        auto buffer = Core::UniqueAlloc::alloc_array_raw<char>(size);
         if (!buffer) {
             MessageBox("Memory error")();
             return;
@@ -330,7 +323,7 @@ void InitMenu(PluginMenu &menu)
 
     #ifdef DEBUG
     #pragma message "Debug enabled"
-    devFolder->Append(new MenuEntry("Dump memory to network", nullptr, [](MenuEntry *entry) {
+    devFolder->Append(Core::alloc<MenuEntry>("Dump memory to network", nullptr, [](MenuEntry *entry) {
         if (socBuffer == NULL) {
             MessageBox("Network is not started")();
             return;
@@ -366,8 +359,7 @@ void InitMenu(PluginMenu &menu)
 
         // Wait until a connection
         if (!tcp.waitConnection(CancelOperationCallback)) {
-            if (!tcp.aborted)
-                MessageBox("Connection error")();
+            if (!tcp.aborted) MessageBox("Connection error")();
             return;
         }
 
@@ -393,12 +385,12 @@ void InitMenu(PluginMenu &menu)
             }
         }
     }));
-    devFolder->Append(new MenuEntry("Connect to PC", nullptr, [](MenuEntry *entry) {
+    devFolder->Append(Core::alloc<MenuEntry>("Connect to PC", nullptr, [](MenuEntry *entry) {
         if (socBuffer == NULL) {
             MessageBox("Network is not started")();
             return;
         }
-        auto tcp = new Core::Network::TCPServer(5431);
+        auto tcp = Core::UniqueAlloc::alloc<Core::Network::TCPServer>(5431);
         std::string host = tcp->getHostName();
 
         // Draw message
@@ -413,21 +405,17 @@ void InitMenu(PluginMenu &menu)
 
         // Wait until a connection
         if (!tcp->waitConnection(CancelOperationCallback)) {
-            if (!tcp->aborted)
-                MessageBox("Connection error")();
-            delete tcp;
+            if (!tcp->aborted) MessageBox("Connection error")();
             return;
         }
 
-        Core::Thread connThread(PCConnectionThreadFunction, tcp);
-        if (!connThread.isStarted()) {
-            MessageBox("Failed to start thread")();
-            delete tcp;
-        }
+        Core::Thread connThread(PCConnectionThreadFunction, tcp.get());
+        if (!connThread.isStarted()) MessageBox("Failed to start thread")();
+        else tcp.release();
     }));
     #endif
     
-    devFolder->Append(new MenuEntry("Clean Lua environment", nullptr, [](MenuEntry *entry) {
+    devFolder->Append(Core::alloc<MenuEntry>("Clean Lua environment", nullptr, [](MenuEntry *entry) {
         if (!MessageBox("This will reload Lua env without any scripts or mods. Continue?", DialogType::DialogYesNo)())
             return;
         if (!Lua_Global_Mut.try_lock())
@@ -440,7 +428,7 @@ void InitMenu(PluginMenu &menu)
         MessageBox("Lua environment cleaned")();
         Lua_Global_Mut.unlock();
     }));
-    devFolder->Append(new MenuEntry("Reload Lua environment", nullptr, [](MenuEntry *entry) {
+    devFolder->Append(Core::alloc<MenuEntry>("Reload Lua environment", nullptr, [](MenuEntry *entry) {
         if (!MessageBox("This will reload Lua env and load all scripts and mods. Continue?", DialogType::DialogYesNo)())
             return;
         if (!Lua_Global_Mut.try_lock())

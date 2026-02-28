@@ -7,6 +7,9 @@
 
 #include "string_hash.hpp"
 #include "lua_utils.hpp"
+#include "Helpers/Allocation.hpp"
+
+using namespace Core;
 
 // ----------------------------------------------------------------------------
 
@@ -46,7 +49,7 @@ static int l_Filesystem_open(lua_State *L) {
         lua_pop(L, 1);
         LUAUTILS_ERRORF(L, "Invalid mode");
     }
-    fileStruct->filePtr = new fslib::File(path_from_string(filepath), fileStruct->mode);
+    fileStruct->filePtr = alloc<fslib::File>(path_from_string(filepath), fileStruct->mode);
     
     if (!fileStruct->filePtr->is_open()) {
         lua_pop(L, 1);
@@ -176,14 +179,13 @@ static int l_Filesystem_File_read(lua_State *L) {
         bytes = fileStruct->size;
         fileStruct->filePtr->seek(0, (fslib::File::Origin)SEEK_SET);
     }
-    char *fileContent = new char[bytes];
-    size_t bytesRead = fileStruct->filePtr->read(fileContent, bytes);
+    auto fileContent = UniqueAlloc::alloc_array<char>(bytes);
+    size_t bytesRead = fileStruct->filePtr->read(fileContent.get(), bytes);
     if (bytesRead == -1 || bytes != bytesRead)
         lua_pushnil(L);
     else
-        lua_pushlstring(L, fileContent, bytesRead);
+        lua_pushlstring(L, fileContent.get(), bytesRead);
         
-    delete fileContent;
     return 1;
 }
 
@@ -318,7 +320,7 @@ static int l_Filesystem_File_gc(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)lua_touserdata(L, 1);
     if (fileStruct->filePtr->is_open())
         fileStruct->filePtr->close();
-    delete fileStruct->filePtr;
+    dealloc(fileStruct->filePtr);
     return 0;
 }
 

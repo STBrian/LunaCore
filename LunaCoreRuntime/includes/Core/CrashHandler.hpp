@@ -3,6 +3,8 @@
 #include <CTRPluginFramework.hpp>
 #include <source_location>
 
+#include "Helpers/Errors.hpp"
+
 namespace Core {
     class CrashHandler {
         public:
@@ -34,6 +36,8 @@ namespace Core {
             static void ReserveMemory();
 
             NORETURN static void Abort(const char* errMsg, const std::source_location& location = std::source_location::current());
+
+            NORETURN static void Abort(ErrorCode errCode);
 
             static CTRPluginFramework::Process::ExceptionCallbackState ExceptionCallback(ERRF_ExceptionInfo *excep, CpuRegisters *regs);
     };

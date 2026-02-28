@@ -9,8 +9,10 @@
 #include "Core/Async.hpp"
 
 #include "Core/Graphics/GraphicsManager.hpp"
+#include "Helpers/Allocation.hpp"
 
 namespace CTRPF = CTRPluginFramework;
+using namespace Core;
 
 using GraphicsFrameCallback = void(*)(void);
 using GraphicsExitCallback = void(*)(void);
@@ -313,7 +315,7 @@ static int l_Graphics_newRect(lua_State *L) {
     short width = luaL_checknumber(L, 3);
     short height = luaL_checknumber(L, 4);
 
-    Core::Rect* obj = new Core::Rect(x, y, width, height, false);
+    Core::Rect* obj = alloc<Core::Rect>(x, y, width, height, false);
     LuaObject::NewObject(L, "GRect", obj);
     return 1;
 }
@@ -331,7 +333,7 @@ static int l_Graphics_newLabel(lua_State *L) {
     short y = luaL_checknumber(L, 2);
     const char* text = luaL_checkstring(L, 3);
 
-    Core::Label* obj = new Core::Label(x, y, false);
+    Core::Label* obj = alloc<Core::Label>(x, y, false);
     obj->setText(text);
     LuaObject::NewObject(L, "GLabel", obj);
     return 1;
@@ -347,7 +349,7 @@ static int l_Graphics_add(lua_State* L) {
     if (obj == nullptr)
         return 0;
 
-    Core::GraphicsManager& mgr = Core::GraphicsManager::getInstance();
+    GraphicsManager& mgr = GraphicsManager::getInstance();
     mgr.addObject(obj);
     return 0;
 }
@@ -362,7 +364,7 @@ static int l_Graphics_remove(lua_State* L) {
     if (obj == nullptr)
         return 0;
 
-    Core::GraphicsManager& mgr = Core::GraphicsManager::getInstance();
+    GraphicsManager& mgr = GraphicsManager::getInstance();
     mgr.removeObject(obj);
     return 0;
 }
@@ -462,9 +464,9 @@ static int l_Graphics_Drawable_setColor(lua_State* L) {
 static int l_Graphics_Drawable_gc(lua_State* L) {
     Core::Drawable** obj = (Core::Drawable**)LuaObject::CheckObject(L, 1, "Drawable");
     if (*obj != nullptr) {
-        Core::GraphicsManager& ins = Core::GraphicsManager::getInstance();
+        GraphicsManager& ins = GraphicsManager::getInstance();
         ins.removeObject(*obj);
-        delete *obj;
+        Core::dealloc(*obj);
         *obj = nullptr;
     }
     return 0;

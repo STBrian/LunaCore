@@ -8,8 +8,10 @@
 #include "CoreGlobals.hpp"
 
 #include "Helpers/Timer.hpp"
+#include "Helpers/Allocation.hpp"
 
 namespace CTRPF = CTRPluginFramework;
+using namespace Core;
 
 static Core::Timer timeoutAsyncTimer(CTRPF::Milliseconds(5000));
 
@@ -62,7 +64,7 @@ static int l_Async_run(lua_State *L)
 
     lua_sethook(co, Core::_TimeoutAsyncHook, LUA_MASKCOUNT, 100);
 
-    Core::Scheduler::getInstance().AddTask(L, -1);
+    Scheduler::getInstance().AddTask(L, -1);
     lua_pop(L, 1); // Pop co
     return 0;
 }
@@ -74,7 +76,7 @@ static int l_Async_run(lua_State *L)
 ### Async.wait
 */
 static int l_Async_wait(lua_State *L) {
-    if (!Core::Scheduler::getInstance().IsValidTask(L)) {
+    if (!Scheduler::getInstance().IsValidTask(L)) {
         return luaL_error(L, "use an async task to execute this function");
     }
     int nargs = lua_gettop(L);
@@ -84,12 +86,13 @@ static int l_Async_wait(lua_State *L) {
             if (sec < 0)
                 return luaL_error(L, "bad time value");
             else
-                return Core::Scheduler::getInstance().CreateWait(L, new Core::AsyncWaitHandler(sec));
+                return Scheduler::getInstance().CreateWait(L, UniqueAlloc::alloc<AsyncWaitHandler>(sec));
         } else {
             return luaL_error(L, "bad #1 argument type (expected number)");
         }
     } else {
-        return Core::Scheduler::getInstance().CreateWait(L, new Core::AsyncWaitHandler(0));
+        // It's a wait once but AsyncWaitHandler is needed otherwise the function won't return true
+        return Scheduler::getInstance().CreateWait(L, UniqueAlloc::alloc<AsyncWaitHandler>(0));
     }
 }
 

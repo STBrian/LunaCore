@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include "lua_common.h"
 
+#include "Helpers/Allocation.hpp"
+
 namespace Core {
     class SchedulerWaitHandler {
         public:
@@ -20,6 +22,8 @@ namespace Core {
     class Scheduler {
         public:
 
+        using UniquePtrWaitHandler = std::unique_ptr<SchedulerWaitHandler, UniqueAlloc::CustomDestructor>;
+
         struct PendingTask {
             lua_State* thread;
             SchedulerWaitHandler* handler;
@@ -33,12 +37,20 @@ namespace Core {
             return (result == 0);
         }
 
-        /* Important: The handler will be deleted after resuming, do not delete it manually!
-        Leave handler as nullptr to make a wait_once */
-        int CreateWait(lua_State* T, SchedulerWaitHandler* handler) {
+        /* Important: The handler will be deleted after resuming, do not delete it manually! */
+        int CreateWait(lua_State* T, UniquePtrWaitHandler handler) {
             PendingTask task;
             task.thread = T;
-            task.handler = handler;
+            task.handler = handler.release();
+            pending.push_back(task);
+            return lua_yield(T, 0);
+        }
+
+        /* Schedules the task to the next tick */
+        int CreateWait(lua_State* T) {
+            PendingTask task;
+            task.thread = T;
+            task.handler = nullptr;
             pending.push_back(task);
             return lua_yield(T, 0);
         }

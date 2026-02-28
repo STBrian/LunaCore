@@ -27,6 +27,8 @@
 #include "CoreConstants.hpp"
 #include "CoreGlobals.hpp"
 
+#include "Helpers/Allocation.hpp"
+
 #include "game/Minecraft.hpp"
 
 namespace CTRPF = CTRPluginFramework;
@@ -179,6 +181,7 @@ namespace CTRPluginFramework
     int main()
     {
         CrashHandler::plg_state = CrashHandler::PLUGIN_MAIN;
+        MenuModsFolder = alloc<MenuFolder>("Mods");
         if (!Core::Utils::checkTitle())
             return 0;
 
@@ -202,7 +205,7 @@ namespace CTRPluginFramework
         if (!Config::SaveConfig(CONFIG_FILE, G_config))
             Debug::LogInfo("Failed to save configs");
 
-        gmenu = new PluginMenu("LunaCore Plugin Menu", Core::Version.major, Core::Version.minor, Core::Version.patch,
+        gmenu = alloc<PluginMenu>("LunaCore Plugin Menu", Core::Version.major, Core::Version.minor, Core::Version.patch,
             plgSummary + "\n\n" + plgDescription + "\nCompiled: " __TIMESTAMP__ " (CST)", 2);
 
         // Synnchronize the menu with frame event
@@ -221,7 +224,7 @@ namespace CTRPluginFramework
         GameState.CoreLoaded.store(true);
         gmenu->Run();
         
-        delete gmenu;
+        dealloc(gmenu);
 
         // Exit plugin
         return 0;

@@ -19,8 +19,7 @@ static void* coreAbortLr = nullptr;
 
 extern "C" void __wrap_abort() {
     internalAbortLr = __builtin_return_address(0);
-    if (!reservedMemory)
-        __real_abort();
+    if (!reservedMemory) __real_abort();
     internalAbort = true;
     *(u32*)nullptr = 0;
     for (;;);
@@ -70,9 +69,36 @@ namespace Core {
 
     void CrashHandler::Abort(const char* errMsg, const std::source_location& location) {
         coreAbortLr = __builtin_return_address(0);
+        if (coreAbort) *(u32*)nullptr = 0; // Double call. Make it crash
         coreAbort = true;
         coreAbortMsg = errMsg;
+        if (reservedMemory) { // Free reserved memory cause ReportInternalError may need that memory if OOM
+            free(reservedMemory);
+            reservedMemory = nullptr;
+        }
         Debug::ReportInternalError(errMsg, location);
+        CrashHandler::ExceptionCallback(nullptr, nullptr);
+        for (;;);
+    }
+
+    static const char* ErrorCodeToString(ErrorCode errCode) {
+        switch (errCode) {
+        case ErrorCode::None:
+            return "None";
+        
+        case ErrorCode::Allocation_Error:
+            return "Allocation error";
+
+        default:
+            return "Unknown";
+        }
+    }
+
+    void CrashHandler::Abort(ErrorCode errCode) {
+        coreAbortLr = __builtin_return_address(0);
+        if (coreAbort) *(u32*)nullptr = 0; // Double call. Make it crash
+        coreAbort = true;
+        coreAbortMsg = ErrorCodeToString(errCode);
         CrashHandler::ExceptionCallback(nullptr, nullptr);
         for (;;);
     }

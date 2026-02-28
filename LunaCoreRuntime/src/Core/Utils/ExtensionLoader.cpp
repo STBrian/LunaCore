@@ -10,9 +10,11 @@
 
 #include "lua_utils.hpp"
 #include <stdlib.h>
-#include <new>
+
+#include "Helpers/Allocation.hpp"
 
 namespace CTRPF = CTRPluginFramework;
+using namespace Core;
 
 extern u32 __start__;
 
@@ -33,27 +35,27 @@ namespace Core {
         if (!extfile.is_open())
             return nullptr;
         size_t fsize = extfile.get_size();
-        char* buffer = reinterpret_cast<char*>(malloc(fsize));
-        extfile.read(buffer, fsize);
+        auto buffer = UniqueAlloc::alloc_array_raw<char>(fsize);
+        extfile.read(buffer.get(), fsize);
         extfile.close();
-        Debug::Message(CTRPF::Utils::Format("Extension loaded at: %08X", buffer));
+        Debug::Message(CTRPF::Utils::Format("Extension loaded at: %08X", buffer.get()));
 
-        __moduleHeader* header = reinterpret_cast<__moduleHeader*>(buffer);
-        if (header->lcrunver != MAKEVERSION(Core::Version.major, Core::Version.minor, Core::Version.patch)) {
-            free(buffer);
+        __moduleHeader* header = reinterpret_cast<__moduleHeader*>(buffer.get());
+        if (header->lcrunver != MAKEVERSION(Core::Version.major, Core::Version.minor, Core::Version.patch))
             return nullptr;
-        }
-        header->got_start += (u32)buffer; // Adjust
-        header->got_end += (u32)buffer; // Adjust
+
+        header->got_start += (u32)buffer.get(); // Adjust
+        header->got_end += (u32)buffer.get(); // Adjust
 
         u32* got_start = reinterpret_cast<u32*>(header->got_start);
         u32* got_end = reinterpret_cast<u32*>(header->got_end);
         while (got_start < got_end) {
             if (*got_start < (u32)0x00100000)
-                *got_start = *got_start + (u32)buffer;
+                *got_start = *got_start + (u32)buffer.get();
             got_start++;
         }
-        return reinterpret_cast<ModuleEntryFun>(buffer + sizeof(__moduleHeader)); // Entry point
+        u32* entryPoint = reinterpret_cast<u32*>((u32)(buffer.release()) + sizeof(__moduleHeader));
+        return reinterpret_cast<ModuleEntryFun>(entryPoint);
     }
 }
 

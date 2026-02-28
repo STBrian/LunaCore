@@ -207,7 +207,7 @@ int LuaObject::l_newindex(lua_State* L) {
     const char* key = lua_tostring(L, 2);
     std::string currClass(objName); // This seems like a better way and less annoying
     bool valid = false;
-    while (!currClass.empty()) {
+    while (!currClass.empty() && !valid) {
         if (!objsLayouts[currClass].contains(key)) {
             if (parents.contains(currClass))
                 currClass = parents[currClass];

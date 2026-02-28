@@ -24,6 +24,25 @@ void LuaObject::RegisterNewObject(lua_State* L, const char* name, const LuaObjec
         objsLayouts[name][f->key] = {f->offset, f->type, f->access, f->flags, f->objtype};
 }
 
+void LuaObject::RegisterNewObject(lua_State* L, const char* name, const LuaObjectField* fields, lua_CFunction gc_fun) {
+    luaL_newmetatable(L, name);
+    lua_pushcfunction(L, LuaObject::l_index);
+    lua_setfield(L, -2, "__index");
+    lua_pushcfunction(L, LuaObject::l_newindex);
+    lua_setfield(L, -2, "__newindex");
+    lua_pushcfunction(L, LuaObject::l_eq);
+    lua_setfield(L, -2, "__eq");
+    lua_pushcfunction(L, gc_fun);
+    lua_setfield(L, -2, "__gc");
+    lua_pushstring(L, name);
+    lua_setfield(L, -2, "__name");
+    lua_pop(L, 1);
+
+    objsLayouts[name] = {};
+    for (const LuaObjectField* f = fields; f->key != NULL; f++)
+        objsLayouts[name][f->key] = {f->offset, f->type, f->access, f->flags, f->objtype};
+}
+
 /* Returns a pointer to the original pointer. To access the original object, dereference.
 This is done in this way so you can invalid the object data at some point */
 void** LuaObject::CheckObject(lua_State* L, int narg, const char* objtype) {

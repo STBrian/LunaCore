@@ -55,6 +55,8 @@ class LuaObject {
 
     static void RegisterNewObject(lua_State* L, const char* name, const LuaObjectField* fields);
 
+    static void RegisterNewObject(lua_State* L, const char* name, const LuaObjectField* fields, lua_CFunction gc_fun);
+
     static void SetGCObjectField(lua_State* L, const char* objtype, lua_CFunction gcfuncion) {
         if (!objsLayouts.contains(objtype))
             return;

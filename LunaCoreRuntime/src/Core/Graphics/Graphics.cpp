@@ -578,13 +578,11 @@ bool Core::Module::RegisterGraphicsModule(lua_State *L)
 {
     LuaObject::RegisterNewObject(L, "Drawable", DrawableFields);
 
-    LuaObject::RegisterNewObject(L, "GRect", GRectFields);
+    LuaObject::RegisterNewObject(L, "GRect", GRectFields, l_Graphics_Drawable_gc);
     LuaObject::SetParent("GRect", "Drawable");
-    LuaObject::SetGCObjectField(L, "GRect", l_Graphics_Drawable_gc);
 
-    LuaObject::RegisterNewObject(L, "GLabel", GLabelFields);
+    LuaObject::RegisterNewObject(L, "GLabel", GLabelFields, l_Graphics_Drawable_gc);
     LuaObject::SetParent("GLabel", "Drawable");
-    LuaObject::SetGCObjectField(L, "GLabel", l_Graphics_Drawable_gc);
 
     lua_getglobal(L, "Core");
     luaC_register_field(L, graphics_functions, "Graphics");

@@ -176,8 +176,7 @@ static const LuaObjectField GameItemInstanceFields[] = {
 
 bool Core::Module::RegisterItemsModule(lua_State *L) {
     LuaObject::RegisterNewObject(L, "GameItem", GameItemFields);
-    LuaObject::RegisterNewObject(L, "GameItemInstance", GameItemInstanceFields);
-    LuaObject::SetGCObjectField(L, "GameItemInstance", l_gc_GameItemInstance);
+    LuaObject::RegisterNewObject(L, "GameItemInstance", GameItemInstanceFields, l_gc_GameItemInstance);
     lua_getglobal(L, "Game");
     lua_newtable(L); // Items
 

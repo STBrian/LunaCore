@@ -1,4 +1,4 @@
-Async.create(function ()
+Async.run(function ()
     local niter = 0
     while Async.wait(5) and niter < 5 do -- Async.wait always returns true
         Core.Debug.message("Hola!")

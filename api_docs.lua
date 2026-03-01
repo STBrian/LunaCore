@@ -264,6 +264,17 @@ function Core.Filesystem.getDirectoryElements(path) end
 ---@return boolean
 function Core.Filesystem.createDirectory(path) end
 
+---To delete a file. Returns true on success
+---@param file string
+---@return boolean
+function Core.Filesystem.deleteFile(file) end
+
+---To rename a file. Only accepts two paths on the same device. Returns true on success
+---@param oldPath string
+---@param newPath string
+---@return boolean
+function Core.Filesystem.renameFile(oldPath, newPath) end
+
 ---Reads the specified amount of bytes to read, or use "*all" to read all file and returns the data in a string or nil if error
 ---@param bytes any
 ---@return string?
@@ -296,6 +307,10 @@ function FilesystemFile:isOpen() end
 ---Checks if the file is on end of file
 ---@return boolean
 function FilesystemFile:isEOF() end
+
+---Returns the size of the file
+---@return integer
+function FilesystemFile:getSize() end
 
 ---Closes the file
 function FilesystemFile:close() end
@@ -718,24 +733,17 @@ local InventorySlot = {}
 ---@return boolean
 function InventorySlot:isEmpty() end
 
+---@param item GameItem
+---@param value integer?
+---@return boolean
+function InventorySlot:setItem(item, value) end
+
 ---@type GameItem?
 InventorySlot.Item = {}
 
 InventorySlot.ItemCount = 0
 
 InventorySlot.ItemData = 0
-
----@class InventoryArmorSlot
-local InventoryArmorSlot = {}
-
-InventoryArmorSlot.Slot = 0
-
----@type GameItem
-InventoryArmorSlot.Item = {}
-
-InventoryArmorSlot.ItemData = 0
-
-InventoryArmorSlot.ItemName = ""
 
 Core.Menu = {}
 

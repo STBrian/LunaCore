@@ -2,16 +2,12 @@ local Gamepad = Game.Gamepad
 local Debug = Core.Debug
 local targetItem = nil
 
---- Backwards compatibility with 0.12.0
-local OnJoinWorld = Game.World.OnWorldJoin or Game.Event.OnPlayerJoinWorld
-local OnKeyPressed = Game.Gamepad.OnKeyPressed or Game.Event.OnKeyPressed
-
-OnJoinWorld:Connect(function ()
+Game.World.OnWorldJoin:Connect(function ()
     targetItem = Game.Items.findItemByName("diamond")
 end)
 
 -- Checks if player is holding a diamond
-OnKeyPressed:Connect(function ()
+Game.Gamepad.OnKeyPressed:Connect(function ()
     if Gamepad.isPressed(Gamepad.KeyCodes.DPADDOWN) then
         if Game.World.Loaded then
             local playerHand = Game.LocalPlayer.Inventory.Slots["hand"]

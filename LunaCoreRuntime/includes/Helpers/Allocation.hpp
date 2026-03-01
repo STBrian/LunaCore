@@ -32,10 +32,11 @@ T* alloc_array(size_t count) {
     return ptr;
 }
 
-template <typename T>
-T* alloc_raw() {
-    T* ptr = std::malloc(sizeof(T));
-    return ptr;
+template <typename T, typename... Args>
+T* alloc_raw(Args&&... args) {
+    void* ptr = std::malloc(sizeof(T));
+    if (ptr == nullptr) return nullptr;
+    return new (ptr) T(std::forward<Args>(args)...);
 }
 
 template <typename T>

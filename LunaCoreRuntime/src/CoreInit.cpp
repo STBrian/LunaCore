@@ -90,6 +90,7 @@ void Core::LoadLuaEnv() {
     Core::LoadModules(L);
 
     // Set Lua path
+    LOGDEBUG("Adding Lua path");
     lua_getglobal(L, "package");
     lua_getfield(L, -1, "path");
     const char *current_path = lua_tostring(L, -1);
@@ -99,6 +100,14 @@ void Core::LoadLuaEnv() {
     lua_pushstring(L, newPath.c_str());
     lua_setfield(L, -2, "path");
     lua_pop(L, 1);
+
+    // Remove debug.getmetatable
+    LOGDEBUG("Removing debug.getmetatable");
+    lua_getglobal(L, "debug");
+    lua_pushnil(L);
+    lua_setfield(L, -2, "getmetatable");
+    lua_pop(L, 1);
+
     Core::Debug::LogInfo("Lua environment loaded");
 }
 

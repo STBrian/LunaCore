@@ -55,12 +55,26 @@ void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsig
     for (int i = 1; i < path.size(); i++) {
         if (lua_istable(L, -1))
             lua_getfield(L, -1, path[i].c_str());
+        else if (lua_isuserdata(L, -1)) {
+            if (luaL_getmetafield(L, -1, "__index") != LUA_TNIL) {
+                lua_pop(L, 1);
+                lua_getfield(L, -1, path[i].c_str());
+            }
+        }
     }
 
-    if (!lua_istable(L, -1)) {
+    if (!lua_istable(L, -1) && !lua_isuserdata(L, -1)) {
         Core::Debug::ReportInternalError("Tried to trigger event \"" + eventName + "\" with parent of type \"" + std::string(luaL_typename(L, -1)) + "\"");
         lua_settop(L, baseIdx);
         return;
+    }
+    if (lua_isuserdata(L, -1)) {
+        if (luaL_getmetafield(L, -1, "__index") == LUA_TNIL) {
+            Core::Debug::ReportInternalError("Tried to trigger event \"" + eventName + "\" with parent of type \"userdata\" without a metatable");
+            lua_settop(L, baseIdx);
+            return;
+        }
+        lua_pop(L, 1);
     }
     lua_getfield(L, -1, "Trigger");
 

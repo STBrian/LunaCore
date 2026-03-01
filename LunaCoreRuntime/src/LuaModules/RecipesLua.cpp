@@ -5,14 +5,13 @@
 
 #include <CTRPluginFramework.hpp>
 
-#include "lua_object.hpp"
-
 #include "Core/Event.hpp"
 #include "Core/Debug.hpp"
 
 #include "game/world/item/crafting/Recipes.hpp"
 
 #include "lua_utils.hpp"
+#include "Helpers/LuaObject.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 
@@ -65,9 +64,9 @@ static const char* ProcessTableKeys(lua_State* L, std::vector<Minecraft::RecipeC
 
             // Second element must be the GameItemInstance
             lua_rawgeti(L, -1, 2);
-            if (!LuaObject::IsObject(L, -1, "GameItemInstance")) {
+            if (!LuaObjectUtils::IsObject(L, -1, "GameItemInstance")) {
                 lua_settop(L, top); // restore stack and remove table
-                return "Unexpected type in component item (expected GameItemInstance)";
+                return "Unexpected type in component item (expected \"GameItemInstance\")";
             } else {
                 item = *(Minecraft::ItemInstance**)lua_touserdata(L, -1);
             }
@@ -97,8 +96,8 @@ static const char* ProcessTableKeys(lua_State* L, std::vector<Minecraft::RecipeC
 ### Game.Recipes.registerShapedRecipe
 */
 static int l_Recipes_registerShapedRecipe(lua_State* L) {
-    void* ptr1 = *(void**)LuaObject::CheckObject(L, 1, "RecipesTable");
-    Minecraft::ItemInstance* resultItem = *(Minecraft::ItemInstance**)LuaObject::CheckObject(L, 2, "GameItemInstance");
+    void* ptr1 = LuaObjectUtils::CheckObject<void>(L, 1, "RecipesTable").get();
+    Minecraft::ItemInstance* resultItem = LuaObjectUtils::CheckObject<Minecraft::ItemInstance>(L, 2, "GameItemInstance").get();
     u16 categoryId = luaL_checkinteger(L, 3);
     s16 position = luaL_checkinteger(L, 4);
     size_t line1s = 0, line2s = 0, line3s = 0;
@@ -148,13 +147,10 @@ static const luaL_Reg recipes_functions[] = {
     {NULL, NULL}
 };
 
-static const LuaObjectField RecipesTableFields[] = {
-    {"dummy", OBJF_TYPE_INT, 0},
-    {NULL, OBJF_TYPE_NIL, 0}
-};
+class RecipesTableDummyClass {};
 
 bool Core::Module::RegisterRecipesModule(lua_State *L) {
-    LuaObject::RegisterNewObject(L, "RecipesTable", RecipesTableFields);
+    ClassBuilder<DummyEmpty>(L, "RecipesTable").build();
 
     lua_getglobal(L, "Game");
     lua_newtable(L); // Recipes

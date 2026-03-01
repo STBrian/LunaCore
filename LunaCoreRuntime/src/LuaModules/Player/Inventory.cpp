@@ -6,13 +6,15 @@
 
 #include "string_hash.hpp"
 #include "lua_utils.hpp"
-#include "lua_object.hpp"
 
 #include "game/Minecraft.hpp"
 #include "game/world/actor/player/Inventory.hpp"
 #include "game/world/item/ItemInstance.hpp"
 
 #include "Core/Utils/ItemUtils.hpp"
+
+#include "Helpers/LuaObject.hpp"
+#include "Helpers/LuaCustomTable.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 using InventorySlot = Minecraft::Inventory::InventorySlot;
@@ -26,26 +28,6 @@ using Item = Game::Item;
 
 // ----------------------------------------------------------------------------
 
-//@@InventorySlot
-
-/*
-## return: boolean
-### InventorySlot:isEmpty
-*/
-static int l_InventorySlot_isEmpty(lua_State *L) {
-    InventorySlot* slotData = *(InventorySlot**)luaC_funccheckudata(L, 1, "InventorySlot");
-    lua_pushboolean(L, slotData->itemCount == 0 || slotData->itemData == nullptr);
-    return 1;
-}
-
-// ----------------------------------------------------------------------------
-
-/*
-#$InventorySlot.Item : ---@type GameItem?
-=InventorySlot.ItemCount = 0
-=InventorySlot.ItemData = 0
-*/
-
 static int l_Inventory_Slots_index(lua_State *L) {
     int index = 0;
     if (lua_type(L, 2) == LUA_TNUMBER)
@@ -55,93 +37,50 @@ static int l_Inventory_Slots_index(lua_State *L) {
         if (key == hash("hand"))
             index = Minecraft::GetHeldSlotNumber();
     }
-    InventorySlot* ptr = (InventorySlot*)Minecraft::GetSlotAddress(index);
-    if (ptr) {
-        InventorySlot** invSlot_ptr = (InventorySlot**)lua_newuserdata(L, sizeof(void*));
-        *invSlot_ptr = ptr;
-        luaC_setmetatable(L, "InventorySlot");
-        return 1;
-    }
-    return 0;
-}
-
-// ----------------------------------------------------------------------------
-
-static int l_Inventory_Slot_class_index(lua_State *L)
-{
-    InventorySlot* slotData = *(InventorySlot**)lua_touserdata(L, 1);
-    if (lua_type(L, 2) != LUA_TSTRING)
-        return 0;
-    uint32_t key = hash(lua_tostring(L, 2));
-    switch (key) {
-        case hash("isEmpty"):
-            lua_pushcfunction(L, l_InventorySlot_isEmpty);
-            break;
-        case hash("Item"): {
-            if (slotData->itemData)
-                LuaObject::NewObject(L, "GameItem", slotData->itemData);
-            else 
-                lua_pushnil(L);
-            break;
-        }
-        case hash("ItemCount"):
-            lua_pushnumber(L, slotData->itemCount);
-            break;
-        case hash("ItemData"):
-            lua_pushnumber(L, slotData->dataValue);
-            break;
-        default:
-            lua_pushnil(L);
-            break;
-    }
+    LuaObjectUtils::NewObjectCheck(L, "InventorySlot", (InventorySlot*)Minecraft::GetSlotAddress(index));
     return 1;
 }
 
-static int l_Inventory_Slot_class_newindex(lua_State *L)
-{
-    auto* slotData = *(MC3DSPluginFramework::ItemInstance**)lua_touserdata(L, 1);
-    if (lua_type(L, 2) != LUA_TSTRING)
-        return luaL_error(L, "unable to set field '?' of 'InventorySlot' instance");
-
-    // "Safe" c++ error handler
-    LUAUTILS_INIT_TYPEERROR_HANDLER();
-    LUAUTILS_SET_TYPEERROR_MESSAGE("unable to assign to a \"%s\" field a \"%s\" value");
-
-    {
-    uint32_t key = hash(lua_tostring(L, 2));
-    switch (key) {
-        case hash("Item"): {
-            Item *itemData = *(Item**)luaC_checkudata(L, 3, "GameItem", "unable to assign to a \"%s\" field a \"%s\" value");
-            slotData->init((MC3DSPluginFramework::ItemId)itemData->itemId, slotData->mCount, 0);
-            break;
-        }
-        case hash("ItemCount"):
-            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
-            slotData->mCount = lua_tonumber(L, 3);
-            break;
-        case hash("ItemData"):
-            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
-            slotData->mDataValue = lua_tonumber(L, 3);
-            break;
-        default:
-            luaL_error(L, "Unable to set field '%s' of 'InventorySlot' instance", lua_tostring(L, 2));
-            break;
-    }
-    return 0;
-    }
-
-    LUAUTILS_SET_ERROR_HANDLER(L);
-}
-
 // ----------------------------------------------------------------------------
 
+//@@InventorySlot
+
 /*
-@@InventoryArmorSlot
-=InventoryArmorSlot.Slot = 0
-#$InventoryArmorSlot.Item : ---@type GameItem
-=InventoryArmorSlot.ItemData = 0
-=InventoryArmorSlot.ItemName = ""
+## return: boolean
+### InventorySlot:isEmpty
 */
+static int l_InventorySlot_isEmpty(lua_State *L) {
+    InventorySlot* slotData = LuaObjectUtils::CheckObject<InventorySlot>(L, 1, "InventorySlot").get();
+    lua_pushboolean(L, slotData->itemCount == 0 || slotData->itemData == nullptr);
+    return 1;
+}
+
+/*
+## item: GameItem
+## value: integer?
+## return: boolean
+### InventorySlot:setItem
+*/
+static int l_InventorySlot_setItem(lua_State *L) {
+    auto slotData = LuaObjectUtils::CheckObject<MC3DSPluginFramework::ItemInstance>(L, 1, "InventorySlot").get();
+    Item* item = LuaObjectUtils::CheckObject<Item>(L, 2, "GameItem").get();
+    u16 dataValue = 0;
+    if (lua_gettop(L) > 2)
+        dataValue = luaL_checknumber(L, 3);
+    u8 count = slotData->mCount;
+    if (count > item->maxStackSize)
+        count = item->maxStackSize;
+    slotData->init((MC3DSPluginFramework::ItemId)item->itemId, count, dataValue);
+    return 1;
+}
+
+/*
+#$InventorySlot.Item : ---@type GameItem?
+=InventorySlot.ItemCount = 0
+=InventorySlot.ItemData = 0
+*/
+
+// ----------------------------------------------------------------------------
 
 static int l_Inventory_ArmorSlots_index(lua_State *L)
 {
@@ -166,61 +105,39 @@ static int l_Inventory_ArmorSlots_index(lua_State *L)
                 break;
         }
     }
-    if (index != 0 && Minecraft::GetArmorSlotAddress(index) == 0)
-        index = 0;
-    if (index >= 1 && index <= 4) {
-        InventorySlot** invSlot_ptr = (InventorySlot**)lua_newuserdata(L, sizeof(void*));
-        *invSlot_ptr = (InventorySlot*)Minecraft::GetArmorSlotAddress(index);
-        luaC_setmetatable(L, "InventorySlot");
-        return 1;
-    }
-    return 0;
+    LuaObjectUtils::NewObjectCheck(L, "InventorySlot", (InventorySlot*)Minecraft::GetArmorSlotAddress(index));
+    return 1;
 }
 
 // ----------------------------------------------------------------------------
 
-static inline void RegisterInventoryMetatables(lua_State *L)
-{
-    luaL_newmetatable(L, "InventorySlotsMetatable");
-    lua_pushcfunction(L, l_Inventory_Slots_index);
-    lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, luaC_invalid_newindex);
-    lua_setfield(L, -2, "__newindex");
-    lua_pushstring(L, "InventorySlotsMetatable");
-    lua_setfield(L, -2, "__name");
-    lua_pop(L, 1);
-
-    luaL_newmetatable(L, "InventorySlot");
-    lua_pushcfunction(L, l_Inventory_Slot_class_index);
-    lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, l_Inventory_Slot_class_newindex);
-    lua_setfield(L, -2, "__newindex");
-    lua_pushstring(L, "InventorySlot");
-    lua_setfield(L, -2, "__name");
-    lua_pop(L, 1);
-
-    luaL_newmetatable(L, "InventoryArmorSlotsMetatable");
-    lua_pushcfunction(L, l_Inventory_ArmorSlots_index);
-    lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, luaC_invalid_newindex);
-    lua_setfield(L, -2, "__newindex");
-    lua_pushstring(L, "InventoryArmorSlotsMetatable");
-    lua_setfield(L, -2, "__name");
-    lua_pop(L, 1);
-}
+template<>
+struct LuaTypeName<Item> {
+    static constexpr const char* value = "GameItem";
+};
 
 // Required to be called inside LocalPlayer definition
-bool Core::Module::LocalPlayer::RegisterInventoryModule(lua_State *L)
-{
-    RegisterInventoryMetatables(L);
+bool Core::Module::LocalPlayer::RegisterInventoryModule(lua_State *L) {
+    ClassBuilder<InventorySlot>(L, "InventorySlot")
+        .property("Item", &InventorySlot::itemData)
+        .property("ItemCount", &InventorySlot::itemCount)
+        .property("ItemData", &InventorySlot::dataValue)
+        .method("isEmpty", l_InventorySlot_isEmpty)
+        .method("setItem", l_InventorySlot_setItem)
+        .build();
 
-    lua_newtable(L); // LocalPlayer.Inventory
-    lua_newtable(L); // LocalPlayer.Inventory.Slots
-    luaC_setmetatable(L, "InventorySlotsMetatable");
+    LuaCustomTable::RegisterNewCustomTable(L, "Inventory");
+    LuaCustomTable::RegisterNewCustomTable(L, "Inventory.Slots", l_Inventory_Slots_index);
+    LuaCustomTable::RegisterNewCustomTable(L, "Inventory.ArmorSlots", l_Inventory_ArmorSlots_index);
+
+    LuaCustomTable::GetIndexTable(L, "Inventory"); // LocalPlayer.Inventory
+
+    LuaCustomTable::NewCustomTable(L, "Inventory.Slots"); // LocalPlayer.Inventory.Slots
     lua_setfield(L, -2, "Slots");
-    lua_newtable(L); // LocalPlayer.Inventory.ArmorSlots
-    luaC_setmetatable(L, "InventoryArmorSlotsMetatable");
+    LuaCustomTable::NewCustomTable(L, "Inventory.ArmorSlots"); // LocalPlayer.Inventory.ArmorSlots
     lua_setfield(L, -2, "ArmorSlots");
-    lua_setfield(L, -2, "Inventory");
+
+    lua_pop(L, 1); // Pop inventory index table
+    LuaCustomTable::SetNewCustomTable(L, -1, "Inventory"); // Sets Inventory to LocalPLayer
     return true;
 }

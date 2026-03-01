@@ -1,11 +1,11 @@
 #include "LuaModules.hpp"
 
-#include "lua_object.hpp"
 #include "CoreGlobals.hpp"
 
 #include "Core/Debug.hpp"
 
 #include "Helpers/Allocation.hpp"
+#include "Helpers/LuaObject.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
@@ -24,7 +24,7 @@ using namespace Core;
 ### Core.Menu.getMenuFolder
 */
 static int l_Menu_getMenuFolder(lua_State* L) {
-    LuaObject::NewObject(L, "MenuFolder", MenuModsFolder);
+    LuaObjectUtils::NewObject(L, "MenuFolder", MenuModsFolder);
     return 1;
 }
 
@@ -77,10 +77,10 @@ static const luaL_Reg menu_functions[] =
 ### MenuFolder:newFolder
 */
 static int l_MenuFolder_newFolder(lua_State* L) {
-    auto* obj = *(CTRPF::MenuFolder**)LuaObject::CheckObject(L, 1, "MenuFolder");
+    CTRPF::MenuFolder* obj = LuaObjectUtils::CheckObject<CTRPF::MenuFolder>(L, 1, "MenuFolder").get();
     const char* name = luaL_checkstring(L, 2);
     auto folder = alloc<CTRPF::MenuFolder>(name);
-    LuaObject::NewObject(L, "MenuFolder", folder);
+    LuaObjectUtils::NewObject(L, "MenuFolder", folder);
     obj->Append(folder);
     return 1;
 }
@@ -92,7 +92,7 @@ static int l_MenuFolder_newFolder(lua_State* L) {
 ### MenuFolder:newEntry
 */
 static int l_MenuFolder_newEntry(lua_State* L) {
-    auto* obj = *(CTRPF::MenuFolder**)LuaObject::CheckObject(L, 1, "MenuFolder");
+    CTRPF::MenuFolder* obj = LuaObjectUtils::CheckObject<CTRPF::MenuFolder>(L, 1, "MenuFolder").get();
     const char* name = luaL_checkstring(L, 2);
     if (!lua_isfunction(L, 3)) {
         return luaL_error(L, "expected function");
@@ -106,7 +106,7 @@ static int l_MenuFolder_newEntry(lua_State* L) {
         lua_rawgeti(Lua_global, LUA_REGISTRYINDEX, funref);
         if (lua_pcall(Lua_global, 0, 0, 0)) {
             std::string error_msg(lua_tostring(Lua_global, -1));
-            Core::Debug::LogError("Script load error: "+error_msg);
+            Core::Debug::LogError("Script error: "+error_msg);
             lua_pop(Lua_global, 1);
         }
         Lua_Global_Mut.unlock();
@@ -116,16 +116,13 @@ static int l_MenuFolder_newEntry(lua_State* L) {
     return 0;
 }
 
-static const LuaObjectField MenuFolderFields[] = {
-    {"newFolder", OBJF_TYPE_METHOD, (u32)l_MenuFolder_newFolder},
-    {"newEntry", OBJF_TYPE_METHOD, (u32)l_MenuFolder_newEntry},
-    {NULL, OBJF_TYPE_NIL, 0}
-};
-
 // ----------------------------------------------------------------------------
 
 bool Core::Module::RegisterMenuModule(lua_State *L) {
-    LuaObject::RegisterNewObject(L, "MenuFolder", MenuFolderFields);
+    ClassBuilder<DummyEmpty>(L, "MenuFolder")
+        .method("newFolder", l_MenuFolder_newFolder)
+        .method("newEntry", l_MenuFolder_newEntry)
+        .build();
     lua_getglobal(L, "Core");
     luaC_register_field(L, menu_functions, "Menu");
     lua_pop(L, 1);

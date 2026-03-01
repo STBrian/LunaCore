@@ -61,6 +61,7 @@ namespace Core {
     ### Core.getTitleId
     */
     bool RegisterCoreModule(lua_State *L) {
+        LOGDEBUG("Setup Core global table");
         lua_newtable(L);
         lua_pushfstring(L, "LunaCore %d.%d.%d", Core::Version.major, Core::Version.minor, Core::Version.patch);
         //=Core._VERSION = "LunaCore 0.15.0"
@@ -70,13 +71,21 @@ namespace Core {
         lua_pushcfunction(L, l_Core_getTitleId);
         lua_setfield(L, -2, "getTitleId");
         lua_setglobal(L, "Core");
+        LOGDEBUG("Loading Debug module");
         Core::Module::RegisterDebugModule(L);
+        LOGDEBUG("Loading Event module");
         Core::Module::RegisterEventModule(L);
+        LOGDEBUG("Loading System module");
         Core::Module::RegisterSystemModule(L);
+        LOGDEBUG("Loading Keyboard module");
         Core::Module::RegisterKeyboardModule(L);
+        LOGDEBUG("Loading Filesystem module");
         Core::Module::RegisterFilesystemModule(L);
+        LOGDEBUG("Loading Graphics module");
         Core::Module::RegisterGraphicsModule(L);
+        LOGDEBUG("Loading Memory module");
         Core::Module::RegisterMemoryModule(L);
+        LOGDEBUG("Loading Menu module");
         Core::Module::RegisterMenuModule(L);
         return true;
     }
@@ -84,14 +93,20 @@ namespace Core {
 
 void Core::LoadModules(lua_State *L)
 {
+    LOGDEBUG("Loading custom file loader");
     Core::RegisterCustomFileLoader(L);
+    LOGDEBUG("Loading utils module");
     Core::RegisterUtilsModule(L);
     
+    LOGDEBUG("Loading Async module");
     Core::RegisterAsyncModule(L);
+    LOGDEBUG("Loading Core module");
     Core::RegisterCoreModule(L);
     //Core::RegisterExtensionLoader(L); not ready for release yet
+    LOGDEBUG("Loading Game module");
     Core::RegisterGameModule(L);
 
+    LOGDEBUG("Making Core and Game read-only");
     const char *lua_Code = R"(
         local realCore = readOnlyTable(Core, "Core")
         Core = nil
@@ -124,5 +139,6 @@ void Core::LoadModules(lua_State *L)
         lua_pop(L, 1);
     }
 
+    LOGDEBUG("Unregister utils module");
     Core::UnregisterUtilsModule(L);
 }

@@ -9,7 +9,6 @@
 
 #include "string_hash.hpp"
 #include "lua_common.h"
-#include "lua_object.hpp"
 #include "Core/Debug.hpp"
 #include "Core/CrashHandler.hpp"
 #include "Core/Event.hpp"
@@ -19,6 +18,8 @@
 #include "game/world/item/Item.hpp"
 #include "game/entity/Entity.hpp"
 #include "game/gstd/gstd_string.hpp"
+
+#include "Helpers/LuaObject.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 
@@ -183,7 +184,7 @@ static void EntitySpawnStartHook(CoreHookContext *ctx) {
 
     if (ctx->r2 != 0) {
         std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
-        LuaObject::NewObject(Lua_global, "GameSpawnCoords", reinterpret_cast<void*>(ctx->r2)); // Pass the reference
+        LuaObjectUtils::NewObject(Lua_global, "GameSpawnCoords", reinterpret_cast<void*>(ctx->r2)); // Pass the reference
         Core::Event::TriggerEvent(Lua_global, "Core.Event.OnGameEntitySpawnStart", 1);
     }
 
@@ -208,7 +209,7 @@ static void EntitySpawnFinishedHook(CoreHookContext *ctx) {
     if (ctx->r0 != 0) {
         std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
         Game::Entity* entity = reinterpret_cast<Game::Entity*>(ctx->r0);
-        LuaObject::NewObject(Lua_global, "GameEntity", entity);
+        LuaObjectUtils::NewObject(Lua_global, "GameEntity", entity);
         Core::Event::TriggerEvent(Lua_global, "Core.Event.OnGameEntitySpawn", 1);
     }
 
@@ -231,7 +232,7 @@ static void RegisterRecipes(CoreHookContext* ctx) {
 
     {
         std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
-        LuaObject::NewObject(Lua_global, "RecipesTable", (void*)ctx->r0);
+        LuaObjectUtils::NewObject(Lua_global, "RecipesTable", (void*)ctx->r0);
         Core::Event::TriggerEvent(Lua_global, "Game.Recipes.OnRegisterRecipes", 1);
     }
     

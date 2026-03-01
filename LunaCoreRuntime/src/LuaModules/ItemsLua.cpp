@@ -2,13 +2,14 @@
 
 #include <cstring>
 #include "string_hash.hpp"
-#include "lua_object.hpp"
 
 #include "Core/Event.hpp"
 #include "Core/Utils/ItemUtils.hpp"
 
 #include "game/Minecraft.hpp"
+
 #include "Helpers/Allocation.hpp"
+#include "Helpers/LuaObject.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
@@ -32,10 +33,7 @@ using ItemInstance = Game::ItemInstance;
 static int l_Items_findItemByName(lua_State *L) {
     const char *name = luaL_checkstring(L, 1);
     Item *itemData = Core::Items::SearchItemByName(name);
-    if (itemData == NULL)
-        lua_pushnil(L);
-    else
-        LuaObject::NewObject(L, "GameItem", itemData);
+    LuaObjectUtils::NewObjectCheck(L, "GameItem", itemData);
     return 1;
 }
 
@@ -48,10 +46,7 @@ static int l_Items_findItemByName(lua_State *L) {
 static int l_Items_findItemByID(lua_State *L) {
     u16 itemID = luaL_checknumber(L, 1);
     Item *itemData = Core::Items::SearchItemByID(itemID);
-    if (itemData == NULL)
-        lua_pushnil(L);
-    else
-        LuaObject::NewObject(L, "GameItem", itemData);
+    LuaObjectUtils::NewObjectCheck(L, "GameItem", itemData);
     return 1;
 }
 
@@ -81,10 +76,7 @@ static int l_Items_registerItem(lua_State *L) {
     const char* itemName = luaL_checkstring(L, 1);
     u16 itemId = luaL_checknumber(L, 2);
     Item* regItem = Game::registerItem(itemName, itemId);
-    if (regItem == nullptr)
-        lua_pushnil(L);
-    else
-        LuaObject::NewObject(L, "GameItem", regItem);
+    LuaObjectUtils::NewObjectCheck(L, "GameItem", regItem);
     return 1;
 }
 
@@ -96,10 +88,10 @@ static int l_Items_registerItem(lua_State *L) {
 ### GameItem:setTexture
 */
 static int l_Items_registerItemTexture(lua_State *L) {
-    Item* item_ptr = *(Item**)LuaObject::CheckObject(L, 1, "GameItem");
+    Item* item = LuaObjectUtils::CheckObject<Item>(L, 1, "GameItem").get();
     const char* textureName = luaL_checkstring(L, 2);
     u16 textureIndex = luaL_checkinteger(L, 3);
-    item_ptr->setTexture(hash(textureName), textureIndex);
+    item->setTexture(hash(textureName), textureIndex);
     return 0;
 }
 
@@ -111,10 +103,10 @@ static int l_Items_registerItemTexture(lua_State *L) {
 ### Game.Items.registerCreativeItem
 */
 static int l_Items_registerCreativeItem(lua_State *L) {
-    Item* item_ptr = *(Item**)LuaObject::CheckObject(L, 1, "GameItem");
+    Item* item = LuaObjectUtils::CheckObject<Item>(L, 1, "GameItem").get();
     u16 groupId = luaL_checkinteger(L, 2);
     s16 position = luaL_checkinteger(L, 3);
-    Item::addCreativeItem(item_ptr, groupId, position);
+    Item::addCreativeItem(item, groupId, position);
     return 0;
 }
 
@@ -127,11 +119,11 @@ static int l_Items_registerCreativeItem(lua_State *L) {
 ### Game.Items.getItemInstance
 */
 static int l_Items_getItemInstance(lua_State *L) {
-    Item *itemData = *(Item**)LuaObject::CheckObject(L, 1, "GameItem");
+    Item* item = LuaObjectUtils::CheckObject<Item>(L, 1, "GameItem").get();
     u16 count = luaL_checkinteger(L, 2);
     u16 data = luaL_checkinteger(L, 3);
-    ItemInstance* ins = alloc<ItemInstance>(itemData, count, data);
-    LuaObject::NewObject(L, "GameItemInstance", ins);
+    ItemInstance* ins = alloc<ItemInstance>(item, count, data);
+    LuaObjectUtils::NewObject(L, "GameItemInstance", ins);
     return 1;
 }
 
@@ -154,29 +146,30 @@ static const luaL_Reg items_functions[] = {
 =GameItem.DescriptionID = ""
 */
 
-static const LuaObjectField GameItemFields[] = {
-    {"StackSize", OBJF_TYPE_SHORT, offsetof(Item, maxStackSize)},
-    {"ID", OBJF_TYPE_SHORT, offsetof(Item, itemId), OBJF_ACCESS_INDEX},
-    {"NameID", OBJF_TYPE_STRING, offsetof(Item, nameId), OBJF_ACCESS_INDEX},
-    {"DescriptionID", OBJF_TYPE_STRING, offsetof(Item, descriptionId), OBJF_ACCESS_INDEX},
-    {"setTexture", OBJF_TYPE_METHOD, (u32)l_Items_registerItemTexture},
-    {NULL, OBJF_TYPE_NIL, 0}
-};
-
 static int l_gc_GameItemInstance(lua_State* L) {
-    ItemInstance* ptr = *(ItemInstance**)LuaObject::CheckObject(L, 1, "GameItemInstance");
-    Core::dealloc(ptr);
+    LuaObject<ItemInstance> ptr = LuaObjectUtils::CheckObject<ItemInstance>(L, 1, "GameItemInstance");
+    Core::dealloc(ptr.get());
     return 0;
 }
 
-static const LuaObjectField GameItemInstanceFields[] = {
-    {"dummy", OBJF_TYPE_SHORT, 0},
-    {NULL, OBJF_TYPE_NIL, 0}
-};
+// ----------------------------------------------------------------------------
 
 bool Core::Module::RegisterItemsModule(lua_State *L) {
-    LuaObject::RegisterNewObject(L, "GameItem", GameItemFields);
-    LuaObject::RegisterNewObject(L, "GameItemInstance", GameItemInstanceFields, l_gc_GameItemInstance);
+    ClassBuilder<Item>(L, "GameItem")
+        .property("StackSize", &Item::maxStackSize)
+        .property("ID", &Item::itemId, true)
+        .property_get<Item, const char*>("NameID", [](const Item& i) -> const char* {
+            return i.nameId.c_str();
+        })
+        .property_get<Item, const char*>("DescriptionID", [](const Item& i) -> const char* {
+            return i.descriptionId.c_str();
+        })
+        .method("setTexture", l_Items_registerItemTexture)
+        .build();
+    ClassBuilder<ItemInstance>(L, "GameItemInstance")
+        .gc(l_gc_GameItemInstance)
+        .build();
+
     lua_getglobal(L, "Game");
     lua_newtable(L); // Items
 

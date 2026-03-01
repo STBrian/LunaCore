@@ -35,7 +35,7 @@ namespace gstd { // to follow rairai's implementation
             return length() == 0;
         }
 
-        const char* c_str() {
+        const char* c_str() const {
             return data;
         }
 

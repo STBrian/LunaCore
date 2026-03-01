@@ -3,13 +3,15 @@
 #include <string>
 #include <mutex>
 
-#include "lua_object.hpp"
 #include "CoreGlobals.hpp"
 #include "Core/Event.hpp"
 #include "Core/Async.hpp"
+#include "Core/Debug.hpp"
 
 #include "Core/Graphics/GraphicsManager.hpp"
+
 #include "Helpers/Allocation.hpp"
+#include "Helpers/LuaObject.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
@@ -316,7 +318,7 @@ static int l_Graphics_newRect(lua_State *L) {
     short height = luaL_checknumber(L, 4);
 
     Core::Rect* obj = alloc<Core::Rect>(x, y, width, height, false);
-    LuaObject::NewObject(L, "GRect", obj);
+    LuaObjectUtils::NewObject(L, "GRect", obj);
     return 1;
 }
 
@@ -335,7 +337,7 @@ static int l_Graphics_newLabel(lua_State *L) {
 
     Core::Label* obj = alloc<Core::Label>(x, y, false);
     obj->setText(text);
-    LuaObject::NewObject(L, "GLabel", obj);
+    LuaObjectUtils::NewObject(L, "GLabel", obj);
     return 1;
 }
 
@@ -345,7 +347,7 @@ static int l_Graphics_newLabel(lua_State *L) {
 ### Core.Graphics.add
 */
 static int l_Graphics_add(lua_State* L) {
-    Core::Drawable* obj = *(Core::Drawable**)LuaObject::CheckObject(L, 1, "Drawable");
+    Core::Drawable* obj = LuaObjectUtils::CheckObject<Core::Drawable>(L, 1, "Drawable").get();
     if (obj == nullptr)
         return 0;
 
@@ -360,7 +362,7 @@ static int l_Graphics_add(lua_State* L) {
 ### Core.Graphics.remove
 */
 static int l_Graphics_remove(lua_State* L) {
-    Core::Drawable* obj = *(Core::Drawable**)LuaObject::CheckObject(L, 1, "Drawable");
+    Core::Drawable* obj = LuaObjectUtils::CheckObject<Core::Drawable>(L, 1, "Drawable").get();
     if (obj == nullptr)
         return 0;
 
@@ -397,7 +399,7 @@ static const luaL_Reg graphics_functions[] =
 ### Drawable:setVisible
 */
 static int l_Graphics_Drawable_setVisible(lua_State* L) {
-    Core::Drawable* obj = *(Core::Drawable**)LuaObject::CheckObject(L, 1, "Drawable");
+    Core::Drawable* obj = LuaObjectUtils::CheckObject<Core::Drawable>(L, 1, "Drawable").get();
     bool visible = lua_toboolean(L, 2);
     if (obj == nullptr)
         return ERROR_OBJECT_DESTROYED(L);
@@ -413,7 +415,7 @@ static int l_Graphics_Drawable_setVisible(lua_State* L) {
 ### Drawable:setScreens
 */
 static int l_Graphics_Drawable_setScreens(lua_State* L) {
-    Core::Drawable* obj = *(Core::Drawable**)LuaObject::CheckObject(L, 1, "Drawable");
+    Core::Drawable* obj = LuaObjectUtils::CheckObject<Core::Drawable>(L, 1, "Drawable").get();
     bool top = lua_toboolean(L, 2);
     bool bottom = lua_toboolean(L, 3);
     if (obj == nullptr)
@@ -431,7 +433,7 @@ static int l_Graphics_Drawable_setScreens(lua_State* L) {
 ### Drawable:setPosition
 */
 static int l_Graphics_Drawable_setPosition(lua_State* L) {
-    Core::Drawable* obj = *(Core::Drawable**)LuaObject::CheckObject(L, 1, "Drawable");
+    Core::Drawable* obj = LuaObjectUtils::CheckObject<Core::Drawable>(L, 1, "Drawable").get();
     short x = luaL_checknumber(L, 2);
     short y = luaL_checknumber(L, 3);
     if (obj == nullptr)
@@ -448,7 +450,7 @@ static int l_Graphics_Drawable_setPosition(lua_State* L) {
 ### Drawable:setColor
 */
 static int l_Graphics_Drawable_setColor(lua_State* L) {
-    Core::Drawable* obj = *(Core::Drawable**)LuaObject::CheckObject(L, 1, "Drawable");
+    Core::Drawable* obj = LuaObjectUtils::CheckObject<Core::Drawable>(L, 1, "Drawable").get();
     u32 color = luaL_checknumber(L, 2);
     if (obj == nullptr)
         return ERROR_OBJECT_DESTROYED(L);
@@ -462,12 +464,12 @@ static int l_Graphics_Drawable_setColor(lua_State* L) {
 ### Drawable:destroy
 */
 static int l_Graphics_Drawable_gc(lua_State* L) {
-    Core::Drawable** obj = (Core::Drawable**)LuaObject::CheckObject(L, 1, "Drawable");
-    if (*obj != nullptr) {
+    LuaObject<Core::Drawable> obj = LuaObjectUtils::CheckObject<Core::Drawable>(L, 1, "Drawable");
+    if (obj.get() != nullptr) {
         GraphicsManager& ins = GraphicsManager::getInstance();
-        ins.removeObject(*obj);
-        Core::dealloc(*obj);
-        *obj = nullptr;
+        ins.removeObject(obj.get());
+        Core::dealloc(obj.get());
+        obj.clear();
     }
     return 0;
 }
@@ -478,7 +480,7 @@ static int l_Graphics_Drawable_gc(lua_State* L) {
 ### GRect:setFilled
 */
 static int l_Graphics_GRect_setFilled(lua_State* L) {
-    Core::Rect* obj = *(Core::Rect**)LuaObject::CheckObject(L, 1, "GRect");
+    Core::Rect* obj = LuaObjectUtils::CheckObject<Core::Rect>(L, 1, "GRect").get();
     bool filled = lua_toboolean(L, 2);
     if (obj == nullptr)
         return ERROR_OBJECT_DESTROYED(L);
@@ -494,7 +496,7 @@ static int l_Graphics_GRect_setFilled(lua_State* L) {
 ### GRect:setSize
 */
 static int l_Graphics_GRect_setSize(lua_State* L) {
-    Core::Rect* obj = *(Core::Rect**)LuaObject::CheckObject(L, 1, "GRect");
+    Core::Rect* obj = LuaObjectUtils::CheckObject<Core::Rect>(L, 1, "GRect").get();
     short width = luaL_checknumber(L, 2);
     short height = luaL_checknumber(L, 3);
     if (obj == nullptr)
@@ -511,7 +513,7 @@ static int l_Graphics_GRect_setSize(lua_State* L) {
 ### GLabel:setSystemFont
 */
 static int l_Graphics_GLabel_setSystemFont(lua_State* L) {
-    Core::Label* obj = *(Core::Label**)LuaObject::CheckObject(L, 1, "GLabel");
+    Core::Label* obj = LuaObjectUtils::CheckObject<Core::Label>(L, 1, "GLabel").get();
     bool useSystemFont = lua_toboolean(L, 2);
     if (obj == nullptr)
         return ERROR_OBJECT_DESTROYED(L);
@@ -526,7 +528,7 @@ static int l_Graphics_GLabel_setSystemFont(lua_State* L) {
 ### GLabel:setBgColor
 */
 static int l_Graphics_GLabel_setBgColor(lua_State* L) {
-    Core::Label* obj = *(Core::Label**)LuaObject::CheckObject(L, 1, "GLabel");
+    Core::Label* obj = LuaObjectUtils::CheckObject<Core::Label>(L, 1, "GLabel").get();
     u32 color = luaL_checknumber(L, 2);
     if (obj == nullptr)
         return ERROR_OBJECT_DESTROYED(L);
@@ -541,7 +543,7 @@ static int l_Graphics_GLabel_setBgColor(lua_State* L) {
 ### GLabel:setText
 */
 static int l_Graphics_GLabel_setText(lua_State* L) {
-    Core::Label* obj = *(Core::Label**)LuaObject::CheckObject(L, 1, "GLabel");
+    Core::Label* obj = LuaObjectUtils::CheckObject<Core::Label>(L, 1, "GLabel").get();
     const char* text = luaL_checkstring(L, 2);
     if (obj == nullptr)
         return ERROR_OBJECT_DESTROYED(L);
@@ -550,39 +552,34 @@ static int l_Graphics_GLabel_setText(lua_State* L) {
     return 0;
 }
 
-static const LuaObjectField DrawableFields[] = {
-    {"setVisible", OBJF_TYPE_METHOD, (u32)l_Graphics_Drawable_setVisible},
-    {"setScreens", OBJF_TYPE_METHOD, (u32)l_Graphics_Drawable_setScreens},
-    {"setPosition", OBJF_TYPE_METHOD, (u32)l_Graphics_Drawable_setPosition},
-    {"setColor", OBJF_TYPE_METHOD, (u32)l_Graphics_Drawable_setColor},
-    {"destroy", OBJF_TYPE_METHOD, (u32)l_Graphics_Drawable_gc},
-    {NULL, OBJF_TYPE_NIL, 0}
-};
-
-static const LuaObjectField GRectFields[] = {
-    {"setFilled", OBJF_TYPE_METHOD, (u32)l_Graphics_GRect_setFilled},
-    {"setSize", OBJF_TYPE_METHOD, (u32)l_Graphics_GRect_setSize},
-    {NULL, OBJF_TYPE_NIL, 0}
-};
-
-static const LuaObjectField GLabelFields[] = {
-    {"setSystemFont", OBJF_TYPE_METHOD, (u32)l_Graphics_GLabel_setSystemFont},
-    {"setBgColor", OBJF_TYPE_METHOD, (u32)l_Graphics_GLabel_setBgColor},
-    {"setText", OBJF_TYPE_METHOD, (u32)l_Graphics_GLabel_setText},
-    {NULL, OBJF_TYPE_NIL, 0}
-};
-
 // ----------------------------------------------------------------------------
 
 bool Core::Module::RegisterGraphicsModule(lua_State *L)
 {
-    LuaObject::RegisterNewObject(L, "Drawable", DrawableFields);
-
-    LuaObject::RegisterNewObject(L, "GRect", GRectFields, l_Graphics_Drawable_gc);
-    LuaObject::SetParent("GRect", "Drawable");
-
-    LuaObject::RegisterNewObject(L, "GLabel", GLabelFields, l_Graphics_Drawable_gc);
-    LuaObject::SetParent("GLabel", "Drawable");
+    LOGDEBUG("Registering Drawable object class");
+    ClassBuilder<Core::Drawable>(L, "Drawable")
+        .method("setVisible", l_Graphics_Drawable_setVisible)
+        .method("setScreens", l_Graphics_Drawable_setScreens)
+        .method("setPosition", l_Graphics_Drawable_setPosition)
+        .method("setColor", l_Graphics_Drawable_setColor)
+        .method("destroy", l_Graphics_Drawable_gc)
+        .gc(l_Graphics_Drawable_gc)
+        .build();
+    LOGDEBUG("Registering GRect object class");
+    ClassBuilder<Core::Rect>(L, "GRect")
+        .method("setFilled", l_Graphics_GRect_setFilled)
+        .method("setSize", l_Graphics_GRect_setSize)
+        .setBase("Drawable")
+        .gc(l_Graphics_Drawable_gc)
+        .build();
+    LOGDEBUG("Registering GLabel object class");
+    ClassBuilder<Core::Rect>(L, "GLabel")
+        .method("setSystemFont", l_Graphics_GLabel_setSystemFont)
+        .method("setBgColor", l_Graphics_GLabel_setBgColor)
+        .method("setText", l_Graphics_GLabel_setText)
+        .setBase("Drawable")
+        .gc(l_Graphics_Drawable_gc)
+        .build();
 
     lua_getglobal(L, "Core");
     luaC_register_field(L, graphics_functions, "Graphics");

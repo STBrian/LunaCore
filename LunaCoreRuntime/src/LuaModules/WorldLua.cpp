@@ -7,8 +7,7 @@
 #include "string_hash.hpp"
 
 #include "game/Minecraft.hpp"
-
-#include "lua_utils.hpp"
+#include "Helpers/LuaCustomTable.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 
@@ -57,36 +56,28 @@ static int l_World_index(lua_State *L)
             break;
     }
 
-    if (valid_key)
-        return 1;
-    else
-        return 0;
+    return valid_key;
 }
 
 static int l_World_newindex(lua_State *L)
 {
     if (lua_type(L, 2) != LUA_TSTRING)
-        return luaL_error(L, "attempt to set field '?' of \"World\"");
+        return LUACT_INVALID_KEY;
 
-    // "Safe" c++ error handler
-    LUAUTILS_INIT_TYPEERROR_HANDLER();
-    LUAUTILS_SET_TYPEERROR_MESSAGE("unable to assign to a \"%s\" field a \"%s\" value");
-
-    {
     shash key = hash(lua_tostring(L, 2));
     bool valid_key = true;
 
     switch (key) {
         case hash("Raining"):
-            LUAUTILS_CHECKTYPE(L, LUA_TBOOLEAN, 3);
+            LUACT_CHECKTYPE(L, LUA_TBOOLEAN, 3);
             Minecraft::SetRain(lua_toboolean(L, 3));
             break;
         case hash("Thunderstorm"):
-            LUAUTILS_CHECKTYPE(L, LUA_TBOOLEAN, 3);
+            LUACT_CHECKTYPE(L, LUA_TBOOLEAN, 3);
             Minecraft::SetThunder(lua_toboolean(L, 3));
             break;
         case hash("CloudsHeight"): {
-            LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
+            LUACT_CHECKTYPE(L, LUA_TNUMBER, 3);
             CTRPF::Process::WriteFloat(world_offsets::cloudsHeight, luaL_checknumber(L, 3));
             break;
         }
@@ -95,28 +86,15 @@ static int l_World_newindex(lua_State *L)
             break;
     }
 
-    if (valid_key)
-        return 0;
-    else
-        return luaL_error(L, "'%s' is not a valid member of World or is a read-only value", lua_tostring(L, 2));
-    }
-
-    LUAUTILS_SET_ERROR_HANDLER(L);
+    if (valid_key) return 0;
+    else return LUACT_INVALID_KEY;
 }
 
 // ----------------------------------------------------------------------------
 
-bool Core::Module::RegisterWorldModule(lua_State *L)
-{
-    luaL_newmetatable(L, "WorldMetatable");
-    lua_pushcfunction(L, l_World_index);
-    lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, l_World_newindex);
-    lua_setfield(L, -2, "__newindex");
-    lua_pop(L, 1);
-
-    lua_getglobal(L, "Game");
-    lua_newtable(L); // World
+bool Core::Module::RegisterWorldModule(lua_State *L) {
+    LuaCustomTable::RegisterNewCustomTable(L, "World", l_World_index, l_World_newindex);
+    LuaCustomTable::GetIndexTable(L, "World");
 
     //$@@@Game.World.OnWorldJoin: EventClass
     Core::Event::NewEvent(L, "OnWorldJoin");
@@ -124,8 +102,9 @@ bool Core::Module::RegisterWorldModule(lua_State *L)
     //$@@@Game.World.OnWorldLeave: EventClass
     Core::Event::NewEvent(L, "OnWorldLeave");
 
-    luaC_setmetatable(L, "WorldMetatable");
-    lua_setfield(L, -2, "World");
-    lua_pop(L, 1);
+    lua_pop(L, 1); // Pop index table
+    lua_getglobal(L, "Game");
+    LuaCustomTable::SetNewCustomTable(L, -1, "World");
+    lua_pop(L, 1); // Pop Game
     return true;
 }

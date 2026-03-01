@@ -1,8 +1,7 @@
 #include "LuaModules.hpp"
 
-#include "lua_object.hpp"
-
 #include "game/entity/Entity.hpp"
+#include "Helpers/LuaObject.hpp"
 
 using Entity = Game::Entity;
 
@@ -24,23 +23,21 @@ using Entity = Game::Entity;
 =GameSpawnCoords.Z = 0.0
 */
 
-static const LuaObjectField GameEntityFields[] = {
-    {"X", OBJF_TYPE_FLOAT, offsetof(Entity, x)},
-    {"Y", OBJF_TYPE_FLOAT, offsetof(Entity, y)},
-    {"Z", OBJF_TYPE_FLOAT, offsetof(Entity, z)},
-    {"EntityID", OBJF_TYPE_INT, offsetof(Entity, entityTypeId), OBJF_ACCESS_INDEX},
-    {NULL, OBJF_TYPE_NIL, 0}
-};
-
-static const LuaObjectField GameSpawnCoordsFields[] = {
-    {"X", OBJF_TYPE_FLOAT, 0},
-    {"Y", OBJF_TYPE_FLOAT, 4},
-    {"Z", OBJF_TYPE_FLOAT, 8},
-    {NULL, OBJF_TYPE_NIL, 0}
-};
+typedef struct {
+    float x, y, z;
+} GameSpawnCoords;
 
 bool Core::Module::RegisterEntityModule(lua_State *L) {
-    LuaObject::RegisterNewObject(L, "GameEntity", GameEntityFields);
-    LuaObject::RegisterNewObject(L, "GameSpawnCoords", GameSpawnCoordsFields);
+    ClassBuilder<Entity>(L, "GameEntity")
+        .property("X", &Entity::x)
+        .property("Y", &Entity::y)
+        .property("Z", &Entity::z)
+        .property("EntityID", &Entity::entityTypeId, true)
+        .build();
+    ClassBuilder<GameSpawnCoords>(L, "GameSpawnCoords")
+        .property("X", &GameSpawnCoords::x)
+        .property("Y", &GameSpawnCoords::y)
+        .property("Z", &GameSpawnCoords::z)
+        .build();
     return true;
 }

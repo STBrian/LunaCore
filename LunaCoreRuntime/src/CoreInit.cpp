@@ -46,11 +46,7 @@ void Core::InitCore() {
     if (!CTRPF::Directory::IsExists(PLUGIN_FOLDER"/scripts"))
         CTRPF::Directory::Create(PLUGIN_FOLDER"/scripts");
 
-    bool loadScripts = Core::Config::GetBoolValue(G_config, "enable_scripts", true);
-
-    // Update configs
-    if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
-        Core::Debug::LogWarn("Failed to save configs");
+    bool loadScripts = G_config.getBool("enable_scripts", true);
     
     Core::Debug::LogInfo("Loading Lua environment");
     Lua_global = luaL_newstate();

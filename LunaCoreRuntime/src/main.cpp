@@ -141,10 +141,10 @@ namespace CTRPluginFramework
         Core::Version.patch = (ver >> 8) & 0xFF;
         Debug::LogInfof("LunaCore version: %d.%d.%d", Core::Version.major, Core::Version.minor, Core::Version.patch);
         Debug::LogInfof("Loading config file '%s'", CONFIG_FILE);
-        G_config = Config::LoadConfig(CONFIG_FILE);
+        G_config = LoadConfig(CONFIG_FILE);
 
-        bool disableZLandZR = Config::GetBoolValue(G_config, "disable_zl_and_zr", false);
-        bool disableDLandDR = Config::GetBoolValue(G_config, "disable_dleft_and_dright", false);
+        bool disableZLandZR = G_config.getBool("disable_zl_and_zr", false);
+        bool disableDLandDR = G_config.getBool("disable_dleft_and_dright", false);
 
         if (Core::Utils::checkCompatibility() || System::IsCitra()) {
             Minecraft::PatchProcess();
@@ -188,7 +188,7 @@ namespace CTRPluginFramework
         if (!fslib::directory_exists(path_from_string(PLUGIN_FOLDER"/layouts")))
             fslib::create_directory(path_from_string(PLUGIN_FOLDER"/layouts"));
 
-        bool loadMenuLayout = Config::GetBoolValue(G_config, "custom_game_menu_layout", true);
+        bool loadMenuLayout = G_config.getBool("custom_game_menu_layout", true);
         if (loadMenuLayout && patchEnabled) {
             if ((fslib::file_exists(path_from_string(PLUGIN_FOLDER"/layouts/menu_layout.json")) 
                 && LoadGameMenuLayout(PLUGIN_FOLDER"/layouts/menu_layout.json")) || 
@@ -200,10 +200,6 @@ namespace CTRPluginFramework
 
         CrashHandler::core_state = CrashHandler::CORE_LOADING_RUNTIME;
         Core::InitCore();
-
-        // Update configs
-        if (!Config::SaveConfig(CONFIG_FILE, G_config))
-            Debug::LogInfo("Failed to save configs");
 
         gmenu = alloc<PluginMenu>("LunaCore Plugin Menu", Core::Version.major, Core::Version.minor, Core::Version.patch,
             plgSummary + "\n\n" + plgDescription + "\nCompiled: " __TIMESTAMP__ " (CST)", 2);

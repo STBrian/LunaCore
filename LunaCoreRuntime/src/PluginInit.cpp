@@ -122,6 +122,8 @@ struct _pair {
 };
 #endif
 
+static bool monitorsEnabled = false;
+
 void InitMenu(PluginMenu &menu)
 {
     // Create your entries here, or elsewhere
@@ -141,93 +143,53 @@ void InitMenu(PluginMenu &menu)
 
     optionsFolder->Append(Core::alloc<MenuEntry>("Toggle Script Loader", nullptr, [](MenuEntry *entry)
     {
-        bool changed = false;
-        if (G_config["enable_scripts"] == "true") {
-            if (MessageBox("Do you want to DISABLE script loader?", DialogType::DialogYesNo)()) {
-                G_config["enable_scripts"] = "false";
-                changed = true;
-            }
-        } else {
-            if (MessageBox("Do you want to ENABLE script loader?", DialogType::DialogYesNo)()) {
-                G_config["enable_scripts"] = "true";
-                changed = true;
-            }
-        }
-        if (changed) {
+        bool current = G_config.getBool("enable_scripts");
+        const char* msg = "Do you want to %s script loader?";
+        const char* action = action ? "ENABLE" : "DISABLE";
+        if (MessageBox(Utils::Format(msg, action), DialogType::DialogYesNo)()) {
+            current = !current;
+            G_config.set("enable_scripts", current);
             MessageBox("Restart the game to apply the changes")();
-            if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
-                Core::Debug::LogWarn("Failed to save configs");
         }
     }));
     optionsFolder->Append(Core::alloc<MenuEntry>("Toggle Menu Layout", nullptr, [](MenuEntry *entry)
     {
-        bool changed = false;
-        if (G_config["custom_game_menu_layout"] == "true") {
-            if (MessageBox("Do you want to DISABLE custom menu layout?", DialogType::DialogYesNo)()) {
-                G_config["custom_game_menu_layout"] = "false";
-                changed = true;
-            }
-        } else {
-            if (MessageBox("Do you want to ENABLE custom menu layout?", DialogType::DialogYesNo)()) {
-                G_config["custom_game_menu_layout"] = "true";
-                changed = true;
-            }
-        }
-        if (changed) {
+        bool current = G_config.getBool("custom_game_menu_layout");
+        const char* msg = "Do you want to %s custom menu layout?";
+        const char* action = action ? "ENABLE" : "DISABLE";
+        if (MessageBox(Utils::Format(msg, action), DialogType::DialogYesNo)()) {
+            current = !current;
+            G_config.set("custom_game_menu_layout", current);
             MessageBox("Restart the game to apply the changes")();
-            if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
-                Core::Debug::LogWarn("Failed to save configs");
         }
     }));
     optionsFolder->Append(Core::alloc<MenuEntry>("Toggle Block ZL and ZR keys", nullptr, [](MenuEntry *entry)
     {
-        bool changed = false;
-        if (G_config["disable_zl_and_zr"] == "true") {
-            if (MessageBox("Do you want to ENABLE ZL and ZR keys?", DialogType::DialogYesNo)()) {
-                G_config["disable_zl_and_zr"] = "false";
-                Process::Write32(0x919530, KEY_ZL); // Pos keycode for ZL
-                Process::Write32(0x919534, KEY_ZR); // Pos keycode for ZR
-                changed = true;
-            }
-        } else {
-            if (MessageBox("Do you want to DISABLE ZL and ZR keys (only scripts will be able to use them)?", DialogType::DialogYesNo)()) {
-                G_config["disable_zl_and_zr"] = "true";
-                Process::Write32(0x919530, 0); // Pos keycode for ZL
-                Process::Write32(0x919534, 0); // Pos keycode for ZR
-                changed = true;
-            }
-        }
-        if (changed) {
+        bool current = G_config.getBool("disable_zl_and_zr");
+        const char* msg = "Do you want to %s ZL and ZR keys? (only affects the game)";
+        const char* action = action ? "ENABLE" : "DISABLE";
+        if (MessageBox(Utils::Format(msg, action), DialogType::DialogYesNo)()) {
+            current = !current;
+            G_config.set("disable_zl_and_zr", current);
             MessageBox("Restart the game to apply the changes")();
-            if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
-                Core::Debug::LogWarn("Failed to save configs");
         }
     }));
     optionsFolder->Append(Core::alloc<MenuEntry>("Toggle Block DPADLEFT and DPADRIGHT keys", nullptr, [](MenuEntry *entry)
     {
-        bool changed = false;
-        if (G_config["disable_zl_and_zr"] == "true") {
-            if (MessageBox("Do you want to ENABLE DPADLEFT and DPADRIGHT keys?", DialogType::DialogYesNo)()) {
-                G_config["disable_dleft_and_dright"] = "false";
-                changed = true;
-            }
-        } else {
-            if (MessageBox("Do you want to DISABLE DPADLEFT and DPADRIGHT keys (only scripts will be able to use them)?", DialogType::DialogYesNo)()) {
-                G_config["disable_dleft_and_dright"] = "true";
-                changed = true;
-            }
-        }
-        if (changed) {
+        bool current = G_config.getBool("disable_dleft_and_dright");
+        const char* msg = "Do you want to %s DPADLEFT and DPADRIGHT keys? (only affects the game)";
+        const char* action = action ? "ENABLE" : "DISABLE";
+        if (MessageBox(Utils::Format(msg, action), DialogType::DialogYesNo)()) {
+            current = !current;
+            G_config.set("disable_dleft_and_dright", current);
             MessageBox("Restart the game to apply the changes")();
-            if (!Core::Config::SaveConfig(CONFIG_FILE, G_config))
-                Core::Debug::LogWarn("Failed to save configs");
         }
     }));
     optionsFolder->Append(Core::alloc<MenuEntry>("Show Lua memory usage", nullptr, [](MenuEntry *entry) {
-        static bool enabled = false;
-        if (!enabled) OSD::Run(DrawMonitors);
+        if (!monitorsEnabled) OSD::Run(DrawMonitors);
         else OSD::Stop(DrawMonitors);
-        enabled = !enabled;
+        monitorsEnabled = !monitorsEnabled;
+        G_config.set("show_monitors", monitorsEnabled);
     }));
     devFolder->Append(Core::alloc<MenuEntry>("Init network", nullptr, [](MenuEntry *entry) {
         if (socBuffer == NULL) {
@@ -446,4 +408,7 @@ void InitMenu(PluginMenu &menu)
     menu.Append(MenuModsFolder);
     menu.Append(optionsFolder);
     menu.Append(devFolder);
+
+    monitorsEnabled = G_config.getBool("show_monitors", false);
+    if (monitorsEnabled) OSD::Run(DrawMonitors);
 }

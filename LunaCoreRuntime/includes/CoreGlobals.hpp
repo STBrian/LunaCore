@@ -7,6 +7,8 @@
 #include <unordered_map>
 #endif
 
+#include "Core/Config.hpp"
+
 #include "types.h"
 #include "lua_common.h"
 #include "Helpers/Mutex.hpp"
@@ -27,7 +29,7 @@ extern int loadedScripts;
 extern int loadedMods;
 
 #if __STDC_HOSTED__
-extern std::unordered_map<std::string, std::string> G_config;
+extern Core::Config G_config;
 extern std::unordered_map<std::string, std::string> modPaths;
 
 typedef struct {

@@ -801,6 +801,10 @@ Game.Resources = {}
 ---Forces the game to reload the current locale
 function Game.Resources.reloadLocale() end
 
+---Returns the current seleted locale
+---@return string?
+function Game.Resources.getLocale() end
+
 Core.System = {}
 
 ---Returns UNIX time

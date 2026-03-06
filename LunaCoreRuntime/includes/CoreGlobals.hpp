@@ -29,6 +29,7 @@ extern int loadedScripts;
 extern int loadedMods;
 
 #if __STDC_HOSTED__
+extern std::string currentLoadingMod;
 extern Core::Config G_config;
 extern std::unordered_map<std::string, std::string> modPaths;
 

@@ -266,6 +266,7 @@ bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& 
         modsDiscarded.emplace_back(hash(modName.c_str()));
         return false;
     }
+    currentLoadingMod = modName;
     modPaths[modName] = PLUGIN_FOLDER "/mods/" + modsAvailable[modName];
     if (!Core::LoadScript(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/init.lua", "mods/" + modsAvailable[modName] + "/init.lua")) {
         Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to load 'init.lua'", modName.c_str()));
@@ -335,4 +336,5 @@ void Core::LoadMods()
     modsDiscarded.clear();
     modsLoading.clear();
     modsAvailable.clear();
+    currentLoadingMod = "";
 }

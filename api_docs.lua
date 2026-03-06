@@ -28,6 +28,10 @@ Core = {}
 ---@return string?
 function Core.getModpath(modname) end
 
+---Returns the mod that is currently being loaded
+---@return string
+function Core.getCurrentModname() end
+
 ---Returns the title id formated in a hex string
 ---@return string
 function Core.getTitleId() end

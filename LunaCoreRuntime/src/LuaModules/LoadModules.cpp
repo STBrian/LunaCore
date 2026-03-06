@@ -30,6 +30,13 @@ namespace Core {
         return true;
     }
 
+    //$Core
+    /*
+    - Returns the full path that corresponds to the modname if registered
+    ## modname: string
+    ## return: string?
+    ### Core.getModpath
+    */
     static int l_Core_getModpath(lua_State* L) {
         const char* modnamec = luaL_checkstring(L, 1);
         std::string modname(modnamec);
@@ -41,6 +48,21 @@ namespace Core {
         return 1;
     }
 
+    /*
+    - Returns the mod that is currently being loaded
+    ## return: string
+    ### Core.getCurrentModname
+    */
+    static int l_Core_getCurrentModname(lua_State* L) {
+        lua_pushstring(L, currentLoadingMod.c_str());
+        return 1;
+    }
+
+    /*
+    - Returns the title id formated in a hex string
+    ## return: string
+    ### Core.getTitleId
+    */
     static int l_Core_getTitleId(lua_State* L) {
         std::string titleId;
         CTRPluginFramework::Process::GetTitleID(titleId);
@@ -48,18 +70,6 @@ namespace Core {
         return 1;
     }
 
-    //$Core
-    /*
-    - Returns the full path that corresponds to the modname if registered
-    ## modname: string
-    ## return: string?
-    ### Core.getModpath
-    */
-    /*
-    - Returns the title id formated in a hex string
-    ## return: string
-    ### Core.getTitleId
-    */
     bool RegisterCoreModule(lua_State *L) {
         LOGDEBUG("Setup Core global table");
         lua_newtable(L);
@@ -68,6 +78,8 @@ namespace Core {
         lua_setfield(L, -2, "_VERSION");
         lua_pushcfunction(L, l_Core_getModpath);
         lua_setfield(L, -2, "getModpath");
+        lua_pushcfunction(L, l_Core_getCurrentModname);
+        lua_setfield(L, -2, "getCurrentModname");
         lua_pushcfunction(L, l_Core_getTitleId);
         lua_setfield(L, -2, "getTitleId");
         lua_setglobal(L, "Core");

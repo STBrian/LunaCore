@@ -332,12 +332,22 @@ class ClassBuilder {
         return *this;
     }
 
+    static int isObject(lua_State* L) {
+        const char* tname = luaL_checkstring(L, 2);
+        lua_pushboolean(L, LuaObjectUtils::IsObject(L, 1, tname));
+        return 1;
+    }
+
     static int indexDispatcher(lua_State* L) {
         void* obj = *(void**)lua_touserdata(L, 1);
         if (lua_type(L, 2) != LUA_TSTRING)
             return 0;
 
         const char* key = lua_tostring(L, 2);
+        if (std::strcmp(key, "isType") == 0) {
+            lua_pushcfunction(L, isObject);
+            return 1;
+        }
         luaL_getmetafield(L, 1, "__properties");
         lua_getfield(L, -1, key);
 

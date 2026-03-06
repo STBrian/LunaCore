@@ -12,6 +12,7 @@
 
 #include "Helpers/Allocation.hpp"
 #include "Helpers/LuaObject.hpp"
+#include "Helpers/Threads.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
@@ -35,21 +36,28 @@ static void processEventHandler(CTRPF::Process::Event event) {
 void GraphicsHandlerMainloop() {
     if (gmenu->IsOpen())
         return; // wait until closed
+    if (!Lua_Global_Mut.try_lock()) { // This should avoid concurrency locks with the game
+        return; // Just return to retry next frame
+    }
+    LOGDEBUG("The process is about to being paused");
     CTRPF::Process::Pause();
+    Core::Thread::Sleep::Milliseconds(1); // Also wait a bit to give the game time to pause
     CTRPF::Process::SetProcessEventCallback(processEventHandler);
 
+    LOGDEBUG("Graphics are open");
     graphicsOpen = true;
     bool exit = false;
+    Lua_Global_Mut.unlock();
     while (!exit && !shouldGraphicsClose) {
         CTRPF::Controller::Update();
 
-        Core::EventHandlerCallback();
-        Core::Scheduler::Update();
-
-        if (CTRPF::OSD::TryLock())
+        if (CTRPF::OSD::TryLock()) {
+            LOGDEBUG("Failed to lock OSD");
             continue;
+        }
 
         if (graphicsFrameCallback == NULL) {
+            LOGDEBUG("Frame callback is NULL");
             exit = true;
             continue;
         }
@@ -58,8 +66,15 @@ void GraphicsHandlerMainloop() {
         
         CTRPF::OSD::SwapBuffers();
         CTRPF::OSD::Unlock();
+        if (shouldGraphicsClose)
+            continue;
+
+        // Moved at the end to give priority to draw something on screen
+        Core::EventHandlerCallback();
+        Core::Scheduler::Update();
 
         if (CTRPF::Controller::IsKeyPressed(CTRPF::Key::Select)) {
+            LOGDEBUG("Trying to open plugin menu, so closing");
             exit = true;
             gmenu->ForceOpen();
         }
@@ -81,6 +96,7 @@ void GraphicsOpen(GraphicsFrameCallback frameCallback, GraphicsExitCallback exit
     graphicsFrameCallback = frameCallback;
     graphicsExitCallback = exitCallback;
     gmenu->Callback(GraphicsHandlerMainloop); // Better add it as Callback to avoid script exahustion
+    LOGDEBUG("Graphics marked to open in next frame");
 }
 
 static void LuaGraphicsFrameCallback() {

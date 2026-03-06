@@ -37,14 +37,16 @@ static int l_Filesystem_open(lua_State *L) {
     bool success = false;
     FilesystemFile* fileStruct = (FilesystemFile*)lua_newuserdata(L, sizeof(FilesystemFile));
     luaC_setmetatable(L, "FilesystemFile");
-    if (filemode == "w")
+    if (filemode == "w" || filemode == "wb")
         fileStruct->mode = FS_OPEN_WRITE|FS_OPEN_CREATE;
-    else if (filemode == "r")
+    else if (filemode == "r" || filemode == "rb")
         fileStruct->mode = FS_OPEN_READ;
-    else if (filemode == "a")
+    else if (filemode == "a" || filemode == "ab")
         fileStruct->mode = FS_OPEN_APPEND;
-    else if (filemode == "rw" || filemode == "wr" || filemode == "r+" || filemode == "w+")
+    else if (filemode == "wb+" || filemode == "wr" || filemode == "w+")
         fileStruct->mode = FS_OPEN_WRITE|FS_OPEN_READ|FS_OPEN_CREATE;
+    else if (filemode == "r+" || filemode == "rb+" || filemode == "rw")
+        fileStruct->mode = FS_OPEN_WRITE|FS_OPEN_READ;
     else {
         lua_pop(L, 1);
         LUAUTILS_ERRORF(L, "Invalid mode");

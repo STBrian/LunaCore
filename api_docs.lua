@@ -222,6 +222,10 @@ local GameEntity = {}
 ---@class GameSpawnCoords
 local GameSpawnCoords = {}
 
+Game.Entity = {}
+
+---@class EntityState: integer
+
 GameEntity.X = 0.0
 
 GameEntity.Y = 0.0
@@ -235,6 +239,36 @@ GameSpawnCoords.X = 0.0
 GameSpawnCoords.Y = 0.0
 
 GameSpawnCoords.Z = 0.0
+
+Game.Entity.States = {}
+
+Game.Entity.States.Burning = 0
+
+Game.Entity.States.Sneaking = 1
+
+Game.Entity.States.Sprinting = 3
+
+Game.Entity.States.Eating = 4
+
+Game.Entity.States.Invisible = 5
+
+Game.Entity.States.IsTempted = 6
+
+Game.Entity.States.InLove = 7
+
+Game.Entity.States.HasSaddle = 8
+
+Game.Entity.States.IsAdult = 11
+
+Game.Entity.States.Named = 14
+
+Game.Entity.States.IsTamed = 27
+
+Game.Entity.States.Leaded = 28
+
+Game.Entity.States.Sheared = 29
+
+Game.Entity.States.ElytraFly = 30
 
 Core.Filesystem = {}
 
@@ -714,6 +748,11 @@ Game.LocalPlayer.SprintDelay = 0.0
 Game.LocalPlayer.Dimension = 0
 
 Game.LocalPlayer.Loaded = false
+
+---Checks if the player is currently in the provided state. stateId: The entity state id from Game.Entity.States
+---@param stateId EntityState
+---@return boolean
+function Game.LocalPlayer.getState(stateId) end
 
 Game.LocalPlayer.Camera = {}
 

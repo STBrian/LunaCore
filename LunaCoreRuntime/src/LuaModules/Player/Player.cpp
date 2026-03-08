@@ -1,6 +1,7 @@
 #include "LuaModules.hpp"
 
 #include <CTRPluginFramework.hpp>
+#include "MC3DSPluginFramework.hpp"
 #include "string_hash.hpp"
 
 #include "game/Minecraft.hpp"
@@ -418,6 +419,20 @@ static int l_LocalPlayer_newindex(lua_State *L)
     else return LUACT_INVALID_KEY;
 }
 
+/*
+- Checks if the player is currently in the provided state. stateId: The entity state id from Game.Entity.States
+## stateId: EntityState
+## return: boolean
+### Game.LocalPlayer.getState
+*/
+static int l_LocalPlayer_getState(lua_State* L) {
+    int stateId = luaL_checknumber(L, 1);
+    MC3DSPluginFramework::Entity* ply = MC3DSPluginFramework::Player::GetInstance();
+    if (ply) lua_pushboolean(L, ply->GetState(static_cast<MC3DSPluginFramework::EntityStateFlag>(1 << stateId)));
+    else lua_pushboolean(L, false);
+    return 1;
+}
+
 // ----------------------------------------------------------------------------
 
 bool Core::Module::RegisterLocalPlayerModule(lua_State *L)
@@ -428,10 +443,13 @@ bool Core::Module::RegisterLocalPlayerModule(lua_State *L)
     luaC_register_field(L, player_position_methods, "Position");
     luaC_register_field(L, player_velocity_methods, "Velocity");
 
+    lua_pushcfunction(L, l_LocalPlayer_getState);
+    lua_setfield(L, -2, "getState");
+
     Core::Module::LocalPlayer::RegisterCameraModule(L);
     Core::Module::LocalPlayer::RegisterInventoryModule(L);
 
-    lua_pop(L, 1);
+    lua_pop(L, 1); // Pop LocalPlayer index table
     lua_getglobal(L, "Game");
     LuaCustomTable::NewCustomTable(L, "LocalPlayer");
     lua_setfield(L, -2, "LocalPlayer");

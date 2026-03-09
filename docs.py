@@ -304,8 +304,12 @@ def process_lines(path: str, lines: list, segpos: int):
                     raise Exception(f"Redefined global/field: '{doc_line}' on {path} at line {segpos + j}")
                 DEF_GLOBALS[globalName] = True                
             DOCS_FILE.write(f"\n{globalName} = {globalDefValue}\n")
+        elif doc_line.startswith("#") and len(doc_line) > 1:
+            # Direct copy
+            content = doc_line[1:].strip()
+            DOCS_FILE.write(f"{content}\n")
 
-DOCS_FILE.write("---@diagnostic disable: missing-return, duplicate-set-field\n")
+DOCS_FILE.write("---@diagnostic disable: missing-return, duplicate-set-field, missing-fields\n")
 for file in iglob("./LunaCoreRuntime/src/**", recursive=True):
     try:
         process_file(str(Path(file)))

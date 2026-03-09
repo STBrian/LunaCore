@@ -9,6 +9,9 @@
 #include "game/world/actor/player/Player.hpp"
 
 #include "Helpers/LuaCustomTable.hpp"
+#include "Helpers/LuaObject.hpp"
+
+#include "Enums.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 
@@ -426,9 +429,10 @@ static int l_LocalPlayer_newindex(lua_State *L)
 ### Game.LocalPlayer.getState
 */
 static int l_LocalPlayer_getState(lua_State* L) {
-    int stateId = luaL_checknumber(L, 1);
+    Core::EnumItem* stateId = Core::EnumItemUtils::LuaToEnumItemOrNull(L, 1, "EntityState", true);
+    if (!stateId) return lua_error(L);
     MC3DSPluginFramework::Entity* ply = MC3DSPluginFramework::Player::GetInstance();
-    if (ply) lua_pushboolean(L, ply->GetState(static_cast<MC3DSPluginFramework::EntityStateFlag>(1 << stateId)));
+    if (ply) lua_pushboolean(L, ply->GetState(static_cast<MC3DSPluginFramework::EntityStateFlag>(1 << stateId->value)));
     else lua_pushboolean(L, false);
     return 1;
 }

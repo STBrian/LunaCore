@@ -110,6 +110,9 @@ void Core::LoadModules(lua_State *L)
     LOGDEBUG("Loading utils module");
     Core::RegisterUtilsModule(L);
     
+    LOGDEBUG("Loading Enums module");
+    Core::Module::RegisterEnumsModule(L);
+
     LOGDEBUG("Loading Async module");
     Core::RegisterAsyncModule(L);
     LOGDEBUG("Loading Core module");

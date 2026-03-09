@@ -1,15 +1,20 @@
 #include "LuaModules.hpp"
 
 #include <CTRPluginFramework.hpp>
+#include "MC3DSPluginFramework.hpp"
 
 #include "CoreGlobals.hpp"
 #include "Core/Event.hpp"
 #include "string_hash.hpp"
 
+#include "Enums.hpp"
+#include "Helpers/LuaObject.hpp"
+
 #include "game/Minecraft.hpp"
 #include "Helpers/LuaCustomTable.hpp"
 
 namespace CTRPF = CTRPluginFramework;
+using namespace Core;
 
 enum world_offsets : u32 {
     cloudsHeight = 0x3C5398
@@ -26,7 +31,10 @@ enum world_offsets : u32 {
 =Game.World.Raining = false
 =Game.World.Thunderstorm = false
 =Game.World.CloudsHeight = 0.0
+#---@type WeatherType
+#Game.World.Weather = "clear"
 */
+
 static int l_World_index(lua_State *L)
 {
     if (lua_type(L, 2) != LUA_TSTRING)
@@ -34,6 +42,14 @@ static int l_World_index(lua_State *L)
 
     shash key = hash(lua_tostring(L, 2));
     bool valid_key = true;
+
+    auto ply = MC3DSPluginFramework::Player::GetInstance();
+    MC3DSPluginFramework::BlockSource* blockSrc = nullptr;
+    MC3DSPluginFramework::Level* level = nullptr;
+    if (ply) {
+        blockSrc = ply->GetBlockSource();
+        level = ply->GetLevel();
+    }
 
     switch (key) {
         case hash("Loaded"): // Read-only
@@ -49,6 +65,17 @@ static int l_World_index(lua_State *L)
             float value;
             CTRPF::Process::ReadFloat(world_offsets::cloudsHeight, value);
             lua_pushnumber(L, value);
+            break;
+        }
+        case hash("Weather"): {
+            MC3DSPluginFramework::WeatherState* weather = level->weather();
+            Core::EnumGroup& group = EnumGroups::getInstance().getGroup("WeatherType");
+            if (weather->get() & MC3DSPluginFramework::Weathers::Thunder)
+                LuaObjectUtils::NewObject(L, group.enumType, group.getItemByName("Thunder"));
+            else if (weather->get() & MC3DSPluginFramework::Weathers::Rain)
+                LuaObjectUtils::NewObject(L, group.enumType, group.getItemByName("Rain"));
+            else
+                LuaObjectUtils::NewObject(L, group.enumType, group.getItemByName("Clear"));
             break;
         }
         default:
@@ -67,6 +94,14 @@ static int l_World_newindex(lua_State *L)
     shash key = hash(lua_tostring(L, 2));
     bool valid_key = true;
 
+    auto ply = MC3DSPluginFramework::Player::GetInstance();
+    MC3DSPluginFramework::BlockSource* blockSrc = nullptr;
+    MC3DSPluginFramework::Level* level = nullptr;
+    if (ply) {
+        blockSrc = ply->GetBlockSource();
+        level = ply->GetLevel();
+    }
+
     switch (key) {
         case hash("Raining"):
             LUACT_CHECKTYPE(L, LUA_TBOOLEAN, 3);
@@ -79,6 +114,12 @@ static int l_World_newindex(lua_State *L)
         case hash("CloudsHeight"): {
             LUACT_CHECKTYPE(L, LUA_TNUMBER, 3);
             CTRPF::Process::WriteFloat(world_offsets::cloudsHeight, luaL_checknumber(L, 3));
+            break;
+        }
+        case hash("Weather"): {
+            Core::EnumItem* val = EnumItemUtils::LuaToEnumItemOrNull(L, 3, "WeatherType", true);
+            if (!val) return -1;
+            if (level) level->weather()->set(val->value);
             break;
         }
         default:

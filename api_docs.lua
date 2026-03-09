@@ -1,4 +1,4 @@
----@diagnostic disable: missing-return, duplicate-set-field
+---@diagnostic disable: missing-return, duplicate-set-field, missing-fields
 
 Async = {}
 
@@ -224,8 +224,6 @@ local GameSpawnCoords = {}
 
 Game.Entity = {}
 
----@class EntityState: integer
-
 GameEntity.X = 0.0
 
 GameEntity.Y = 0.0
@@ -240,35 +238,77 @@ GameSpawnCoords.Y = 0.0
 
 GameSpawnCoords.Z = 0.0
 
-Game.Entity.States = {}
+Enums = {}
+---@class BaseEnumItem
+---@field Name string
+---@field Value integer
+local BaseEnumItem = {}
 
-Game.Entity.States.Burning = 0
+---@class EnumItem: BaseEnumItem
 
-Game.Entity.States.Sneaking = 1
+---@class EntityState: EnumItem
+EntityState = {}
 
-Game.Entity.States.Sprinting = 3
+---@class WeatherType: EnumItem
+WeatherType = {}
 
-Game.Entity.States.Eating = 4
+Enums.EntityState = {}
 
-Game.Entity.States.Invisible = 5
+---@type EntityState
+Enums.EntityState.Burning = {}
 
-Game.Entity.States.IsTempted = 6
+---@type EntityState
+Enums.EntityState.Sneaking = {}
 
-Game.Entity.States.InLove = 7
+---@type EntityState
+Enums.EntityState.Sprinting = {}
 
-Game.Entity.States.HasSaddle = 8
+---@type EntityState
+Enums.EntityState.Eating = {}
 
-Game.Entity.States.IsAdult = 11
+---@type EntityState
+Enums.EntityState.Invisible = {}
 
-Game.Entity.States.Named = 14
+---@type EntityState
+Enums.EntityState.Tempted = {}
 
-Game.Entity.States.IsTamed = 27
+---@type EntityState
+Enums.EntityState.InLove = {}
 
-Game.Entity.States.Leaded = 28
+---@type EntityState
+Enums.EntityState.HasSaddle = {}
 
-Game.Entity.States.Sheared = 29
+---@type EntityState
+Enums.EntityState.IsAdult = {}
 
-Game.Entity.States.ElytraFly = 30
+---@type EntityState
+Enums.EntityState.Named = {}
+
+---@type EntityState
+Enums.EntityState.Tamed = {}
+
+---@type EntityState
+Enums.EntityState.Leaded = {}
+
+---@type EntityState
+Enums.EntityState.Sheared = {}
+
+---@type EntityState
+Enums.EntityState.ElytraFly = {}
+
+Enums.WeatherType = {}
+
+---@type WeatherType
+Enums.WeatherType.Clear = {}
+
+---@type WeatherType
+Enums.WeatherType.Rain = {}
+
+---@type WeatherType
+Enums.WeatherType.Thunder = {}
+
+---@type WeatherType
+Enums.WeatherType.RainThunder = {}
 
 Core.Filesystem = {}
 
@@ -867,6 +907,8 @@ Game.World.Raining = false
 Game.World.Thunderstorm = false
 
 Game.World.CloudsHeight = 0.0
+---@type WeatherType
+Game.World.Weather = "clear"
 
 ---@class OnWorldJoin: EventClass
 Game.World.OnWorldJoin = {}

@@ -32,7 +32,7 @@ enum world_offsets : u32 {
 =Game.World.Thunderstorm = false
 =Game.World.CloudsHeight = 0.0
 #---@type WeatherType
-#Game.World.Weather = "clear"
+#Game.World.Weather = {}
 */
 
 static int l_World_index(lua_State *L)

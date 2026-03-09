@@ -908,7 +908,7 @@ Game.World.Thunderstorm = false
 
 Game.World.CloudsHeight = 0.0
 ---@type WeatherType
-Game.World.Weather = "clear"
+Game.World.Weather = {}
 
 ---@class OnWorldJoin: EventClass
 Game.World.OnWorldJoin = {}

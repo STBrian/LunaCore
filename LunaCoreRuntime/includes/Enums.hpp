@@ -72,15 +72,15 @@ namespace Core {
         static EnumItem* LuaToEnumItemOrNull(lua_State* L, int narg, const char* typeName, bool pushError = false) {
             EnumItem* val = nullptr;
             if (LuaObjectUtils::IsObject(L, narg, typeName))
-                val = LuaObjectUtils::CheckObject<EnumItem>(L, 3, typeName).get();
-            else if (lua_isstring(L, 3)) {
-                const char* tname = lua_tostring(L, 3);
+                val = LuaObjectUtils::CheckObject<EnumItem>(L, narg, typeName).get();
+            else if (lua_isstring(L, narg)) {
+                const char* tname = lua_tostring(L, narg);
                 EnumGroup& group = EnumGroups::getInstance().getGroup(typeName);
                 val = group.getItemByName(tname);
                 if (!val && pushError)
                     lua_pushfstring(L, "Invalid \"%s\": \"%s\"", typeName, tname);
-            } else if (lua_isnumber(L, 3)) {
-                int tvalue = lua_tonumber(L, 3);
+            } else if (lua_isnumber(L, narg)) {
+                int tvalue = lua_tonumber(L, narg);
                 EnumGroup& group = EnumGroups::getInstance().getGroup(typeName);
                 val = group.getItemByValue(tvalue);
                 if (!val && pushError)

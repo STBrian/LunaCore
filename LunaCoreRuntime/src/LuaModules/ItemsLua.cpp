@@ -13,8 +13,8 @@
 
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
-using Item = Game::Item;
-using ItemInstance = Game::ItemInstance;
+using Item = Minecraft::Item;
+using ItemInstance = Minecraft::ItemInstance;
 
 // ----------------------------------------------------------------------------
 
@@ -75,7 +75,7 @@ static int l_Items_getCreativePosition(lua_State *L) {
 static int l_Items_registerItem(lua_State *L) {
     const char* itemName = luaL_checkstring(L, 1);
     u16 itemId = luaL_checknumber(L, 2);
-    Item* regItem = Game::registerItem(itemName, itemId);
+    Item* regItem = Minecraft::registerItem<Item>(itemName, itemId);
     LuaObjectUtils::NewObjectCheck(L, "GameItem", regItem);
     return 1;
 }

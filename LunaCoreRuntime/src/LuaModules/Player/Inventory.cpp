@@ -18,7 +18,7 @@
 
 namespace CTRPF = CTRPluginFramework;
 using InventorySlot = Minecraft::Inventory::InventorySlot;
-using Item = Game::Item;
+using Item = Minecraft::Item;
 
 // ----------------------------------------------------------------------------
 

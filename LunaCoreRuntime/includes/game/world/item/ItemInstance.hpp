@@ -2,7 +2,7 @@
 
 #include "game/types.h"
 
-namespace Game {
+namespace Minecraft {
     class Item;
 
     class ItemInstance {

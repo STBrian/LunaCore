@@ -6,7 +6,7 @@
 
 namespace Minecraft {
     class Inventory {
-        using Item = Game::Item;
+        using Item = Minecraft::Item;
         
         public:
         typedef struct {

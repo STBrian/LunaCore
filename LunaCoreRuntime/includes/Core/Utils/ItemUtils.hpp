@@ -5,8 +5,8 @@
 #include "game/world/item/Item.hpp"
 
 namespace Core::Items {
-    using Item = Game::Item;
-    using ItemInstance = Game::ItemInstance;
+    using Item = Minecraft::Item;
+    using ItemInstance = Minecraft::ItemInstance;
     
     Item *SearchItemByName(const std::string& name);
 

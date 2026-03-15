@@ -4,18 +4,29 @@
 #include <string>
 #endif
 
+#include <type_traits>
+#include "game/gstdlib.h"
 #include "game/asserts.h"
 
 #include "game/gstd/gstd_string.hpp"
 #include "game/world/item/ItemInstance.hpp"
 
-namespace Game {
+namespace Minecraft {
     class Item;
-    
-    static Item*(*registerItem)(const char* nameId, const short& itemId) = reinterpret_cast<decltype(registerItem)>(0x007cdc8c);
+
+    template<typename T> 
+    static T* registerItem(const char* nameId, const short& itemId) {
+        if constexpr (std::is_same<T, Item>::value) {
+            return reinterpret_cast<Item*(*)(const char*, const short&)>(0x007cdc8c)(nameId, itemId);
+        } else {
+            T* obj = (T*)gstd::malloc(sizeof(T));
+        }
+    }
 
     class Item {
         public:
+        constexpr static u16 SIZEOF = 0xac;
+
         //void* vtable; // 0x0
         u8 maxStackSize; // 0x4
         //char unk1[3]; // 0x5
@@ -33,7 +44,7 @@ namespace Game {
         short unk6; // 0x26
         u8 blockID; // 0x28
         bool canEat; // 0x29
-        u8 padding[0xac - 0x2a];
+        u8 padding[Item::SIZEOF - 0x2a];
 
         class Tier {
             public:
@@ -269,5 +280,5 @@ namespace Game {
         inline static Item*& mChorusFruitPopped = mItemTable[187];
     };
 
-    ASSERT_SIZE(Game::Item, 0xac);
+    ASSERT_SIZE(Item, Item::SIZEOF);
 }

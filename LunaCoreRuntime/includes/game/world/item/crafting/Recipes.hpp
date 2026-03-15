@@ -6,9 +6,9 @@
 #include "game/world/level/block/Block.hpp"
 
 namespace Minecraft {
-    using Item = Game::Item;
+    using Item = Minecraft::Item;
     using Block = Minecraft::Block;
-    using ItemInstance = Game::ItemInstance;
+    using ItemInstance = Minecraft::ItemInstance;
 
     class InternalRecipeElementDefinition {
         public:

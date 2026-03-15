@@ -110,9 +110,9 @@ static __attribute__((naked)) void RegisterItemOverwriteReturn() {
 }
 
 static void RegisterItemsHook(CoreHookContext* ctx) {
-    Game::Item* totemItem = reinterpret_cast<Game::Item*>(ctx->r0);
+    Minecraft::Item* totemItem = reinterpret_cast<Minecraft::Item*>(ctx->r0);
     totemItem->padding[6] = 1;
-    Game::Item::mTotem = totemItem;
+    Minecraft::Item::mTotem = totemItem;
 
     {
         std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);

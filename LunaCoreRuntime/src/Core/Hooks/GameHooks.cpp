@@ -30,7 +30,8 @@ namespace CTRPF = CTRPluginFramework;
 #define IS_INS_B(ins) ((((ins) & 0xFF000000) & INS_B) == ((ins) & 0xFF000000))
 #define IS_INS_BL(ins) ((((ins) & 0xFF000000) & INS_BL) == ((ins) & 0xFF000000))
 
-#define DECODE_TARGET_INS_B(ins, pc_actual) (((ins) & 0xFFFFFF) << 2) + ((pc_actual) + 8)
+#define DECODE_TARGET_INS_B(ins, pc_actual) \
+    (((pc_actual) + 8) + (((int32_t)((ins) << 8)) >> 6))
 #define DECODE_TARGET_INS_BL(ins, pc_actual) (DECODE_TARGET_INS_B(ins, pc_actual))
 
 #ifndef LEGACY_HOOKS
@@ -61,7 +62,7 @@ __attribute__((naked)) void hookReturnOverwrite(CoreHookContext *ctx, u32 return
 }
 
 // Hooks an ARMv7 function, length must be at least 2 instructions to hook
-// and instructions cannot be pc-relative dependent
+// and instructions cannot be pc-relative dependent. B and BL calls are allowed
 void newHookFunction(u32 targetAddr, u32 callbackAddr) {
     CoreHookContext* hookCtx2 = Core::alloc<CoreHookContext>();
 
@@ -79,6 +80,7 @@ void newHookFunction(u32 targetAddr, u32 callbackAddr) {
     hookCtx2->preHookData[0] = callbackAddr;
     hookCtx2->preHookData[1] = (u32)hookBody;
 
+    // r4: hookCtxPtr
     hookCtx2->returnIns[0] = 0xE8947FFF; // ldmia r4, {r0-r12, sp, lr}
     int insIdx = 1;
     int dataOffset = 0;
@@ -103,28 +105,11 @@ void newHookFunction(u32 targetAddr, u32 callbackAddr) {
     *((u32*)targetAddr + 1) = (u32)&hookCtx2->preHookBody[0];
 }
 
-static __attribute__((naked)) void RegisterItemOverwriteReturn() {
-    asm volatile (
-        "add sp, sp, #0x3c\n"
-        "ldmia sp!, {r4-r11, pc}"
-    );
-}
-
 static void RegisterItemsHook(CoreHookContext* ctx) {
-    Game::Item* totemItem = reinterpret_cast<Game::Item*>(ctx->r[0]);
-    totemItem->padding[6] = 1;
-    Game::Item::mTotem = totemItem;
-
-    {
-        std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
-        GameState.LoadingItems.store(true);
-        Core::Event::TriggerEvent(Lua_global, "Game.Items.OnRegisterItems");
-        GameState.LoadingItems.store(false);
-    }
-
-    reinterpret_cast<void(*)()>(0x0056e450)();
+    std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
+    GameState.LoadingItems.store(true);
+    Core::Event::TriggerEvent(Lua_global, "Game.Items.OnRegisterItems");
     GameState.LoadingItems.store(false);
-    hookReturnOverwrite(ctx, (u32)RegisterItemOverwriteReturn);
 }
 
 static __attribute__((naked)) void RegisterItemsTexturesOverwriteReturn() {
@@ -312,7 +297,7 @@ static __attribute__((naked)) void GameDebugLogfHook(CoreHookContext* ctx) {
 
 void hookSomeFunctions() {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOKING;
-    newHookFunction(0x0056c2a0, (u32)RegisterItemsHook);
+    newHookFunction(0x0056c2ac, (u32)RegisterItemsHook);
     newHookFunction(0x0056de70, (u32)RegisterItemsTexturesHook);
     newHookFunction(0x00578358, (u32)RegisterCreativeItemsHook);
     newHookFunction(0x001b4898, (u32)RegisterRecipes);

@@ -10,6 +10,10 @@ typedef struct alignas(4) {
     u32 returnIns[10];
     u32 returnData[2];
 
+    // -------------------
+    // Modifying after this is fine
+    // -------------------
+
     u32 targetAddress;
     u32 selfHookPtr;
     u32 preHookBody[9];

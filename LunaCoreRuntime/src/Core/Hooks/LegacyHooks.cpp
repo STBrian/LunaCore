@@ -23,83 +23,82 @@
 
 namespace CTRPF = CTRPluginFramework;
 
-#define COND_ALWAYS (u32)(0b1110 << 28)
-#define INS_B COND_ALWAYS | (0b101 << 25) | (0b0 << 24)
-#define INS_BL COND_ALWAYS | (0b101 << 25) | (0b1 << 24)
+#define BASE_OFF 0x100000
 
-#define IS_INS_B(ins) ((((ins) & 0xFF000000) & INS_B) == ((ins) & 0xFF000000))
-#define IS_INS_BL(ins) ((((ins) & 0xFF000000) & INS_BL) == ((ins) & 0xFF000000))
+static std::vector<std::unique_ptr<LegacyCoreHookContext>> hooks;
 
-#define DECODE_TARGET_INS_B(ins, pc_actual) (((ins) & 0xFFFFFF) << 2) + ((pc_actual) + 8)
-#define DECODE_TARGET_INS_BL(ins, pc_actual) (DECODE_TARGET_INS_B(ins, pc_actual))
-
-extern "C" void lc_nsetCoreHookState() {
+extern "C" void lc_setCoreHookState() {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
 }
 
 static __attribute__((naked)) void hookBody() {
-    asm volatile (          // r0: callbackPtr, r4 hookCtxPtr
-        "mov r5, r0\n"      // Copy callbackPtr to r5
-        "bl lc_nsetCoreHookState\n"
-        "mov r0, r4\n"      // Copy hookCtxPtr to r0 (arg 1)
-        "blx r5\n"          // Branch to callback
-        "add r0, r4, #60\n"
-        "bx r0\n"           // Jump to returnIns and return normal flow
+    asm volatile ( // r4 contains hookCtxPtr
+        "mov r5, sp\n" // Save stack pointer
+        "str r0, [r4, #0x0c]\n" // Store r0-r3 in hookCtxPtr->r0-r3
+        "str r1, [r4, #0x10]\n"
+        "str r2, [r4, #0x14]\n"
+        "str r3, [r4, #0x18]\n"
+        "str lr, [r4, #0x1c]\n"
+        "str sp, [r4, #0x20]\n"
+        "ldr r6, [r4, #0x4]\n" // Load callback function address
+        "bl lc_setCoreHookState\n"
+        "mov r0, r4\n" // Copy hookCtxPtr to r0 (arg 1)
+        "blx r6\n"
+        "mov sp, r5\n" // Restore stack pointer
+        "add r6, r4, #0x24\n"
+        "bx r6" // Jump to restoreIns and return normal flow
     );
 }
 
-__attribute__((naked)) void hookReturnOverwrite(CoreHookContext *ctx, u32 returnCallback) {
-    asm volatile ( // r0 contains hookCtxPtr, r1 callback
-        "add r2, r0, #16\n"
-        "ldmia r2, {r4-r12, sp, lr}\n"  // Restore registers
+u32 getStackPointerFromCtx(LegacyCoreHookContext *ctx) {
+    return ctx->sp + 4 * 14;
+}
+
+__attribute__((naked)) void hookReturnOverwrite(LegacyCoreHookContext *ctx, u32 returnCallback) {
+    asm volatile ( // r0 contains hookCtxPtr
+        "ldr sp, [r0, #0x20]\n"
+        "add sp, sp, #0x10\n"
+        "ldmia sp!, {r4-r12, lr}\n"  // Restore stack pointer
         "mov r2, r1\n"
-        "ldr r1, [r0, #0x4]\n"
-        "ldr r0, [r0]\n"
+        "ldr r1, [r0, #0x10]\n"
+        "ldr r0, [r0, #0x0c]\n"
         "bx r2\n"
     );
 }
 
-// Hooks an ARMv7 function, length must be at least 2 instructions to hook
+// Hooks an ARMv7 function, length must be at least 5 instructions to hook
 // and instructions cannot be pc-relative dependent
-void newHookFunction(u32 targetAddr, u32 callbackAddr) {
-    CoreHookContext* hookCtx2 = Core::alloc<CoreHookContext>();
+void hookFunction(u32 targetAddr, u32 callbackAddr) {
+    const u32 asmData[] = {
+        0xE92D5FFF, // stmdb sp!, {r0-r12, lr}
+        0xE59F4004, // ldr r4, [pc, #0x4] pc is already 2 ins ahead
+        0xE5945000, // ldr r5, [r4, #0x0]
+        0xE12FFF15, // bx r5
+        // hookCtxPtr
+    };
+    auto hookCtx = std::make_unique<LegacyCoreHookContext>();
+    hookCtx->wrapCallbackAddress = (u32)hookBody;
+    hookCtx->targetAddress = targetAddr;
+    hookCtx->callbackAddress = callbackAddr;
 
-    hookCtx2->targetAddress = targetAddr;
-    hookCtx2->selfHookPtr = (u32)hookCtx2;
-    hookCtx2->preHookBody[0] = 0xE52D4004; // str r4, [sp, #-4]!            this saves r4 to stack and decrements sp
-    hookCtx2->preHookBody[1] = 0xE51F4010; // ldr r4, [pc, #-16]            loads the hookCtx pointer to r4
-    hookCtx2->preHookBody[2] = 0xE8847FFF; // stmia r4, {r0-r12, sp, lr}    stores all possible registers
-    hookCtx2->preHookBody[3] = 0xE49D5004; // ldr r5, [sp], #4              this copies original r4 to r5 and restores sp
-    hookCtx2->preHookBody[4] = 0xE5845014; // str r5, [r4, #16]             fix r4 value
-    hookCtx2->preHookBody[5] = 0xE584D034; // str sp, [r4, #52]             fix sp value
-    hookCtx2->preHookBody[6] = 0xE59F0004; // ldr r0, [pc, #4]
-    hookCtx2->preHookBody[7] = 0xE59F1004; // ldr r1, [pc, #4]
-    hookCtx2->preHookBody[8] = 0xE12FFF11; // bx r1
-    hookCtx2->preHookData[0] = callbackAddr;
-    hookCtx2->preHookData[1] = (u32)hookBody;
+    hookCtx->restoreIns = 0xE8BD5FFF; // ldmia sp!, {r0-r12, lr}
+    hookCtx->jmpIns = 0xE51FF004; // ldr pc, [pc, #-0x4] pc is already 2 ins ahead
+    hookCtx->returnAddress = targetAddr + 4 * 5;
 
-    hookCtx2->returnIns[0] = 0xE8947FFF; // ldmia r4, {r0-r12, sp, lr}
-    int insIdx = 1;
-    int dataOffset = 0;
-    for (int i = 0; i < 2; i++) {
-        u32 targetIns = *((u32*)targetAddr + i);
-        if (IS_INS_B(targetIns)) {
-            hookCtx2->returnIns[insIdx] = 0xE59FF000 + sizeof(hookCtx2->returnIns) - 8 + 4 * dataOffset - 4 * insIdx; // ldr, pc, [pc, dataOffset]
-            hookCtx2->returnData[dataOffset++] = DECODE_TARGET_INS_B(targetIns, (u32)((u32*)targetAddr + i));
-        } else if (IS_INS_BL(targetIns)) {
-            hookCtx2->returnIns[insIdx++] = 0xE1A0E00F; // mov lr, pc
-            hookCtx2->returnIns[insIdx] = 0xE59FF000 + sizeof(hookCtx2->returnIns) - 8 + 4 * dataOffset - 4 * insIdx; // ldr, pc, [pc, dataOffset]
-            hookCtx2->returnData[dataOffset++] = DECODE_TARGET_INS_BL(targetIns, (u32)((u32*)targetAddr + i));
-        } else {
-            hookCtx2->returnIns[insIdx] = targetIns;
-        }
-        insIdx++;
-    }
-    hookCtx2->returnIns[insIdx++] = 0xE51FF004; // ldr pc, [pc, #-0x4]
-    hookCtx2->returnIns[insIdx++] = targetAddr + 4 * 2;
+    hookCtx->overwrittenIns[0] = *(u32*)targetAddr;
+    hookCtx->overwrittenIns[1] = *((u32*)targetAddr + 1);
+    hookCtx->overwrittenIns[2] = *((u32*)targetAddr + 2);
+    hookCtx->overwrittenIns[3] = *((u32*)targetAddr + 3);
+    hookCtx->overwrittenIns[4] = *((u32*)targetAddr + 4);
 
-    *(u32*)targetAddr = 0xE51FF004; // ldr pc, [pc, #-0x4]
-    *((u32*)targetAddr + 1) = (u32)&hookCtx2->preHookBody[0];
+    LegacyCoreHookContext *hookCtxPtr = hookCtx.get();
+    hooks.push_back(std::move(hookCtx));
+
+    *(u32*)targetAddr = asmData[0];
+    *((u32*)targetAddr + 1) = asmData[1];
+    *((u32*)targetAddr + 2) = asmData[2];
+    *((u32*)targetAddr + 3) = asmData[3];
+    *((u32*)targetAddr + 4) = (u32)hookCtxPtr;
 }
 
 static __attribute__((naked)) void RegisterItemOverwriteReturn() {
@@ -109,8 +108,8 @@ static __attribute__((naked)) void RegisterItemOverwriteReturn() {
     );
 }
 
-static void RegisterItemsHook(CoreHookContext* ctx) {
-    Game::Item* totemItem = reinterpret_cast<Game::Item*>(ctx->r[0]);
+static void RegisterItemsHook(LegacyCoreHookContext* ctx) {
+    Game::Item* totemItem = reinterpret_cast<Game::Item*>(ctx->r0);
     totemItem->padding[6] = 1;
     Game::Item::mTotem = totemItem;
 
@@ -136,7 +135,7 @@ static __attribute__((naked)) void RegisterItemsTexturesOverwriteReturn() {
     );
 }
 
-static void RegisterItemsTexturesHook(CoreHookContext* ctx) {
+static void RegisterItemsTexturesHook(LegacyCoreHookContext* ctx) {
     GameState.SettingItemsTextures.store(true);
 
     {
@@ -158,7 +157,7 @@ static __attribute__((naked)) void RegisterCreativeItemsOverwriteReturn() {
     );
 }
 
-static void RegisterCreativeItemsHook(CoreHookContext* ctx) {
+static void RegisterCreativeItemsHook(LegacyCoreHookContext* ctx) {
     GameState.LoadingCreativeItems.store(true);
 
     {
@@ -181,11 +180,11 @@ static __attribute__((naked)) void EntitySpawnStartOverwriteReturn() {
     );
 }
 
-static void EntitySpawnStartHook(CoreHookContext *ctx) {
+static void EntitySpawnStartHook(LegacyCoreHookContext *ctx) {
 
-    if (ctx->r[2] != 0) {
+    if (ctx->r2 != 0) {
         std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
-        LuaObjectUtils::NewObject(Lua_global, "GameSpawnCoords", reinterpret_cast<void*>(ctx->r[2])); // Pass the reference
+        LuaObjectUtils::NewObject(Lua_global, "GameSpawnCoords", reinterpret_cast<void*>(ctx->r2)); // Pass the reference
         Core::Event::TriggerEvent(Lua_global, "Core.Event.OnGameEntitySpawnStart", 1);
     }
 
@@ -204,12 +203,12 @@ static __attribute__((naked)) void EntitySpawnFinishedOverwriteReturn() {
     );
 }
 
-static void EntitySpawnFinishedHook(CoreHookContext *ctx) {
+static void EntitySpawnFinishedHook(LegacyCoreHookContext *ctx) {
     // Core::Debug::LogError("Trying to hook entity spawn");
 
-    if (ctx->r[0] != 0) {
+    if (ctx->r0 != 0) {
         std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
-        Game::Entity* entity = reinterpret_cast<Game::Entity*>(ctx->r[0]);
+        Game::Entity* entity = reinterpret_cast<Game::Entity*>(ctx->r0);
         LuaObjectUtils::NewObject(Lua_global, "GameEntity", entity);
         Core::Event::TriggerEvent(Lua_global, "Core.Event.OnGameEntitySpawn", 1);
     }
@@ -228,12 +227,12 @@ static __attribute__((naked)) void RegisterRecipesOverwriteReturn() {
     );
 }
 
-static void RegisterRecipes(CoreHookContext* ctx) {
+static void RegisterRecipes(LegacyCoreHookContext* ctx) {
     GameState.LoadingRecipes.store(true);
 
     {
         std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
-        LuaObjectUtils::NewObject(Lua_global, "RecipesTable", (void*)ctx->r[0]);
+        LuaObjectUtils::NewObject(Lua_global, "RecipesTable", (void*)ctx->r0);
         Core::Event::TriggerEvent(Lua_global, "Game.Recipes.OnRegisterRecipes", 1);
     }
     
@@ -264,20 +263,7 @@ static bool allow_call(void) {
     return true;
 }
 
-extern "C" CoreHookContext* DumpRegisters(CoreHookContext* ctx) {
-    Core::Debug::LogRawf("\tSP: %08X\n", ctx->sp);
-    Core::Debug::LogRawf("\tLR: %08X\n", ctx->lr);
-    Core::Debug::LogRawf("\tR0: %08X \tR1: %08X\n", ctx->r[0], ctx->r[1]);
-    Core::Debug::LogRawf("\tR2: %08X \tR3: %08X\n", ctx->r[2], ctx->r[3]);
-    Core::Debug::LogRawf("\tR4: %08X \tR5: %08X\n", ctx->r[4], ctx->r[5]);
-    Core::Debug::LogRawf("\tR6: %08X \tR7: %08X\n", ctx->r[6], ctx->r[7]);
-    Core::Debug::LogRawf("\tR8: %08X \tR9: %08X\n", ctx->r[8], ctx->r[9]);
-    Core::Debug::LogRawf("\tR10: %08X\tR11: %08X\n", ctx->r[10], ctx->r[11]);
-    Core::Debug::LogRawf("\tR12: %08X\n", ctx->r[12]);
-    return ctx;
-}
-
-extern "C" void NewGameDebugLogfHandler(u32 ukn1, u32 ukn2, const char* author, u32 ukn3, const char* fmt, ...) {
+extern "C" void GameDebugLogfHandler(u32 ukn1, u32 ukn2, const char* author, u32 ukn3, const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
 
@@ -299,21 +285,20 @@ extern "C" void NewGameDebugLogfHandler(u32 ukn1, u32 ukn2, const char* author, 
     return;
 }
 
-static __attribute__((naked)) void GameDebugLogfHook(CoreHookContext* ctx) {
+static __attribute__((naked)) void GameDebugLogfHook(LegacyCoreHookContext* ctx) {
     asm volatile (
-        "bl DumpRegisters\n"
-        "ldmia r0, {r0-r12, sp, lr}\n" // We will just overwrite the whole function
-        "b NewGameDebugLogfHandler\n"
+        "ldmia sp!, {r0-r12, lr}\n" // We will just overwrite the whole function
+        "b GameDebugLogfHandler\n"
     );
 }
 
-void newHookSomeFunctions() {
+void hookSomeFunctions() {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOKING;
-    newHookFunction(0x0056c2a0, (u32)RegisterItemsHook);
-    newHookFunction(0x0056de70, (u32)RegisterItemsTexturesHook);
-    newHookFunction(0x00578358, (u32)RegisterCreativeItemsHook);
-    newHookFunction(0x001b4898, (u32)RegisterRecipes);
-    newHookFunction(0x00114f50, (u32)GameDebugLogfHook);
+    hookFunction(0x0056c2a0, (u32)RegisterItemsHook);
+    hookFunction(0x0056de70, (u32)RegisterItemsTexturesHook);
+    hookFunction(0x00578358, (u32)RegisterCreativeItemsHook);
+    hookFunction(0x001b4898, (u32)RegisterRecipes);
+    hookFunction(0x00114f50, (u32)GameDebugLogfHook);
     //hookFunction(0x004df688, (u32)EntitySpawnStartHook); disabled as there is a weird memory leak ? idk why
     //hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
 }

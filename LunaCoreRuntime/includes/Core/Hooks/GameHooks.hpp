@@ -2,6 +2,7 @@
 
 #include "types.h"
 
+#ifndef LEGACY_HOOKS
 typedef struct alignas(4) {
     u32 r[13];
     u32 sp, lr;
@@ -14,7 +15,9 @@ typedef struct alignas(4) {
     u32 preHookBody[9];
     u32 preHookData[2];
 } CoreHookContext;
+#endif
 
+#ifdef LEGACY_HOOKS
 typedef struct alignas(4) cHkCtx_s {
     u32 wrapCallbackAddress;
     u32 callbackAddress;
@@ -26,7 +29,8 @@ typedef struct alignas(4) cHkCtx_s {
     u32 overwrittenIns[5];
     u32 jmpIns;
     u32 returnAddress;
-} LegacyCoreHookContext;
+} CoreHookContext;
+#endif
 
 void hookFunction(u32 targetAddr, u32 callbackAddr);
 

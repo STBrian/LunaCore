@@ -25,7 +25,8 @@ namespace CTRPF = CTRPluginFramework;
 
 #define BASE_OFF 0x100000
 
-static std::vector<std::unique_ptr<LegacyCoreHookContext>> hooks;
+#ifdef LEGACY_HOOKS
+static std::vector<std::unique_ptr<CoreHookContext>> hooks;
 
 extern "C" void lc_setCoreHookState() {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
@@ -50,11 +51,11 @@ static __attribute__((naked)) void hookBody() {
     );
 }
 
-u32 getStackPointerFromCtx(LegacyCoreHookContext *ctx) {
+u32 getStackPointerFromCtx(CoreHookContext *ctx) {
     return ctx->sp + 4 * 14;
 }
 
-__attribute__((naked)) void hookReturnOverwrite(LegacyCoreHookContext *ctx, u32 returnCallback) {
+__attribute__((naked)) void hookReturnOverwrite(CoreHookContext *ctx, u32 returnCallback) {
     asm volatile ( // r0 contains hookCtxPtr
         "ldr sp, [r0, #0x20]\n"
         "add sp, sp, #0x10\n"
@@ -76,7 +77,7 @@ void hookFunction(u32 targetAddr, u32 callbackAddr) {
         0xE12FFF15, // bx r5
         // hookCtxPtr
     };
-    auto hookCtx = std::make_unique<LegacyCoreHookContext>();
+    auto hookCtx = std::make_unique<CoreHookContext>();
     hookCtx->wrapCallbackAddress = (u32)hookBody;
     hookCtx->targetAddress = targetAddr;
     hookCtx->callbackAddress = callbackAddr;
@@ -91,7 +92,7 @@ void hookFunction(u32 targetAddr, u32 callbackAddr) {
     hookCtx->overwrittenIns[3] = *((u32*)targetAddr + 3);
     hookCtx->overwrittenIns[4] = *((u32*)targetAddr + 4);
 
-    LegacyCoreHookContext *hookCtxPtr = hookCtx.get();
+    CoreHookContext *hookCtxPtr = hookCtx.get();
     hooks.push_back(std::move(hookCtx));
 
     *(u32*)targetAddr = asmData[0];
@@ -108,7 +109,7 @@ static __attribute__((naked)) void RegisterItemOverwriteReturn() {
     );
 }
 
-static void RegisterItemsHook(LegacyCoreHookContext* ctx) {
+static void RegisterItemsHook(CoreHookContext* ctx) {
     Game::Item* totemItem = reinterpret_cast<Game::Item*>(ctx->r0);
     totemItem->padding[6] = 1;
     Game::Item::mTotem = totemItem;
@@ -135,7 +136,7 @@ static __attribute__((naked)) void RegisterItemsTexturesOverwriteReturn() {
     );
 }
 
-static void RegisterItemsTexturesHook(LegacyCoreHookContext* ctx) {
+static void RegisterItemsTexturesHook(CoreHookContext* ctx) {
     GameState.SettingItemsTextures.store(true);
 
     {
@@ -157,7 +158,7 @@ static __attribute__((naked)) void RegisterCreativeItemsOverwriteReturn() {
     );
 }
 
-static void RegisterCreativeItemsHook(LegacyCoreHookContext* ctx) {
+static void RegisterCreativeItemsHook(CoreHookContext* ctx) {
     GameState.LoadingCreativeItems.store(true);
 
     {
@@ -180,7 +181,7 @@ static __attribute__((naked)) void EntitySpawnStartOverwriteReturn() {
     );
 }
 
-static void EntitySpawnStartHook(LegacyCoreHookContext *ctx) {
+static void EntitySpawnStartHook(CoreHookContext *ctx) {
 
     if (ctx->r2 != 0) {
         std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
@@ -203,7 +204,7 @@ static __attribute__((naked)) void EntitySpawnFinishedOverwriteReturn() {
     );
 }
 
-static void EntitySpawnFinishedHook(LegacyCoreHookContext *ctx) {
+static void EntitySpawnFinishedHook(CoreHookContext *ctx) {
     // Core::Debug::LogError("Trying to hook entity spawn");
 
     if (ctx->r0 != 0) {
@@ -227,7 +228,7 @@ static __attribute__((naked)) void RegisterRecipesOverwriteReturn() {
     );
 }
 
-static void RegisterRecipes(LegacyCoreHookContext* ctx) {
+static void RegisterRecipes(CoreHookContext* ctx) {
     GameState.LoadingRecipes.store(true);
 
     {
@@ -285,7 +286,7 @@ extern "C" void GameDebugLogfHandler(u32 ukn1, u32 ukn2, const char* author, u32
     return;
 }
 
-static __attribute__((naked)) void GameDebugLogfHook(LegacyCoreHookContext* ctx) {
+static __attribute__((naked)) void GameDebugLogfHook(CoreHookContext* ctx) {
     asm volatile (
         "ldmia sp!, {r0-r12, lr}\n" // We will just overwrite the whole function
         "b GameDebugLogfHandler\n"
@@ -302,3 +303,4 @@ void hookSomeFunctions() {
     //hookFunction(0x004df688, (u32)EntitySpawnStartHook); disabled as there is a weird memory leak ? idk why
     //hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
 }
+#endif

@@ -33,14 +33,15 @@ namespace CTRPF = CTRPluginFramework;
 #define DECODE_TARGET_INS_B(ins, pc_actual) (((ins) & 0xFFFFFF) << 2) + ((pc_actual) + 8)
 #define DECODE_TARGET_INS_BL(ins, pc_actual) (DECODE_TARGET_INS_B(ins, pc_actual))
 
-extern "C" void lc_nsetCoreHookState() {
+#ifndef LEGACY_HOOKS
+extern "C" void lc_setCoreHookState() {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
 }
 
 static __attribute__((naked)) void hookBody() {
     asm volatile (          // r0: callbackPtr, r4 hookCtxPtr
         "mov r5, r0\n"      // Copy callbackPtr to r5
-        "bl lc_nsetCoreHookState\n"
+        "bl lc_setCoreHookState\n"
         "mov r0, r4\n"      // Copy hookCtxPtr to r0 (arg 1)
         "blx r5\n"          // Branch to callback
         "add r0, r4, #60\n"
@@ -70,7 +71,7 @@ void newHookFunction(u32 targetAddr, u32 callbackAddr) {
     hookCtx2->preHookBody[1] = 0xE51F4010; // ldr r4, [pc, #-16]            loads the hookCtx pointer to r4
     hookCtx2->preHookBody[2] = 0xE8847FFF; // stmia r4, {r0-r12, sp, lr}    stores all possible registers
     hookCtx2->preHookBody[3] = 0xE49D5004; // ldr r5, [sp], #4              this copies original r4 to r5 and restores sp
-    hookCtx2->preHookBody[4] = 0xE5845014; // str r5, [r4, #16]             fix r4 value
+    hookCtx2->preHookBody[4] = 0xE5845010; // str r5, [r4, #16]             fix r4 value
     hookCtx2->preHookBody[5] = 0xE584D034; // str sp, [r4, #52]             fix sp value
     hookCtx2->preHookBody[6] = 0xE59F0004; // ldr r0, [pc, #4]
     hookCtx2->preHookBody[7] = 0xE59F1004; // ldr r1, [pc, #4]
@@ -277,7 +278,7 @@ extern "C" CoreHookContext* DumpRegisters(CoreHookContext* ctx) {
     return ctx;
 }
 
-extern "C" void NewGameDebugLogfHandler(u32 ukn1, u32 ukn2, const char* author, u32 ukn3, const char* fmt, ...) {
+extern "C" void GameDebugLogfHandler(u32 ukn1, u32 ukn2, const char* author, u32 ukn3, const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
 
@@ -301,13 +302,15 @@ extern "C" void NewGameDebugLogfHandler(u32 ukn1, u32 ukn2, const char* author, 
 
 static __attribute__((naked)) void GameDebugLogfHook(CoreHookContext* ctx) {
     asm volatile (
+        #ifdef DUMPLOGREGISTERS
         "bl DumpRegisters\n"
+        #endif
         "ldmia r0, {r0-r12, sp, lr}\n" // We will just overwrite the whole function
-        "b NewGameDebugLogfHandler\n"
+        "b GameDebugLogfHandler\n"
     );
 }
 
-void newHookSomeFunctions() {
+void hookSomeFunctions() {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOKING;
     newHookFunction(0x0056c2a0, (u32)RegisterItemsHook);
     newHookFunction(0x0056de70, (u32)RegisterItemsTexturesHook);
@@ -317,3 +320,4 @@ void newHookSomeFunctions() {
     //hookFunction(0x004df688, (u32)EntitySpawnStartHook); disabled as there is a weird memory leak ? idk why
     //hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
 }
+#endif

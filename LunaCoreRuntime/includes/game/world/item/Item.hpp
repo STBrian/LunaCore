@@ -295,4 +295,20 @@ namespace Minecraft {
     inline Item* registerItemSwordTool(const char* nameId, const short& itemId, Item::Tier* tierId) {
         return reinterpret_cast<Item*(*)(const char*, const short&, Item::Tier*)>(0x7caf94)(nameId, itemId, tierId);
     }
+
+    inline Item* registerItemShovelTool(const char* nameId, const short& itemId, Item::Tier* tierId) {
+        return reinterpret_cast<Item*(*)(const char*, const short&, Item::Tier*)>(0x7caddc)(nameId, itemId, tierId);
+    }
+
+    inline Item* registerItemPickaxeTool(const char* nameId, const short& itemId, Item::Tier* tierId) {
+        return reinterpret_cast<Item*(*)(const char*, const short&, Item::Tier*)>(0x7cb340)(nameId, itemId, tierId);
+    }
+
+    inline Item* registerItemAxeTool(const char* nameId, const short& itemId, Item::Tier* tierId) {
+        return reinterpret_cast<Item*(*)(const char*, const short&, Item::Tier*)>(0x7cb188)(nameId, itemId, tierId);
+    }
+
+    inline Item* registerItemHoeTool(const char* nameId, const short& itemId, Item::Tier* tierId) {
+        return reinterpret_cast<Item*(*)(const char*, const short&, Item::Tier*)>(0x7ce35c)(nameId, itemId, tierId);
+    }
 }

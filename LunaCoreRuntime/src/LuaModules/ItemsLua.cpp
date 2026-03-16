@@ -109,6 +109,74 @@ static int l_Items_registerItemSwordTool(lua_State *L) {
 }
 
 /*
+- Creates a new hoe tool item and registers it in the game. Returns the address to the item
+## itemName: string
+## itemId: integer
+## tier: MCToolTier
+## return: MCItem?
+### Game.Items.registerHoeItem
+*/
+static int l_Items_registerItemHoeTool(lua_State *L) {
+    const char* itemName = luaL_checkstring(L, 1);
+    u16 itemId = luaL_checknumber(L, 2);
+    Item::Tier* tier = LuaObjectUtils::CheckObject<Item::Tier>(L, 3, "MCToolTier").get();
+    Item* regItem = Minecraft::registerItemHoeTool(itemName, itemId, tier);
+    LuaObjectUtils::NewObjectCheck(L, "MCItem", regItem);
+    return 1;
+}
+
+/*
+- Creates a new axe tool item and registers it in the game. Returns the address to the item
+## itemName: string
+## itemId: integer
+## tier: MCToolTier
+## return: MCItem?
+### Game.Items.registerAxeItem
+*/
+static int l_Items_registerItemAxeTool(lua_State *L) {
+    const char* itemName = luaL_checkstring(L, 1);
+    u16 itemId = luaL_checknumber(L, 2);
+    Item::Tier* tier = LuaObjectUtils::CheckObject<Item::Tier>(L, 3, "MCToolTier").get();
+    Item* regItem = Minecraft::registerItemAxeTool(itemName, itemId, tier);
+    LuaObjectUtils::NewObjectCheck(L, "MCItem", regItem);
+    return 1;
+}
+
+/*
+- Creates a new pickaxe tool item and registers it in the game. Returns the address to the item
+## itemName: string
+## itemId: integer
+## tier: MCToolTier
+## return: MCItem?
+### Game.Items.registerPickaxeItem
+*/
+static int l_Items_registerItemPickaxeTool(lua_State *L) {
+    const char* itemName = luaL_checkstring(L, 1);
+    u16 itemId = luaL_checknumber(L, 2);
+    Item::Tier* tier = LuaObjectUtils::CheckObject<Item::Tier>(L, 3, "MCToolTier").get();
+    Item* regItem = Minecraft::registerItemPickaxeTool(itemName, itemId, tier);
+    LuaObjectUtils::NewObjectCheck(L, "MCItem", regItem);
+    return 1;
+}
+
+/*
+- Creates a new shovel tool item and registers it in the game. Returns the address to the item
+## itemName: string
+## itemId: integer
+## tier: MCToolTier
+## return: MCItem?
+### Game.Items.registerShovelItem
+*/
+static int l_Items_registerItemShovelTool(lua_State *L) {
+    const char* itemName = luaL_checkstring(L, 1);
+    u16 itemId = luaL_checknumber(L, 2);
+    Item::Tier* tier = LuaObjectUtils::CheckObject<Item::Tier>(L, 3, "MCToolTier").get();
+    Item* regItem = Minecraft::registerItemShovelTool(itemName, itemId, tier);
+    LuaObjectUtils::NewObjectCheck(L, "MCItem", regItem);
+    return 1;
+}
+
+/*
 - Takes a registered item with Game.Items.registerItem, and sets its texture
 ## item: MCItem
 ## textureName: string
@@ -162,6 +230,10 @@ static const luaL_Reg items_functions[] = {
     {"newToolTier", l_Items_newToolTier},
     {"registerItem", l_Items_registerItem},
     {"registerSwordItem", l_Items_registerItemSwordTool},
+    {"registerAxeItem", l_Items_registerItemAxeTool},
+    {"registerPickaxeItem", l_Items_registerItemPickaxeTool},
+    {"registerShovelItem", l_Items_registerItemShovelTool},
+    {"registerHoeItem", l_Items_registerItemHoeTool},
     {"registerCreativeItem", l_Items_registerCreativeItem},
     {"getItemInstance", l_Items_getItemInstance},
     {NULL, NULL}
@@ -220,14 +292,19 @@ bool Core::Module::RegisterItemsModule(lua_State *L) {
 
     //$Game.Items.ToolTiers
     lua_newtable(L);
+    //$@@@Game.Items.ToolTiers.WOOD: MCToolTier
     LuaObjectUtils::NewObject(L, "MCToolTier", Item::Tier::WOOD);
     lua_setfield(L, -2, "WOOD");
+    //$@@@Game.Items.ToolTiers.STONE: MCToolTier
     LuaObjectUtils::NewObject(L, "MCToolTier", Item::Tier::STONE);
     lua_setfield(L, -2, "STONE");
+    //$@@@Game.Items.ToolTiers.IRON: MCToolTier
     LuaObjectUtils::NewObject(L, "MCToolTier", Item::Tier::IRON);
     lua_setfield(L, -2, "IRON");
+    //$@@@Game.Items.ToolTiers.GOLD: MCToolTier
     LuaObjectUtils::NewObject(L, "MCToolTier", Item::Tier::GOLD);
     lua_setfield(L, -2, "GOLD");
+    //$@@@Game.Items.ToolTiers.DIAMOND: MCToolTier
     LuaObjectUtils::NewObject(L, "MCToolTier", Item::Tier::DIAMOND);
     lua_setfield(L, -2, "DIAMOND");
     lua_setfield(L, -2, "ToolTiers");

@@ -201,8 +201,13 @@ namespace CTRPluginFramework
         CrashHandler::core_state = CrashHandler::CORE_LOADING_RUNTIME;
         Core::InitCore();
 
+        #ifdef DEBUG
+        gmenu = alloc<PluginMenu>("LunaCore Plugin Menu", Core::Version.major, Core::Version.minor, Core::Version.patch,
+            plgSummary + "\n\n" + plgDescription + "\nCompiled: " __TIMESTAMP__ " (CST)\nDeveloper version", 2);
+        #else
         gmenu = alloc<PluginMenu>("LunaCore Plugin Menu", Core::Version.major, Core::Version.minor, Core::Version.patch,
             plgSummary + "\n\n" + plgDescription + "\nCompiled: " __TIMESTAMP__ " (CST)", 2);
+        #endif
 
         // Synnchronize the menu with frame event
         gmenu->SynchronizeWithFrame(true);

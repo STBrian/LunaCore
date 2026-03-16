@@ -88,7 +88,7 @@ namespace Core {
             }
             else {
                 if (pushError)
-                    lua_pushfstring(L, "unable to assign \"%s\" to a \"%s\" field", luaL_typename(L, narg), typeName); 
+                    lua_pushfstring(L, "expected \"%s\" (got \"%s\")", typeName, luaL_typename(L, narg)); 
             }
             return val;
         }

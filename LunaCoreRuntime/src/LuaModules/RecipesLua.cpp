@@ -62,11 +62,11 @@ static const char* ProcessTableKeys(lua_State* L, std::vector<Minecraft::RecipeC
             }
             lua_pop(L, 1);
 
-            // Second element must be the GameItemInstance
+            // Second element must be the MCItemInstance
             lua_rawgeti(L, -1, 2);
-            if (!LuaObjectUtils::IsObject(L, -1, "GameItemInstance")) {
+            if (!LuaObjectUtils::IsObject(L, -1, "MCItemInstance")) {
                 lua_settop(L, top); // restore stack and remove table
-                return "Unexpected type in component item (expected \"GameItemInstance\")";
+                return "Unexpected type in component item (expected \"MCItemInstance\")";
             } else {
                 item = *(Minecraft::ItemInstance**)lua_touserdata(L, -1);
             }
@@ -86,7 +86,7 @@ static const char* ProcessTableKeys(lua_State* L, std::vector<Minecraft::RecipeC
 /*
 - Allows to register a recipe. Use with the value given in event Game.Recipes.OnRegisterRecipes to get RecipesTable value
 ## recipesTable: RecipesTable
-## resultItem: GameItemInstance
+## resultItem: MCItemInstance
 ## categoryId: integer
 ## position: integer
 ## line1: string
@@ -97,7 +97,7 @@ static const char* ProcessTableKeys(lua_State* L, std::vector<Minecraft::RecipeC
 */
 static int l_Recipes_registerShapedRecipe(lua_State* L) {
     void* ptr1 = LuaObjectUtils::CheckObject<void>(L, 1, "RecipesTable").get();
-    Minecraft::ItemInstance* resultItem = LuaObjectUtils::CheckObject<Minecraft::ItemInstance>(L, 2, "GameItemInstance").get();
+    Minecraft::ItemInstance* resultItem = LuaObjectUtils::CheckObject<Minecraft::ItemInstance>(L, 2, "MCItemInstance").get();
     u16 categoryId = luaL_checkinteger(L, 3);
     s16 position = luaL_checkinteger(L, 4);
     size_t line1s = 0, line2s = 0, line3s = 0;

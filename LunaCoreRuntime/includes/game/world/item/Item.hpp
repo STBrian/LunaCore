@@ -12,17 +12,6 @@
 #include "game/world/item/ItemInstance.hpp"
 
 namespace Minecraft {
-    class Item;
-
-    template<typename T> 
-    static T* registerItem(const char* nameId, const short& itemId) {
-        if constexpr (std::is_same<T, Item>::value) {
-            return reinterpret_cast<Item*(*)(const char*, const short&)>(0x007cdc8c)(nameId, itemId);
-        } else {
-            T* obj = (T*)gstd::malloc(sizeof(T));
-        }
-    }
-
     class Item {
         public:
         constexpr static u16 SIZEOF = 0xac;
@@ -67,13 +56,6 @@ namespace Minecraft {
         inline static ItemInstance** creativeItemsEnd = reinterpret_cast<ItemInstance**>(0x00b0d748);
 
         inline static void (*registerItems)() = reinterpret_cast<void(*)()>(0x00563db0);
-
-        #if __STDC_HOSTED__
-        /* Item.itemId = itemId + 0x100 */
-        Item(const std::string& nameId, short itemId) {
-            reinterpret_cast<void*(*)(Item*, const gstd::string&, short)>(0x005790a4)(this, nameId, itemId);
-        }
-        #endif
 
         /* Item.itemId = itemId + 0x100 */
         Item(const gstd::string& nameId, short itemId) {
@@ -281,4 +263,36 @@ namespace Minecraft {
     };
 
     ASSERT_SIZE(Item, Item::SIZEOF);
+
+    template<typename T> 
+    inline T* registerItem(const char* nameId, const short& itemId) {
+        if constexpr (std::is_same<T, Item>::value) {
+            return reinterpret_cast<Item*(*)(const char*, const short&)>(0x007cdc8c)(nameId, itemId);
+        } else {
+            T* obj = (T*)gstd::malloc(sizeof(T));
+            if (obj) {
+                new (obj) T(gstd::string(nameId), itemId);
+                *(u32*)obj = T::VTABLE;
+            }
+            Item* itemObj = static_cast<Item*>(obj);
+            if (itemObj->itemId > 0x200) {
+                // Out of range itemId advice
+                return nullptr;
+            }
+            if (itemObj->descriptionId.empty()) {
+                // Empty description advice
+                return nullptr;
+            }
+            if (Item::mItems[itemObj->itemId]) {
+                // ID already taken advice
+                return nullptr;
+            }
+            Item::mItems[itemObj->itemId] = itemObj;
+            return nullptr;
+        }
+    }
+
+    inline Item* registerItemSwordTool(const char* nameId, const short& itemId, Item::Tier* tierId) {
+        return reinterpret_cast<Item*(*)(const char*, const short&, Item::Tier*)>(0x7caf94)(nameId, itemId, tierId);
+    }
 }

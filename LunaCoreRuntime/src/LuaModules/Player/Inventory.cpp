@@ -56,14 +56,14 @@ static int l_InventorySlot_isEmpty(lua_State *L) {
 }
 
 /*
-## item: GameItem
+## item: MCItem
 ## value: integer?
 ## return: boolean
 ### InventorySlot:setItem
 */
 static int l_InventorySlot_setItem(lua_State *L) {
     auto slotData = LuaObjectUtils::CheckObject<MC3DSPluginFramework::ItemInstance>(L, 1, "InventorySlot").get();
-    Item* item = LuaObjectUtils::CheckObject<Item>(L, 2, "GameItem").get();
+    Item* item = LuaObjectUtils::CheckObject<Item>(L, 2, "MCItem").get();
     u16 dataValue = 0;
     if (lua_gettop(L) > 2)
         dataValue = luaL_checknumber(L, 3);
@@ -75,7 +75,7 @@ static int l_InventorySlot_setItem(lua_State *L) {
 }
 
 /*
-#$InventorySlot.Item : ---@type GameItem?
+#$InventorySlot.Item : ---@type MCItem?
 =InventorySlot.ItemCount = 0
 =InventorySlot.ItemData = 0
 */
@@ -113,7 +113,7 @@ static int l_Inventory_ArmorSlots_index(lua_State *L)
 
 template<>
 struct LuaTypeName<Item> {
-    static constexpr const char* value = "GameItem";
+    static constexpr const char* value = "MCItem";
 };
 
 // Required to be called inside LocalPlayer definition

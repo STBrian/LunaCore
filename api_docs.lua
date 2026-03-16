@@ -492,20 +492,23 @@ Game.Gamepad.KeyCodes.CSTICK = 184549376
 
 Game.Items = {}
 
----@class GameItem
-local GameItem = {}
+---@class MCItem
+local MCItem = {}
 
----@class GameItemInstance
-local GameItemInstance = {}
+---@class MCItemInstance
+local MCItemInstance = {}
+
+---@class MCToolTier
+local MCToolTier = {}
 
 ---Find an item using its ID
 ---@param name string
----@return GameItem?
+---@return MCItem?
 function Game.Items.findItemByName(name) end
 
 ---Find and item using its name
 ---@param itemID integer
----@return GameItem?
+---@return MCItem?
 function Game.Items.findItemByID(itemID) end
 
 ---Get the item position in creative using the id
@@ -514,38 +517,61 @@ function Game.Items.findItemByID(itemID) end
 ---@return number
 function Game.Items.getCreativePosition(itemID, groupID) end
 
+---Returns a new empty ToolTier
+---@return MCToolTier
+function Game.Items.newToolTier() end
+
 ---Creates a new item and stores it in the game's items table. Returns the address to the item
 ---@param itemName string
 ---@param itemId integer
----@return GameItem?
+---@return MCItem?
 function Game.Items.registerItem(itemName, itemId) end
 
+---Creates a new sword tool item and registers it in the game. Returns the address to the item
+---@param itemName string
+---@param itemId integer
+---@param tier MCToolTier
+---@return MCItem?
+function Game.Items.registerSwordItem(itemName, itemId, tier) end
+
 ---Takes a registered item with Game.Items.registerItem, and sets its texture
----@param item GameItem
+---@param item MCItem
 ---@param textureName string
 ---@param textureIndex integer
-function GameItem:setTexture(item, textureName, textureIndex) end
+function MCItem:setTexture(item, textureName, textureIndex) end
 
 ---Takes a registered item with Game.Items.registerItem, and registers it in creative menu
----@param item GameItem
+---@param item MCItem
 ---@param groupId integer
 ---@param position integer
 function Game.Items.registerCreativeItem(item, groupId, position) end
 
----Returns a GameItemInstance
----@param item GameItem
+---Returns a MCItemInstance
+---@param item MCItem
 ---@param count integer
 ---@param data integer
----@return GameItemInstance
+---@return MCItemInstance
 function Game.Items.getItemInstance(item, count, data) end
 
-GameItem.StackSize = 64
+MCItem.StackSize = 64
 
-GameItem.ID = 1
+MCItem.ID = 1
 
-GameItem.NameID = ""
+MCItem.NameID = ""
 
-GameItem.DescriptionID = ""
+MCItem.DescriptionID = ""
+
+MCToolTier.MiningLevel = 0
+
+MCToolTier.Durability = 0
+
+MCToolTier.MiningEfficiency = 0
+
+MCToolTier.DamageBonus = 0
+
+MCToolTier.Enchantability = 0
+
+Game.Items.ToolTiers = {}
 
 ---@class OnRegisterItems: EventClass
 Game.Items.OnRegisterItems = {}
@@ -816,12 +842,12 @@ local InventorySlot = {}
 ---@return boolean
 function InventorySlot:isEmpty() end
 
----@param item GameItem
+---@param item MCItem
 ---@param value integer?
 ---@return boolean
 function InventorySlot:setItem(item, value) end
 
----@type GameItem?
+---@type MCItem?
 InventorySlot.Item = {}
 
 InventorySlot.ItemCount = 0
@@ -867,7 +893,7 @@ local RecipesTable = {}
 
 ---Allows to register a recipe. Use with the value given in event Game.Recipes.OnRegisterRecipes to get RecipesTable value
 ---@param recipesTable RecipesTable
----@param resultItem GameItemInstance
+---@param resultItem MCItemInstance
 ---@param categoryId integer
 ---@param position integer
 ---@param line1 string

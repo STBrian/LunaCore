@@ -30,7 +30,22 @@ local AMETHYST_SHARD = testModReg:registerItem("amethyst_shard", 252, {
     }
 })
 
-LOGGER:info(tostring(AMETHYST_SHARD ~= nil))
+local CopperTier = Game.Items.newToolTier()
+CopperTier.MiningLevel = 1
+CopperTier.Durability = 191
+CopperTier.MiningEfficiency = 5
+CopperTier.DamageBonus = 1
+CopperTier.Enchantability = 13
+
+local COPPER_SWORD = testModReg:registerItem("copper_sword", 251, {
+    texture = "items/copper_sword.3dst",
+    locales = {
+        en_US = "Copper sword",
+        es_MX = "Espada de cobre"
+    },
+    tool = "sword",
+    tier = CopperTier
+})
 
 CoreAPI.ItemGroups.registerEntries(CoreAPI.ItemGroups.FOOD_MINERALS, function (entries)
     entries:addBefore(COPPER_INGOT, "iron_ingot")
@@ -38,7 +53,8 @@ CoreAPI.ItemGroups.registerEntries(CoreAPI.ItemGroups.FOOD_MINERALS, function (e
 end)
 
 CoreAPI.ItemGroups.registerEntries(CoreAPI.ItemGroups.TOOLS, function (entries)
-    entries:addAfter(COPPER_PICKAXE, "stone_pickaxe")
+    entries:addAfter(COPPER_SWORD, "stone_hoe")
+    entries:addAfter(COPPER_PICKAXE, COPPER_SWORD)
 end)
 
 testModReg:buildResources()

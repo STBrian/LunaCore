@@ -534,6 +534,34 @@ function Game.Items.registerItem(itemName, itemId) end
 ---@return MCItem?
 function Game.Items.registerSwordItem(itemName, itemId, tier) end
 
+---Creates a new hoe tool item and registers it in the game. Returns the address to the item
+---@param itemName string
+---@param itemId integer
+---@param tier MCToolTier
+---@return MCItem?
+function Game.Items.registerHoeItem(itemName, itemId, tier) end
+
+---Creates a new axe tool item and registers it in the game. Returns the address to the item
+---@param itemName string
+---@param itemId integer
+---@param tier MCToolTier
+---@return MCItem?
+function Game.Items.registerAxeItem(itemName, itemId, tier) end
+
+---Creates a new pickaxe tool item and registers it in the game. Returns the address to the item
+---@param itemName string
+---@param itemId integer
+---@param tier MCToolTier
+---@return MCItem?
+function Game.Items.registerPickaxeItem(itemName, itemId, tier) end
+
+---Creates a new shovel tool item and registers it in the game. Returns the address to the item
+---@param itemName string
+---@param itemId integer
+---@param tier MCToolTier
+---@return MCItem?
+function Game.Items.registerShovelItem(itemName, itemId, tier) end
+
 ---Takes a registered item with Game.Items.registerItem, and sets its texture
 ---@param item MCItem
 ---@param textureName string
@@ -572,6 +600,21 @@ MCToolTier.DamageBonus = 0
 MCToolTier.Enchantability = 0
 
 Game.Items.ToolTiers = {}
+
+---@class WOOD: MCToolTier
+Game.Items.ToolTiers.WOOD = {}
+
+---@class STONE: MCToolTier
+Game.Items.ToolTiers.STONE = {}
+
+---@class IRON: MCToolTier
+Game.Items.ToolTiers.IRON = {}
+
+---@class GOLD: MCToolTier
+Game.Items.ToolTiers.GOLD = {}
+
+---@class DIAMOND: MCToolTier
+Game.Items.ToolTiers.DIAMOND = {}
 
 ---@class OnRegisterItems: EventClass
 Game.Items.OnRegisterItems = {}

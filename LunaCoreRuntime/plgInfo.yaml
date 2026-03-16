@@ -2,8 +2,8 @@ Author: STBUniverse
 
 Version: # Plugin version
     Major: 0
-    Minor: 18
-    Revision: 1
+    Minor: 19
+    Revision: 0
 
 Targets: # Low TitleId of games which are compatibles with this plugin (0 for all)
     - 0x001B8700

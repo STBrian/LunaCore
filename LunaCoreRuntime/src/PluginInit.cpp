@@ -284,7 +284,6 @@ void InitMenu(PluginMenu &menu)
     }));
 
     #ifdef DEBUG
-    #pragma message "Debug enabled"
     devFolder->Append(Core::alloc<MenuEntry>("Dump memory to network", nullptr, [](MenuEntry *entry) {
         if (socBuffer == NULL) {
             MessageBox("Network is not started")();

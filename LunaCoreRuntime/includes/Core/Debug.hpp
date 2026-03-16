@@ -11,6 +11,7 @@
 #include "lua_common.h"
 
 #ifdef DEBUG
+#pragma message "Debug enabled"
 #define LOGDEBUG(fmt, ...) \
     Core::Debug::LogInfof("[DEBUG] " fmt ". [%s:%d]", ##__VA_ARGS__, __FILE__, __LINE__)
 #else

@@ -22,7 +22,8 @@ SOURCES 	:= 	src externals/MC3DSPluginFramework/Sources
 ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -marm
 
 CFLAGS		:=	$(ARCH) $(INCLUDE) -D__3DS__ -Os -s -mword-relocations \
-				-fdata-sections -fomit-frame-pointer -ffunction-sections -fno-strict-aliasing -fvisibility=hidden
+				-fdata-sections -fomit-frame-pointer -ffunction-sections -fno-strict-aliasing -fvisibility=hidden \
+				$(CFLAGS_EXTRA)
 
 ifeq ($(EXPERIMENTAL), 1)
 	CFLAGS		+=	-DEXPERIMENTAL

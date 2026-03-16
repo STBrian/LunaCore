@@ -40,4 +40,4 @@ void hookFunction(u32 targetAddr, u32 callbackAddr);
 
 void hookSomeFunctions();
 
-void hookReturnOverwrite(CoreHookContext *ctx, u32 data);
+void hookReturnOverride(CoreHookContext *ctx, u32 data);

@@ -55,7 +55,7 @@ u32 getStackPointerFromCtx(CoreHookContext *ctx) {
     return ctx->sp + 4 * 14;
 }
 
-__attribute__((naked)) void hookReturnOverwrite(CoreHookContext *ctx, u32 returnCallback) {
+__attribute__((naked)) void hookReturnOverride(CoreHookContext *ctx, u32 returnCallback) {
     asm volatile ( // r0 contains hookCtxPtr
         "ldr sp, [r0, #0x20]\n"
         "add sp, sp, #0x10\n"
@@ -123,7 +123,7 @@ static void RegisterItemsHook(CoreHookContext* ctx) {
 
     reinterpret_cast<void(*)()>(0x0056e450)();
     GameState.LoadingItems.store(false);
-    hookReturnOverwrite(ctx, (u32)RegisterItemOverwriteReturn);
+    hookReturnOverride(ctx, (u32)RegisterItemOverwriteReturn);
 }
 
 static __attribute__((naked)) void RegisterItemsTexturesOverwriteReturn() {
@@ -145,7 +145,7 @@ static void RegisterItemsTexturesHook(CoreHookContext* ctx) {
     }
 
     GameState.SettingItemsTextures.store(false);
-    hookReturnOverwrite(ctx, (u32)RegisterItemsTexturesOverwriteReturn);
+    hookReturnOverride(ctx, (u32)RegisterItemsTexturesOverwriteReturn);
 }
 
 static __attribute__((naked)) void RegisterCreativeItemsOverwriteReturn() {
@@ -167,7 +167,7 @@ static void RegisterCreativeItemsHook(CoreHookContext* ctx) {
     }
 
     GameState.LoadingCreativeItems.store(false);
-    hookReturnOverwrite(ctx, (u32)RegisterCreativeItemsOverwriteReturn);
+    hookReturnOverride(ctx, (u32)RegisterCreativeItemsOverwriteReturn);
 }
 
 static __attribute__((naked)) void EntitySpawnStartOverwriteReturn() {
@@ -189,7 +189,7 @@ static void EntitySpawnStartHook(CoreHookContext *ctx) {
         Core::Event::TriggerEvent(Lua_global, "Core.Event.OnGameEntitySpawnStart", 1);
     }
 
-    hookReturnOverwrite(ctx, (u32)EntitySpawnStartOverwriteReturn);
+    hookReturnOverride(ctx, (u32)EntitySpawnStartOverwriteReturn);
 }
 
 static __attribute__((naked)) void EntitySpawnFinishedOverwriteReturn() {
@@ -214,7 +214,7 @@ static void EntitySpawnFinishedHook(CoreHookContext *ctx) {
         Core::Event::TriggerEvent(Lua_global, "Core.Event.OnGameEntitySpawn", 1);
     }
 
-    hookReturnOverwrite(ctx, (u32)EntitySpawnFinishedOverwriteReturn);
+    hookReturnOverride(ctx, (u32)EntitySpawnFinishedOverwriteReturn);
 }
 
 static __attribute__((naked)) void RegisterRecipesOverwriteReturn() {
@@ -238,7 +238,7 @@ static void RegisterRecipes(CoreHookContext* ctx) {
     }
     
     GameState.LoadingRecipes.store(false);
-    hookReturnOverwrite(ctx, (u32)RegisterRecipesOverwriteReturn);
+    hookReturnOverride(ctx, (u32)RegisterRecipesOverwriteReturn);
 }
 
 #define MAX_CALLS 10

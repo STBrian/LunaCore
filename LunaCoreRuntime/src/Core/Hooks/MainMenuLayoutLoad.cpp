@@ -77,8 +77,8 @@ static std::vector<MenuButtonID::MenuButtonID> MenuBtnsOrder;
 static MenuChrtData MenuLayoutChrt;
 
 static void CreateMenuButtons(int *ptr, std::vector<btn_ctx> &btn_ctxs) {
-    GameButton *(*InitMenuButton)(GameButton*ptr1, int* ptr2, MenuButtonID::MenuButtonID submenuID, int posX, int posY, int width, int height, const char *string, int buttonType) = (GameButton*(*)(GameButton*, int*, MenuButtonID::MenuButtonID, int, int, int, int, const char *, int))(0x5d6b58);
-    void (*AddButtonTexUVs)(GameButton* btnPtr, void*, int u, int v, int w, int h, int, uv_vals*, uv_vals*, int, int, int) = (void(*)(GameButton*, void*, int, int, int, int, int, uv_vals*, uv_vals*, int, int, int))(0x5d6a50);
+    GameButton *(*InitMenuButton)(GameButton*ptr1, int* ptr2, MenuButtonID::MenuButtonID submenuID, int posX, int posY, int width, int height, const char *string, int buttonType) = (decltype(InitMenuButton))(0x5d6b58);
+    void (*AddButtonTexUVs)(GameButton* btnPtr, void*, int u, int v, int w, int h, int, uv_vals*, uv_vals*, int, int, int) = (decltype(AddButtonTexUVs))(0x5d6a50);
 
     // Button bg uvs
     uv_vals uv1 = {0x38, 0x90, 8, 8};
@@ -110,8 +110,8 @@ static void CreateMenuButtons(int *ptr, std::vector<btn_ctx> &btn_ctxs) {
 
 static void CreateMainMenuCustomLayout(int *ptr) {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
-    void (*InitMenuCharacter)(GameCharacterView* chrPtr,int*,float,float,int,int,int,int) = (void(*)(GameCharacterView*,int*,float,float,int,int,int,int))(0x1ec930);
-    void (*CreateUpdatePopUp)(int*,int,int,int) = (void(*)(int*,int,int,int))(0x26eb1c);
+    void (*InitMenuCharacter)(GameCharacterView* chrPtr,int*,float,float,int,int,int,int) = (decltype(InitMenuCharacter))(0x1ec930);
+    void (*CreateUpdatePopUp)(int*,int,int,int) = (decltype(CreateUpdatePopUp))(0x26eb1c);
 
     *(char *)0xa35877 = 1;
     std::vector<btn_ctx> btn_ctxs(7);

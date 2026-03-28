@@ -7,6 +7,8 @@
 #include "Core/Utils/ItemUtils.hpp"
 
 #include "game/Minecraft.hpp"
+#include "game/world/item/ItemInstance.hpp"
+#include "game/world/item/CreativeMenu.hpp"
 
 #include "Helpers/Allocation.hpp"
 #include "Helpers/LuaObject.hpp"
@@ -202,7 +204,7 @@ static int l_Items_registerCreativeItem(lua_State *L) {
     Item* item = LuaObjectUtils::CheckObject<Item>(L, 1, "MCItem").get();
     u16 groupId = luaL_checkinteger(L, 2);
     s16 position = luaL_checkinteger(L, 3);
-    Item::addCreativeItem(item, groupId, position);
+    Minecraft::Creative::addCreativeItem(item, groupId, position);
     return 0;
 }
 

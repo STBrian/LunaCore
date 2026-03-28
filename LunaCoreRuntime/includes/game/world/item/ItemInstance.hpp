@@ -1,10 +1,9 @@
 #pragma once
 
 #include "game/types.h"
+#include "game/world/item/Item.hpp"
 
 namespace Minecraft {
-    class Item;
-
     class ItemInstance {
         public:
         char field1; // 0x00
@@ -21,6 +20,11 @@ namespace Minecraft {
         int field12; // 0x24
         int field13; // 0x28
         int field14; // 0x2c
+
+        template<typename T>
+        T* offset(u32 o) {
+            return reinterpret_cast<T*>(reinterpret_cast<char*>(this) + o);
+        }
 
         ItemInstance() {
             reinterpret_cast<ItemInstance*(*)(ItemInstance*)>(0x001d28f4)(this);

@@ -3,6 +3,7 @@
 #include "game/gstd/gstd_vector.hpp"
 #include "game/gstd/gstd_string.hpp"
 #include "game/world/item/Item.hpp"
+#include "game/world/item/ItemInstance.hpp"
 #include "game/world/level/block/Block.hpp"
 
 namespace Minecraft {

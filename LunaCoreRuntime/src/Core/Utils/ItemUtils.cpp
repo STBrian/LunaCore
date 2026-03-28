@@ -1,5 +1,10 @@
 #include "Core/Utils/ItemUtils.hpp"
 
+#include "game/world/item/CreativeMenu.hpp"
+
+using Item = Minecraft::Item;
+using ItemInstance = Minecraft::ItemInstance;
+
 namespace Core::Items {
     Item* SearchItemByName(const std::string& name) {
         short i = 1;
@@ -29,11 +34,9 @@ namespace Core::Items {
     }
 
     u16 GetCreativeItemPositionOfGroup(u16 itemId, u16 groupId) {
-        ItemInstance* actualPos = *Item::creativeItems;
-        while (actualPos < *Item::creativeItemsEnd) {
-            if (actualPos->unknown1 == groupId && (*reinterpret_cast<Item**>((u32)(actualPos) + 0xc))->itemId == itemId)
-                return actualPos->unknown2;
-            actualPos = actualPos + 1;
+        for (ItemInstance* actual : Minecraft::Creative::InventoryItems) {
+            if (actual->unknown1 == groupId && (*actual->offset<Minecraft::Item*>(0xc))->itemId == itemId)
+                return actual->unknown2;
         }
         return 0x7FFF;
     }

@@ -5,12 +5,10 @@
 #include "game/world/item/Item.hpp"
 
 namespace Core::Items {
-    using Item = Minecraft::Item;
-    using ItemInstance = Minecraft::ItemInstance;
     
-    Item *SearchItemByName(const std::string& name);
+    Minecraft::Item *SearchItemByName(const std::string& name);
 
-    Item *SearchItemByID(u16 id);
+    Minecraft::Item *SearchItemByID(u16 id);
 
     void* GetRenderIDByItemID(u16 id);
 

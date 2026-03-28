@@ -9,13 +9,10 @@
 #include "game/asserts.h"
 
 #include "game/gstd/gstd_string.hpp"
-#include "game/world/item/ItemInstance.hpp"
 
 namespace Minecraft {
-    class Item {
+    class ItemImpl {
         public:
-        constexpr static u16 SIZEOF = 0xac;
-
         //void* vtable; // 0x0
         u8 maxStackSize; // 0x4
         //char unk1[3]; // 0x5
@@ -33,7 +30,16 @@ namespace Minecraft {
         short unk6; // 0x26
         u8 blockID; // 0x28
         bool canEat; // 0x29
-        u8 padding[Item::SIZEOF - 0x2a];
+
+        virtual void unkFunc1();
+        virtual void unkFunc2();
+        virtual void setTexture(u32 texnameHash, u32 idx);
+    };
+
+    class Item : public ItemImpl {
+        public:
+        constexpr static u16 SIZEOF = 0xac;
+        u8 padding[Item::SIZEOF - sizeof(ItemImpl)];
 
         class Tier {
             public:
@@ -52,8 +58,6 @@ namespace Minecraft {
 
         constexpr static short MAX_ITEMS = 512;
         inline static Item** mItems = reinterpret_cast<Item**>(0x00b0cef0);
-        inline static ItemInstance** creativeItems = reinterpret_cast<ItemInstance**>(0x00b0d744);
-        inline static ItemInstance** creativeItemsEnd = reinterpret_cast<ItemInstance**>(0x00b0d748);
 
         inline static void (*registerItems)() = reinterpret_cast<void(*)()>(0x00563db0);
 
@@ -61,17 +65,6 @@ namespace Minecraft {
         Item(const gstd::string& nameId, short itemId) {
             reinterpret_cast<void*(*)(Item*, const gstd::string&, short)>(0x005790a4)(this, nameId, itemId);
         }
-
-        inline static void addCreativeItem(Item* item, u8 categoryId, s16 position) {
-            ItemInstance itemins(item->itemId, 1, 0); // Def values
-            itemins.unknown1 = categoryId;
-            itemins.unknown2 = position;
-            reinterpret_cast<void(*)(ItemInstance*)>(0x0056e108)(&itemins);
-        }
-
-        virtual void unkFunc1();
-        virtual void unkFunc2();
-        virtual void setTexture(u32 texnameHash, u32 idx);
 
         inline static Item** mItemTable = reinterpret_cast<Item**>(0x00a33f40);
         inline static Item*& mShovel_iron = mItemTable[1];

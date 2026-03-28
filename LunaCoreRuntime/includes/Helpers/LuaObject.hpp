@@ -298,10 +298,11 @@ class ClassBuilder {
         return *this;
     }
 
-    template <typename M>
-    ClassBuilder& property(const char* name, M T::* member, bool readOnly = false) {
+    template <typename M, typename C>
+    ClassBuilder& property(const char* name, M C::* member, bool readOnly = false) {
+        static_assert(std::is_base_of_v<C, T> || std::is_same_v<C, T>, "Member must belong to T or its base");
         lua_getfield(L, -1, "__properties");
-        PropertyBase* prop = Core::alloc<Property<T,M>>(member, readOnly);
+        PropertyBase* prop = Core::alloc<Property<T,M>>(reinterpret_cast<M T::*>(member), readOnly);
         lua_pushlightuserdata(L, prop);
         lua_setfield(L, -2, name);
         lua_pop(L, 1);

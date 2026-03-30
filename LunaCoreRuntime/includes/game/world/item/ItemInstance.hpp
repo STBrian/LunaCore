@@ -6,14 +6,14 @@
 namespace Minecraft {
     class ItemInstance {
         public:
-        char field1; // 0x00
-        short field2; // 0x02
+        u8 mCount; // 0x00
+        u16 mDataValue; // 0x02
         char field3; // 0x04
         int field4; // 0x08
-        int field5; // 0x0c
+        Item* mItem; // 0x0c
         int field6; // 0x10
-        short unknown1; // 0x14
-        short unknown2; // 0x16
+        u16 mCategory; // 0x14
+        short mNumber; // 0x16
         int field9; // 0x18
         int field10; // 0x1c
         int field11; // 0x20

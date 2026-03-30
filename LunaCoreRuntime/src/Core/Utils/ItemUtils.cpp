@@ -34,9 +34,9 @@ namespace Core::Items {
     }
 
     u16 GetCreativeItemPositionOfGroup(u16 itemId, u16 groupId) {
-        for (ItemInstance* actual : Minecraft::Creative::InventoryItems) {
-            if (actual->unknown1 == groupId && (*actual->offset<Minecraft::Item*>(0xc))->itemId == itemId)
-                return actual->unknown2;
+        for (const ItemInstance& actual : Minecraft::Creative::InventoryItems) {
+            if (actual.mCategory == groupId && actual.mItem->itemId == itemId)
+                return actual.mNumber;
         }
         return 0x7FFF;
     }

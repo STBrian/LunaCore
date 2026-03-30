@@ -13,6 +13,8 @@
 #include "game/Minecraft.hpp"
 #include "Helpers/LuaCustomTable.hpp"
 
+#include "MC3DSPluginFramework.hpp"
+
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
 
@@ -131,6 +133,14 @@ static int l_World_newindex(lua_State *L)
     else return LUACT_INVALID_KEY;
 }
 
+static int l_World_message(lua_State *L) {
+    const char* msg = luaL_checkstring(L, 1);
+    if (MC3DSPluginFramework::SystemMessagesScreen::RunningInstance) {
+        MC3DSPluginFramework::SystemMessagesScreen::RunningInstance->pushMessage(msg, false);
+    }
+    return 0;
+}
+
 // ----------------------------------------------------------------------------
 
 bool Core::Module::RegisterWorldModule(lua_State *L) {
@@ -142,6 +152,9 @@ bool Core::Module::RegisterWorldModule(lua_State *L) {
 
     //$@@@Game.World.OnWorldLeave: EventClass
     Core::Event::NewEvent(L, "OnWorldLeave");
+
+    lua_pushcfunction(L, l_World_message);
+    lua_setfield(L, -2, "message");
 
     lua_pop(L, 1); // Pop index table
     lua_getglobal(L, "Game");

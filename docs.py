@@ -1,10 +1,27 @@
 from glob import iglob
 from pathlib import Path
+import re
 
 DOCS_FILE = open("./api_docs.lua", "w", encoding="utf-8")
 DEF_CLASSES = ["number", "integer", "table", "nil", "userdata", "lightuserdata", "string", "boolean", "function", "any", "thread"]
 LOADED_FILES = []
 DEF_GLOBALS = {}
+
+class MissingSymbolException(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+
+class ImportFailedException(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+
+class InvalidFunctionNameException(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+
+class FunctionDeclarationException(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
 
 def verify_fmt(string: str, allow_dots: bool):
     if len(string) == 0 or not string[0].isalpha():
@@ -29,41 +46,54 @@ def process_file(filename: str):
         with open(path, "r", encoding="utf-8") as f:
             data = f.read()
         lines = data.splitlines()
-        stripped_lines = []
-        for line in lines:
-            stripped_lines.append(line.strip())
+        stripped_lines = [line.strip() for line in lines]
         process_data(filename, stripped_lines)
         LOADED_FILES.append(str(path.resolve()))
+
+pendingData = []
 
 def process_data(path: str, lines: list):
     segment = []
     add_to_list = False
     for i, line in enumerate(lines):
         assert isinstance(line, str)
-        if line.startswith("*/"):
+        if line.find("*/") > -1:
             add_to_list = False
+            val = line[:line.find("*/")].strip()
+            if len(val) > 0:
+                segment.append(val)
             if len(segment) > 0:
-                # Process docs
                 process_lines(path, segment, i - len(segment) + 1)
                 segment.clear()
-        if line.startswith("//"):
-            lineStripped = line[2:]
+        if line.find("//") > -1:
+            lineStripped = line[line.find("//"):].strip()
             if lineStripped.startswith("#") or lineStripped.startswith("-") or lineStripped.startswith("@") or lineStripped.startswith("$") or lineStripped.startswith("="):
                 process_lines(path, [lineStripped], i + 1)
             elif lineStripped.startswith("!include "):
                 filename = Path(lineStripped[len("!include "):].strip())
                 if not (filename.exists() and filename.is_file()):
-                    raise Exception(f"Failed to open file on line: {lineStripped} on {path} at line {i}")
+                    raise ImportFailedException(f"Failed to open file on line: {lineStripped} on {path} at line {i}")
                 process_file(str(filename))
         if add_to_list:
             segment.append(line)
             if line.startswith("!include "):
                 filename = Path(line[len("!include "):].strip())
                 if not (filename.exists() and filename.is_file()):
-                    raise Exception(f"Failed to open file on line: {line} on {path} at line {i}")
+                    raise ImportFailedException(f"Failed to open file on line: {line} on {path} at line {i}")
                 process_file(str(filename))
-        if line.startswith("/*"):
+        if line.find("/*") > -1:
             add_to_list = True
+            val = line[line.find("/*"):].strip()
+            if len(val) > 0:
+                segment.append(val)
+
+def nameIsPath(name: str):
+    return "." in name or ":" in name
+
+def getPathInfo(name: str):
+    res = re.split(r"\.|:", name)
+    selfFun = ":" in name
+    return {"path": res, "isSelf": selfFun}
 
 def process_lines(path: str, lines: list, segpos: int):
     desc = []
@@ -74,22 +104,21 @@ def process_lines(path: str, lines: list, segpos: int):
         if doc_line.startswith("-") and len(doc_line) > 1:
             # Function description
             if len(args) > 0:
-                raise Exception(f"Function description after params definition: '{doc_line}' on {path} at line {segpos + j}")
+                raise FunctionDeclarationException(f"Function description after params definition: '{doc_line}' on {path} at line {segpos + j}")
             stripped = doc_line[1:].strip()
             desc.append(stripped)
         elif doc_line.startswith("###") and len(doc_line) > 3:
             # Function definition
             stripped = doc_line[3:].strip()
             if not verify_fmt(stripped, True):
-                raise Exception(f"Invalid function name: '{doc_line}' on {path} at line {segpos + j}")
+                raise InvalidFunctionNameException(f"Invalid function name: '{doc_line}' on {path} at line {segpos + j}")
             func_name = stripped
 
-            if "." in func_name:
-                pathToGlobal = func_name.split(".")
+            if nameIsPath(func_name):
+                pathToGlobal = getPathInfo(func_name)
                 curr = DEF_GLOBALS
                 currName = "None"
-                for idx in range(len(pathToGlobal) - 1):
-                    entry = pathToGlobal[idx]
+                for entry in pathToGlobal["path"]:
                     if entry in curr:
                         if isinstance(curr, type(None)):
                             raise Exception(f"Trying to path '{currName}' is a function: '{doc_line}' on {path} at line {segpos + j}")
@@ -99,9 +128,9 @@ def process_lines(path: str, lines: list, segpos: int):
                         currName = entry
                     else:
                         raise Exception(f"Undefined '{entry}': '{doc_line}' on {path} at line {segpos + j}")
-                if pathToGlobal[-1] in curr:
+                if pathToGlobal["path"][-1] in curr:
                     raise Exception(f"Redefined global/field: '{doc_line}' on {path} at line {segpos + j}")
-                curr[pathToGlobal[-1]] = None
+                curr[pathToGlobal["path"][-1]] = None
             else:
                 if func_name in DEF_GLOBALS:
                     raise Exception(f"Redefined global/field: '{doc_line}' on {path} at line {segpos + j}")

@@ -35,24 +35,36 @@ namespace CTRPF = CTRPluginFramework;
 #define DECODE_TARGET_INS_BL(ins, pc_actual) (DECODE_TARGET_INS_B(ins, pc_actual))
 
 #ifndef LEGACY_HOOKS
-extern "C" void lc_setCoreHookState() {
+
+#ifdef DEBUG
+static __attribute__((naked)) void GameDebugLogfHook(CoreHookContext* ctx);
+#endif
+extern "C" void lc_setCoreHookState(CoreHookContext* ctx) {
+    #ifdef DEBUG
+    if (ctx->callbackAddress != (u32)GameDebugLogfHook) {
+        LOGDEBUG("Hook reached: 0x%08X", ctx);
+    }
+    #endif
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
 }
 
 static __attribute__((naked)) void hookBody() {
     asm volatile (          // r0: callbackPtr, r4 hookCtxPtr
         "mov r5, r0\n"      // Copy callbackPtr to r5
+        "mov r0, r4\n"
         "bl lc_setCoreHookState\n"
         "mov r0, r4\n"      // Copy hookCtxPtr to r0 (arg 1)
         "blx r5\n"          // Branch to callback
-        "add r0, r4, #60\n"
+        "add r0, r4, %[off]\n"
         "bx r0\n"           // Jump to returnIns and return normal flow
+        :
+        : [off] "I"(offsetof(CoreHookContext, returnIns))
     );
 }
 
 __attribute__((naked)) void hookReturnOverride(CoreHookContext *ctx, u32 returnCallback) {
     asm volatile ( // r0 contains hookCtxPtr, r1 callback
-        "add r2, r0, #16\n"
+        "add r2, r0, #16\n" // Discard r0-r3
         "ldmia r2, {r4-r12, sp, lr}\n"  // Restore registers
         "mov r2, r1\n"
         "ldr r1, [r0, #0x4]\n"
@@ -63,26 +75,31 @@ __attribute__((naked)) void hookReturnOverride(CoreHookContext *ctx, u32 returnC
 
 // Hooks an ARMv7 function, length must be at least 2 instructions to hook
 // and instructions cannot be pc-relative dependent. B and BL calls are allowed
-void hookFunction(u32 targetAddr, u32 callbackAddr) {
+void* hookFunction(u32 targetAddr, u32 callbackAddr) {
     CoreHookContext* hookCtx2 = Core::alloc<CoreHookContext>();
+    hookCtx2->callbackAddress = callbackAddr;
 
     hookCtx2->targetAddress = targetAddr;
     hookCtx2->selfHookPtr = (u32)hookCtx2;
-    hookCtx2->preHookBody[0] = 0xE52D4004; // str r4, [sp, #-4]!            this saves r4 to stack and decrements sp
-    hookCtx2->preHookBody[1] = 0xE51F4010; // ldr r4, [pc, #-16]            loads the hookCtx pointer to r4
-    hookCtx2->preHookBody[2] = 0xE8847FFF; // stmia r4, {r0-r12, sp, lr}    stores all possible registers
-    hookCtx2->preHookBody[3] = 0xE49D5004; // ldr r5, [sp], #4              this copies original r4 to r5 and restores sp
-    hookCtx2->preHookBody[4] = 0xE5845010; // str r5, [r4, #16]             fix r4 value
-    hookCtx2->preHookBody[5] = 0xE584D034; // str sp, [r4, #52]             fix sp value
-    hookCtx2->preHookBody[6] = 0xE59F0004; // ldr r0, [pc, #4]
-    hookCtx2->preHookBody[7] = 0xE59F1004; // ldr r1, [pc, #4]
-    hookCtx2->preHookBody[8] = 0xE12FFF11; // bx r1
+    hookCtx2->preHookBody[0] = 0xE52D4004;      // str r4, [sp, #-4]!            this saves r4 to stack and decrements sp
+    hookCtx2->preHookBody[1] = 0xE51F4010;      // ldr r4, [pc, #-16]            loads the hookCtx pointer to r4
+    hookCtx2->preHookBody[2] = 0xE8847FFF;      // stmia r4, {r0-r12, sp, lr}    stores all possible registers
+    hookCtx2->preHookBody[3] = 0xE49D5004;      // ldr r5, [sp], #4              this copies original r4 to r5 and restores sp
+    hookCtx2->preHookBody[4] = 0xE5845010;      // str r5, [r4, #16]             fix r4 value
+    hookCtx2->preHookBody[5] = 0xE584D034;      // str sp, [r4, #52]             fix sp value
+    hookCtx2->preHookBody[6] = 0xE2842040;      // add r2, r4, #64
+    hookCtx2->preHookBody[7] = 0xEC820B20;      // vstm r2, {d0-d15}
+    hookCtx2->preHookBody[8] = 0xE59F0004;      // ldr r0, [pc, #4]
+    hookCtx2->preHookBody[9] = 0xE59F1004;      // ldr r1, [pc, #4]
+    hookCtx2->preHookBody[10] = 0xE12FFF11;     // bx r1
     hookCtx2->preHookData[0] = callbackAddr;
     hookCtx2->preHookData[1] = (u32)hookBody;
 
     // r4: hookCtxPtr
-    hookCtx2->returnIns[0] = 0xE8947FFF; // ldmia r4, {r0-r12, sp, lr}
-    int insIdx = 1;
+    hookCtx2->returnIns[0] = 0xE2842040; // add r2, r4, #64
+    hookCtx2->returnIns[1] = 0xEC920B20; // vldm r0, {d0-d15}
+    hookCtx2->returnIns[2] = 0xE8947FFF; // ldmia r4, {r0-r12, sp, lr}
+    int insIdx = 3;
     int dataOffset = 0;
     for (int i = 0; i < 2; i++) {
         u32 targetIns = *((u32*)targetAddr + i);
@@ -99,17 +116,22 @@ void hookFunction(u32 targetAddr, u32 callbackAddr) {
         insIdx++;
     }
     hookCtx2->returnIns[insIdx++] = 0xE51FF004; // ldr pc, [pc, #-0x4]
-    hookCtx2->returnIns[insIdx++] = targetAddr + 4 * 2;
+    hookCtx2->returnIns[insIdx++] = targetAddr + 8;
 
     *(u32*)targetAddr = 0xE51FF004; // ldr pc, [pc, #-0x4]
     *((u32*)targetAddr + 1) = (u32)&hookCtx2->preHookBody[0];
+
+    LOGDEBUG("Installed hook @ %08X : %08X", targetAddr, hookCtx2);
+    return hookCtx2;
 }
 
 static void RegisterItemsHook(CoreHookContext* ctx) {
+    LOGDEBUG("Hook RegisterItems start");
     std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
     GameState.LoadingItems.store(true);
     Core::Event::TriggerEvent(Lua_global, "Game.Items.OnRegisterItems");
     GameState.LoadingItems.store(false);
+    LOGDEBUG("Hook RegisterItems end");
 }
 
 static void RegisterItemsTexturesHook(CoreHookContext* ctx) {
@@ -188,6 +210,9 @@ extern "C" CoreHookContext* DumpRegisters(CoreHookContext* ctx) {
 }
 
 extern "C" void GameDebugLogfHandler(u32 ukn1, u32 ukn2, const char* author, u32 ukn3, const char* fmt, ...) {
+    #ifdef DEBUG
+    void* lreturn = __builtin_return_address(0);
+    #endif
     va_list ap;
     va_start(ap, fmt);
 
@@ -198,11 +223,14 @@ extern "C" void GameDebugLogfHandler(u32 ukn1, u32 ukn2, const char* author, u32
             buffer[res-1] = '\0';
         //Core::Debug::Message(CTRPF::Utils::Format("%X, %X, %X", ukn1, ukn2, ukn3));
         if (ukn2 == 2)
-            Core::Debug::LogInfo("[Game.Info] " + std::string(author) + ": " + buffer);
+            Core::Debug::LogInfof("[Game.Info] %s: %s", author, buffer);
         else if (ukn2 == 8)
-            Core::Debug::LogInfo("[Game.Warn] " + std::string(author) + ": " + buffer);
+            Core::Debug::LogInfof("[Game.Warn] %s: %s", author, buffer);
         else
-            Core::Debug::LogInfo(' ' + std::string(author) + ": " + buffer);
+            Core::Debug::LogInfof("[Game.Other] %s: %s", author, buffer);
+        #ifdef DEBUG
+        Core::Debug::LogInfof("%08X", lreturn);
+        #endif
     }
 
     va_end(ap);
@@ -216,6 +244,13 @@ static __attribute__((naked)) void GameDebugLogfHook(CoreHookContext* ctx) {
     );
 }
 
+#ifdef DEBUG
+static void ModifyColdTaiga(CoreHookContext* ctx) {
+    ctx->s[0] = 2;
+    ctx->s[1] = 4;
+}
+#endif
+
 void hookSomeFunctions() {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOKING;
     hookFunction(0x0056c2ac, (u32)RegisterItemsHook);
@@ -225,5 +260,8 @@ void hookSomeFunctions() {
     hookFunction(0x00114f50, (u32)GameDebugLogfHook);
     //hookFunction(0x004df68c, (u32)EntitySpawnStartHook); disabled as there is a weird memory leak ? idk why
     //hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
+    #ifdef DEBUG
+    hookFunction(0x0059d758, (u32)ModifyColdTaiga);
+    #endif
 }
 #endif

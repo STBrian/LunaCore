@@ -133,12 +133,18 @@ static int l_World_newindex(lua_State *L)
     else return LUACT_INVALID_KEY;
 }
 
+/*
+- Displays an in-game message in the world screen if the player is currently inside a world. Returns true if success
+## return: boolean
+### Game.World.message
+*/
 static int l_World_message(lua_State *L) {
     const char* msg = luaL_checkstring(L, 1);
     if (MC3DSPluginFramework::SystemMessagesScreen::RunningInstance) {
         MC3DSPluginFramework::SystemMessagesScreen::RunningInstance->pushMessage(msg, false);
     }
-    return 0;
+    lua_pushboolean(L, MC3DSPluginFramework::SystemMessagesScreen::RunningInstance != nullptr);
+    return 1;
 }
 
 // ----------------------------------------------------------------------------

@@ -115,12 +115,42 @@ static int l_Keyboard_getHex(lua_State *L) {
     return 1;
 }
 
+/*
+- Opens a selection keyboard. Returns the index of the selected item or nil if none was selected
+## options: table
+## return: integer?
+### Core.Keyboard.populate
+*/
+static int l_Keyboard_populate(lua_State* L) {
+    if (!lua_istable(L, 1))
+        return luaL_typerror(L, 1, "table");
+    CTRPF::Keyboard keyboard;
+    std::vector<std::string> options;
+    int len = lua_objlen(L, 1);
+    for (int i = 1; i <= len; i++) {
+        lua_rawgeti(L, 1, i);
+        if (lua_isstring(L, -1))
+            options.push_back(lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+    if (options.empty())
+        return 0;
+    keyboard.Populate(options);
+    int idx = keyboard.Open();
+    if (idx >= 0) {
+        lua_pushnumber(L, idx + 1);
+        return 1;
+    } else
+        return 0;
+}
+
 static const luaL_Reg keyboard_functions[] =
 {
     {"getString", l_Keyboard_getString},
     {"getNumber", l_Keyboard_getNumber},
     {"getInteger", l_Keyboard_getInteger},
     {"getHex", l_Keyboard_getHex},
+    {"populate", l_Keyboard_populate},
     {NULL, NULL}
 };
 

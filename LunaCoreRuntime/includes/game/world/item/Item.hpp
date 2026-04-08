@@ -260,7 +260,7 @@ namespace Minecraft {
     template<typename T> 
     inline T* registerItem(const char* nameId, const short& itemId) {
         if constexpr (std::is_same<T, Item>::value) {
-            return reinterpret_cast<Item*(*)(const char*, const short&)>(0x007cdc8c)(nameId, itemId);
+            return reinterpret_cast<Item*(*)(const char*, const short&)>(0x7ccd38)(nameId, itemId);
         } else {
             T* obj = (T*)gstd::malloc(sizeof(T));
             if (obj) {

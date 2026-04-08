@@ -145,7 +145,7 @@ void InitMenu(PluginMenu &menu)
     {
         bool current = G_config.getBool("enable_scripts");
         const char* msg = "Do you want to %s script loader?";
-        const char* action = action ? "ENABLE" : "DISABLE";
+        const char* action = !current ? "ENABLE" : "DISABLE";
         if (MessageBox(Utils::Format(msg, action), DialogType::DialogYesNo)()) {
             current = !current;
             G_config.set("enable_scripts", current);
@@ -156,7 +156,7 @@ void InitMenu(PluginMenu &menu)
     {
         bool current = G_config.getBool("custom_game_menu_layout");
         const char* msg = "Do you want to %s custom menu layout?";
-        const char* action = action ? "ENABLE" : "DISABLE";
+        const char* action = !current ? "ENABLE" : "DISABLE";
         if (MessageBox(Utils::Format(msg, action), DialogType::DialogYesNo)()) {
             current = !current;
             G_config.set("custom_game_menu_layout", current);
@@ -167,7 +167,7 @@ void InitMenu(PluginMenu &menu)
     {
         bool current = G_config.getBool("disable_zl_and_zr");
         const char* msg = "Do you want to %s ZL and ZR keys? (only affects the game)";
-        const char* action = action ? "ENABLE" : "DISABLE";
+        const char* action = current ? "ENABLE" : "DISABLE";
         if (MessageBox(Utils::Format(msg, action), DialogType::DialogYesNo)()) {
             current = !current;
             G_config.set("disable_zl_and_zr", current);
@@ -178,7 +178,7 @@ void InitMenu(PluginMenu &menu)
     {
         bool current = G_config.getBool("disable_dleft_and_dright");
         const char* msg = "Do you want to %s DPADLEFT and DPADRIGHT keys? (only affects the game)";
-        const char* action = action ? "ENABLE" : "DISABLE";
+        const char* action = current ? "ENABLE" : "DISABLE";
         if (MessageBox(Utils::Format(msg, action), DialogType::DialogYesNo)()) {
             current = !current;
             G_config.set("disable_dleft_and_dright", current);
@@ -404,6 +404,11 @@ void InitMenu(PluginMenu &menu)
         MessageBox("Lua environment reloaded")();
         Lua_Global_Mut.unlock();
     }));
+    #ifdef DEBUG
+    devFolder->Append(Core::alloc<MenuEntry>("Force Exit to Home Menu", nullptr, [](MenuEntry* entry) {
+        Process::ReturnToHomeMenu();
+    }));
+    #endif
     menu.Append(MenuModsFolder);
     menu.Append(optionsFolder);
     menu.Append(devFolder);

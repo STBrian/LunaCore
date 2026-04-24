@@ -96,7 +96,7 @@ static int l_custom_loader(lua_State *L)
     }
 
     __error:
-    return lua_error(L);
+    return 1;
 }
 
 bool Core::RegisterCustomFileLoader(lua_State *L)
@@ -109,12 +109,13 @@ bool Core::RegisterCustomFileLoader(lua_State *L)
     lua_getglobal(L, "package");
     lua_getfield(L, -1, "loaders");
     if (lua_istable(L, -1)) {
-        for (int i = lua_objlen(L, -1) + 1; i > 1; --i) {
+        int idx = lua_objlen(L, -1) + 1;
+        /*for (int i = ; i > 1; --i) {
             lua_rawgeti(L, -1, i - 1);
             lua_rawseti(L, -2, i);
-        }
+        } */
         lua_pushcfunction(L, l_custom_loader);
-        lua_rawseti(L, -2, 1);
+        lua_rawseti(L, -2, idx);
     }
     else {
         lua_pop(L, 2);

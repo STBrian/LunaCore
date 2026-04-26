@@ -59,7 +59,7 @@ static __attribute__((naked)) void hookBody() {
         "bx r0\n"           // Jump to returnIns and return normal flow
         :
         : [off] "I"(offsetof(CoreHookContext, returnIns))
-    );
+    ); 
 }
 
 __attribute__((naked)) void hookReturnOverride(CoreHookContext *ctx, u32 returnCallback) {
@@ -135,17 +135,21 @@ static void RegisterItemsHook(CoreHookContext* ctx) {
 }
 
 static void RegisterItemsTexturesHook(CoreHookContext* ctx) {
+    LOGDEBUG("Hook RegisterItemsTextures start");
     std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
     GameState.SettingItemsTextures.store(true);
     Core::Event::TriggerEvent(Lua_global, "Game.Items.OnRegisterItemsTextures");
     GameState.SettingItemsTextures.store(false);
+    LOGDEBUG("Hook RegisterItemsTextures end");
 }
 
 static void RegisterCreativeItemsHook(CoreHookContext* ctx) {
+    LOGDEBUG("Hook RegisterCreativeItems start");
     std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
     GameState.LoadingCreativeItems.store(true);
     Core::Event::TriggerEvent(Lua_global, "Game.Items.OnRegisterCreativeItems");
     GameState.LoadingCreativeItems.store(false);
+    LOGDEBUG("Hook RegisterCreativeItems end");
 }
 
 static void EntitySpawnStartHook(CoreHookContext *ctx) {
@@ -221,15 +225,15 @@ extern "C" void GameDebugLogfHandler(u32 ukn1, u32 ukn2, const char* author, u32
         int res = vsnprintf(buffer, sizeof(buffer), fmt, ap);
         if (buffer[res-1] == '\n') // Remove the new line cause Log already adds it
             buffer[res-1] = '\0';
-        //Core::Debug::Message(CTRPF::Utils::Format("%X, %X, %X", ukn1, ukn2, ukn3));
+        const char* prefix = "Other";
         if (ukn2 == 2)
-            Core::Debug::LogInfof("[Game.Info] %s: %s", author, buffer);
+            prefix = "Info";
         else if (ukn2 == 8)
-            Core::Debug::LogInfof("[Game.Warn] %s: %s", author, buffer);
-        else
-            Core::Debug::LogInfof("[Game.Other] %s: %s", author, buffer);
-        #ifdef DEBUG
-        Core::Debug::LogInfof("%08X", lreturn);
+            prefix = "Warn";
+        #ifndef DEBUG
+        Core::Debug::LogInfof("[Game.%s] %s: %s", prefix, author, buffer);
+        #else
+        Core::Debug::LogInfof("[Game.%s] %s @ 0x%08X: %s", prefix, author, lreturn, buffer);
         #endif
     }
 
@@ -249,6 +253,40 @@ static void ModifyColdTaiga(CoreHookContext* ctx) {
     ctx->s[0] = 2;
     ctx->s[1] = 4;
 }
+
+static const char* entries[] = {
+    "mini",
+    "masomenos",
+    "aceptable",
+    "okeyyaestabien",
+    "bronoexageres"
+};
+
+static void ModifyCreateWorldScreen(CoreHookContext* ctx) {
+    ctx->r[1] = (u32)&entries[0];
+    ctx->r[2] = sizeof(entries) / sizeof(char*);
+}
+
+extern "C" void CorePrintfHandler(const char* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+
+    char buffer[0x200] = {0};
+    int res = vsnprintf(buffer, sizeof(buffer), fmt, ap);
+    if (buffer[res-1] == '\n') // Remove the new line cause Log already adds it
+        buffer[res-1] = '\0';
+    Core::Debug::LogInfof("[Core.Info] %s", buffer);
+
+    va_end(ap);
+    return;
+}
+
+static __attribute__((naked)) void CorePrintfHook(CoreHookContext* ctx) {
+    asm volatile (
+        "ldmia r0, {r0-r12, sp, lr}\n" // We will just overwrite the whole function
+        "b CorePrintfHandler\n"
+    );
+}
 #endif
 
 void hookSomeFunctions() {
@@ -262,6 +300,8 @@ void hookSomeFunctions() {
     //hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
     #ifdef DEBUG
     hookFunction(0x0059d758, (u32)ModifyColdTaiga);
+    hookFunction(0x3f7480, (u32)ModifyCreateWorldScreen);
+    hookFunction((u32)printf, (u32)CorePrintfHook); 
     #endif
 }
 #endif

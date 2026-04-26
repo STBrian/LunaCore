@@ -4,8 +4,9 @@
 #include <cstdlib>
 
 #include <ffi.h>
-
 #include <CTRPluginFramework.hpp>
+
+#include "Helpers/LuaTable.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 
@@ -182,6 +183,48 @@ static int l_Memory_writeU32(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
     s32 value = (s32)luaL_checknumber(L, 2);
     lua_pushboolean(L, CTRPF::Process::Write32(offset, (u32)value));
+    return 1;
+}
+
+class WriteFuncHelper {
+    public:
+    static inline bool Write(u32 address, u32 value) {
+        return CTRPF::Process::Write32(address, value);
+    }
+
+    static inline bool Write(u32 address, u16 value) {
+        return CTRPF::Process::Write16(address, value);
+    }
+
+    static inline bool Write(u32 address, u8 value) {
+        return CTRPF::Process::Write8(address, value);
+    }
+
+    static inline bool Write(u32 address, float value) {
+        return CTRPF::Process::WriteFloat(address, value);
+    }
+
+    static inline bool Write(u32 address, double value) {
+        return CTRPF::Process::WriteDouble(address, value);
+    }
+};
+
+template <typename T>
+requires std::is_arithmetic_v<T>
+static int l_Memory_write(lua_State *L) {
+    u32 offset = (u32)luaL_checknumber(L, 1);
+    if constexpr (std::is_integral_v<T>) {
+        using ST = std::make_signed_t<T>;
+        using UT = std::make_unsigned_t<T>;
+
+        ST value = (ST)luaL_checknumber(L, 2);
+        lua_pushboolean(L, WriteFuncHelper::Write(offset, (UT)value));
+    } else if constexpr (std::is_floating_point_v<T>) {
+        T value = (T)luaL_checknumber(L, 2);
+        lua_pushboolean(L, WriteFuncHelper::Write(offset, value));
+    } else {
+        static_assert(std::is_integral_v<T> || std::is_floating_point_v<T>, "unsupported type");
+    }
     return 1;
 }
 
@@ -447,6 +490,22 @@ static int l_Memory_call(lua_State *L) {
     }
 }
 
+// I'm going to use templates to avoid bloating the code of repetitive functions
+template <typename searchType>
+static int l_Memory_search(lua_State* L) {
+    u32 start = luaL_checknumber(L, 1);
+    u32 size = luaL_checknumber(L, 2);
+    luaL_checktype(L, 3, LUA_TTABLE);
+    std::vector<searchType> pattern;
+    LuaNumberTable<searchType> pattern_table(L, 3);
+    for (searchType val : pattern_table) {
+        pattern.push_back(val);
+    }
+    u32 result = CTRPF::Utils::Search(start, size, pattern);
+    lua_pushnumber(L, result);
+    return 1;
+}
+
 // ----------------------------------------------------------------------------
 
 static const luaL_Reg memory_functions[] = {
@@ -462,15 +521,19 @@ static const luaL_Reg memory_functions[] = {
     {"readFloat", l_Memory_readFloat},
     {"readDouble", l_Memory_readDouble},
     {"readString", l_Memory_readString},
-    {"writeU32", l_Memory_writeU32},
-    {"writeS32", l_Memory_writeU32},  // Works the same for signed
-    {"writeU16", l_Memory_writeU16},
-    {"writeS16", l_Memory_writeU16},  // Works the same for signed
-    {"writeU8", l_Memory_writeU8},
-    {"writeS8", l_Memory_writeU8}, // Works the same for signed
-    {"writeFloat", l_Memory_writeFloat},
-    {"writeDouble", l_Memory_writeDouble},
+    {"writeU32", l_Memory_write<u32>},
+    {"writeS32", l_Memory_write<u32>},  // Works the same for signed
+    {"writeU16", l_Memory_write<u16>},
+    {"writeS16", l_Memory_write<u16>},  // Works the same for signed
+    {"writeU8", l_Memory_write<u8>},
+    {"writeS8", l_Memory_write<u8>}, // Works the same for signed
+    {"writeFloat", l_Memory_write<float>},
+    {"writeDouble", l_Memory_write<double>},
     {"writeString", l_Memory_writeString},
+    {"searchU32", l_Memory_search<u32>},
+    {"searchU16", l_Memory_search<u16>},
+    {"searchU8", l_Memory_search<u8>},
+    {"searchFloat", l_Memory_search<float>},
     {NULL, NULL}
 };
 

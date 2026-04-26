@@ -74,8 +74,8 @@ void Core::InitCore() {
 
 void TimeoutLoadHook(lua_State *L, lua_Debug *ar)
 {
-    if (timeoutLoadClock.HasTimePassed(CTRPF::Milliseconds(20000)))
-        luaL_error(L, "Script load exceeded execution time (20000 ms)");
+    if (timeoutLoadClock.HasTimePassed(CTRPF::Seconds(60)))
+        luaL_error(L, "Script load exceeded execution time (60000 ms)");
 }
 
 void Core::LoadLuaEnv() {

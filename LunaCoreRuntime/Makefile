@@ -9,7 +9,7 @@ include $(DEVKITARM)/3ds_rules
 
 CTRPFLIB	?=	$(DEVKITPRO)/libctrpf
 
-TARGET		:= 	LunaCore
+TARGET		:= 	LunaCore$(TARGET_PREFIX)
 PLGINFO 	:= 	plgInfo.yaml
 
 BUILD		:= 	Build
@@ -38,7 +38,12 @@ ASFLAGS		:=	$(ARCH)
 LDFLAGS		:= -T $(TOPDIR)/3gx.ld $(ARCH) -L $(PORTLIBS)/lib -Os -Wl,--gc-sections,--strip-discarded,--strip-debug,-Map=lunacore.map \
 				-T $(TOPDIR)/linker_symbols.ld -Wl,--wrap=abort
 
-LIBS		:=  -llua5.1 -lfslib -lctrpf -lctru -lffi
+LIBS		:= -lFsLib -lctrpf -lctru -lffi
+ifeq ($(BUILD_JIT), 1)
+	LIBS	+=	-lluajit-5.1
+else
+	LIBS	+= -llua5.1
+endif
 LIBDIRS		:= 	$(CTRPFLIB) $(CTRULIB) $(PORTLIBS)
 
 #---------------------------------------------------------------------------------
@@ -80,6 +85,7 @@ $(BUILD):
 clean:
 	@echo clean ... 
 	@rm -fr $(BUILD) $(shell find $(SOURCES) -name "*.o") $(shell find $(SOURCES) -name "*.d") $(OUTPUT).3gx $(OUTPUT).elf
+	@find . -type f \( -name "*.o" -o -name "*.d" \) -delete
 
 re: clean all
 

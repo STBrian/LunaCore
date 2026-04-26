@@ -137,6 +137,8 @@ static int l_Keyboard_populate(lua_State* L) {
         return 0;
     keyboard.Populate(options);
     int idx = keyboard.Open();
+    Core::EventRestartClock();
+    Core::AsyncRestartClock();
     if (idx >= 0) {
         lua_pushnumber(L, idx + 1);
         return 1;

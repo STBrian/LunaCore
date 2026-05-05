@@ -2,6 +2,7 @@
 
 #include <CTRPluginFramework.hpp>
 
+#include "Helpers/LuaTable.hpp"
 #include "CoreGlobals.hpp"
 #include "Core/Event.hpp"
 #include "Core/Async.hpp"
@@ -126,12 +127,9 @@ static int l_Keyboard_populate(lua_State* L) {
         return luaL_typerror(L, 1, "table");
     CTRPF::Keyboard keyboard;
     std::vector<std::string> options;
-    int len = lua_objlen(L, 1);
-    for (int i = 1; i <= len; i++) {
-        lua_rawgeti(L, 1, i);
-        if (lua_isstring(L, -1))
-            options.push_back(lua_tostring(L, -1));
-        lua_pop(L, 1);
+    LuaTable options_table(L, 1);
+    for (auto item : options_table) {
+        options.push_back((const char*)item.second);
     }
     if (options.empty())
         return 0;

@@ -497,9 +497,9 @@ static int l_Memory_search(lua_State* L) {
     u32 size = luaL_checknumber(L, 2);
     luaL_checktype(L, 3, LUA_TTABLE);
     std::vector<searchType> pattern;
-    LuaNumberTable<searchType> pattern_table(L, 3);
-    for (searchType val : pattern_table) {
-        pattern.push_back(val);
+    LuaTable pattern_table(L, 3);
+    for (auto val : pattern_table) {
+        pattern.push_back((searchType)val.second);
     }
     u32 result = CTRPF::Utils::Search(start, size, pattern);
     lua_pushnumber(L, result);

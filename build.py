@@ -35,7 +35,7 @@ if args.legacyhooks:
 if args.enable_jit:
     make_envvars["BUILD_JIT"] = "1"
     make_envvars["TARGET_PREFIX"] = "-jit"
-os.environ["CFLAGS_EXTRA"] = cflags_extra
+make_envvars["CFLAGS_EXTRA"] = cflags_extra
 
 cmd_args = ["make"]
 try:

@@ -17,6 +17,10 @@
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
 
+namespace CTRPluginFramework::ProcessImpl {
+    void    Play(bool forced);
+}
+
 using GraphicsFrameCallback = void(*)(void);
 using GraphicsExitCallback = void(*)(void);
 
@@ -89,7 +93,7 @@ void GraphicsHandlerMainloop() {
     graphicsExitCallback = NULL;
     graphicsOpen = false;
     shouldGraphicsClose = false;
-    CTRPF::Process::Play();
+    CTRPF::ProcessImpl::Play(true);
 }
 
 void GraphicsOpen(GraphicsFrameCallback frameCallback, GraphicsExitCallback exitCallback) {

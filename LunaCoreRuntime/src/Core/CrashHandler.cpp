@@ -5,8 +5,25 @@
 #include <FsLib/fslib.hpp>
 #include "Core/Debug.hpp"
 #include "CoreGlobals.hpp"
+#include "ExtendedHeap.hpp"
 
 namespace CTRPF = CTRPluginFramework;
+
+namespace CTRPluginFramework::ProcessImpl {
+    extern u32 exceptionCount;
+
+    void ReturnFromException(CpuRegisters* regs);
+
+     void    UnlockGameThreads(void);
+}
+
+namespace CTRPluginFrameworkImpl::Services::GSP {
+    void    PauseInterruptReceiver(void);
+}
+
+namespace CTRPluginFramework::ScreenImpl {
+    void    SwitchFrameBuffers(bool game);
+}
 
 static void *reservedMemory = nullptr;
 
@@ -19,7 +36,7 @@ static void* coreAbortLr = nullptr;
 
 extern "C" void __wrap_abort() {
     internalAbortLr = __builtin_return_address(0);
-    if (!reservedMemory) __real_abort();
+    if (!reservedMemory || internalAbort) __real_abort();
     internalAbort = true;
     *(u32*)nullptr = 0;
     for (;;);
@@ -126,6 +143,19 @@ namespace Core {
         static bool first = true;
         if (first) {
             first = false;
+            if (excep != nullptr && regs != nullptr && excep->type == ERRF_ExceptionType::ERRF_EXCEPTION_DATA_ABORT) {
+                u32 status = (excep->fsr & 0xF) | ((excep->fsr >> 6) & 0x10);
+                if ((status == 0x05 || status == 0x07) && ExtendedHeapIsAddressInHeap(excep->far)) { // Section | Page translation fault
+                    LOGDEBUG("Page fault reached at: %08X", excep->far);
+                    //CTRPF::ScreenImpl::SwitchFrameBuffers(true);
+                    ExtendedHeapAttemptLoadPage(excep->far);
+                    AtomicPostDecrement(&CTRPF::ProcessImpl::exceptionCount);
+                    CTRPluginFrameworkImpl::Services::GSP::PauseInterruptReceiver(); 
+                    CTRPF::ProcessImpl::UnlockGameThreads();
+                    LOGDEBUG("Resuming to PC: %08X", regs->pc);
+                    CTRPF::ProcessImpl::ReturnFromException(regs);
+                }
+            }
             if (reservedMemory) {
                 free(reservedMemory);
                 reservedMemory = nullptr;
@@ -197,34 +227,38 @@ namespace Core {
             u32 errorCode = (errtype << 30 | core_state << 27 | game_state << 25 | possibleError << 23 | pluginFault << 22 | pc);
             Core::Debug::LogRawf("\tError code: %08X\n", errorCode);
             Core::Debug::CloseLogFile();
-            if (plg_state != PluginState::PLUGIN_MAINLOOP) {
-                if (coreAbortMsg != nullptr)
-                    PLGLDR__DisplayErrMessage("Fatal core exception", (std::string(coreAbortMsg) + "\nThe console will reboot now").c_str(), errorCode);
-                else 
-                    PLGLDR__DisplayErrMessage("Fatal core exception", "An unhandled exception ocurred.\nThe console will reboot now", errorCode);
-                CTRPF::System::Reboot();
-            } 
-            fslib::close_device(u"extdata");
-            fslib::exit();
 
+            const char* errtitle = "Oops... Game crashed!";
+            char errcontent[0x100];
+            char extrainfobuffer[0x80];
+            const char* extrainfo = "";
+            const char* actionmsg = "The game will exit now";
+            if (plg_state != PluginState::PLUGIN_MAINLOOP) 
+                actionmsg = "The console will reboot now";
             if (regs == nullptr || excep == nullptr) {
-                if (coreAbortMsg != nullptr)
-                    PLGLDR__DisplayErrMessage("Fatal core exception", (std::string(coreAbortMsg) + "\nThe game will exit now").c_str(), errorCode);
-                else 
-                    PLGLDR__DisplayErrMessage("Fatal core exception", "An unhandled exception ocurred.\nThe game will exit now", errorCode);
-                CTRPF::Process::ReturnToHomeMenu();
+                errtitle = "Fatal core exception";
+                if (coreAbortMsg != nullptr) extrainfo = coreAbortMsg;
             } else {
-                const char *titleMsg = "Oops.. Game crashed!";
-                if (internalAbort || coreAbort)
-                    titleMsg = "Oh no... Things got out of hand!";
+                if (internalAbort || coreAbort) errtitle = "Oh no... Things got out of hand!";
 
-                if (possibleOOM)
-                    titleMsg = "Core ran out of memory!";
-                if (pcOriginal == 0x00114A98)
-                    titleMsg = "Game crashed! A game assert exception occurred";
-                PLGLDR__DisplayErrMessage(titleMsg, "An unhandled exception ocurred.\nThe game will exit now", errorCode);
+                if (possibleOOM) errtitle = "Core ran out of memory!";
+                if (pcOriginal == 0x00114A98) errtitle = "Game assertion exception";
+
+                if (excep->type == ERRF_ExceptionType::ERRF_EXCEPTION_DATA_ABORT) {
+                    snprintf(extrainfobuffer, sizeof(extrainfobuffer), "Access at: 0x%08X", excep->far);
+                    extrainfo = extrainfobuffer;
+                }
+            }
+            snprintf(errcontent, sizeof(errcontent), "An unhandled exception ocurred.\n%s\n%s", extrainfo, actionmsg);
+            PLGLDR__DisplayErrMessage(errtitle, errcontent, errorCode);
+            if (plg_state != PluginState::PLUGIN_MAINLOOP) {
+                CTRPF::System::Reboot();
+            } else {
+                fslib::close_device(u"extdata");
+                fslib::exit();
                 CTRPF::Process::ReturnToHomeMenu();
             }
+            
         }
         return CTRPF::Process::EXCB_LOOP;
     }

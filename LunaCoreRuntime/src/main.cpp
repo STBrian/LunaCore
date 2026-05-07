@@ -28,6 +28,7 @@
 #include "CoreGlobals.hpp"
 
 #include "Helpers/Allocation.hpp"
+#include "ExtendedHeap.hpp"
 
 #include "game/Minecraft.hpp"
 
@@ -198,6 +199,7 @@ namespace CTRPluginFramework
                 PatchGameMenuLayoutFunction();
         }
 
+        ExtendedHeapInit(0x800);
         CrashHandler::core_state = CrashHandler::CORE_LOADING_RUNTIME;
         Core::InitCore();
 

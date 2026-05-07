@@ -20,6 +20,7 @@
 #include "LuaModules.hpp"
 #include "CoreConstants.hpp"
 #include "CoreGlobals.hpp"
+#include "ExtendedHeap.hpp"
 
 #define IS_VUSA_COMP(id, version) ((id) == 0x00040000001B8700LL && (version) == 9408) // 1.9.19 USA
 #define IS_VEUR_COMP(id, version) ((id) == 0x000400000017CA00LL && (version) == 9392) // 1.9.19 EUR
@@ -31,6 +32,18 @@ namespace CTRPF = CTRPluginFramework;
 using namespace Core;
 
 CTRPF::Clock timeoutLoadClock;
+
+void* extended_lua_allocator(void* ud, void* ptr, size_t osize, size_t nsize) {
+    if (nsize == 0) {
+        ExtendedHeapFree(ptr);
+        return NULL;
+    } else {
+        if (ptr == NULL)
+            return ExtendedHeapMalloc(nsize);
+        else
+            return ExtendedHeapRealloc(ptr, nsize);
+    }
+}
 
 void Core::InitCore() {
     u64 titleID = CTRPF::Process::GetTitleID();
@@ -49,8 +62,16 @@ void Core::InitCore() {
     bool loadScripts = G_config.getBool("enable_scripts", true);
     
     Core::Debug::LogInfo("Loading Lua environment");
-    Lua_global = luaL_newstate();
+    Lua_global = lua_newstate(extended_lua_allocator, NULL);
     Core::LoadLuaEnv();
+    Core::Debug::LogInfof("Test malloc");
+    void* test = ExtendedHeapMalloc(100);
+    if (test == NULL) {
+        Core::Debug::LogInfof("Test malloc failed");
+    } else {
+        Core::Debug::LogInfof("Test free");
+        ExtendedHeapFree(test);
+    }
 
     std::string region;
     Core::Utils::getRegion(region);

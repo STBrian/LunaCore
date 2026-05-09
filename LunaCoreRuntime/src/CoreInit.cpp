@@ -64,14 +64,6 @@ void Core::InitCore() {
     Core::Debug::LogInfo("Loading Lua environment");
     Lua_global = lua_newstate(extended_lua_allocator, NULL);
     Core::LoadLuaEnv();
-    Core::Debug::LogInfof("Test malloc");
-    void* test = ExtendedHeapMalloc(100);
-    if (test == NULL) {
-        Core::Debug::LogInfof("Test malloc failed");
-    } else {
-        Core::Debug::LogInfof("Test free");
-        ExtendedHeapFree(test);
-    }
 
     std::string region;
     Core::Utils::getRegion(region);

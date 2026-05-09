@@ -83,7 +83,7 @@ namespace CTRPluginFramework
 
         svcGetProcessInfo(&textTotalSize, processHandle, 0x10002);
         svcGetProcessInfo(&startAddress, processHandle, 0x10005);
-        if(R_FAILED(svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, 0x14000000, processHandle, (u32)startAddress, textTotalSize)))
+        if(R_FAILED(svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, 0x14000000, processHandle, (u32)startAddress, textTotalSize, MAPEXFLAGS_SHARED)))
             goto exit;
 
         found = (u32 *)Utils::Search<u32>(0x14000000, (u32)textTotalSize, pattern);
@@ -160,7 +160,7 @@ namespace CTRPluginFramework
                 Process::Write32(0x919530-(4*8), 0); // Pos keycode for DPADRIGHT
                 Process::Write32(0x919530-(4*7), 0); // Pos keycode for DPADLEFT
             }
-            hookSomeFunctions();
+            //hookSomeFunctions();
             patchEnabled = true;
         }
     }
@@ -199,7 +199,7 @@ namespace CTRPluginFramework
                 PatchGameMenuLayoutFunction();
         }
 
-        ExtendedHeapInit(0x800);
+        if (R_FAILED(ExtendedHeapInit(0x800))) Core::Abort("Failed to initialize heap");
         CrashHandler::core_state = CrashHandler::CORE_LOADING_RUNTIME;
         Core::InitCore();
 

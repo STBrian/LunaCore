@@ -258,6 +258,9 @@ enum tlsf_private
 #define tlsf_min(a, b)		((a) < (b) ? (a) : (b))
 #define tlsf_max(a, b)		((a) > (b) ? (a) : (b))
 
+#include "Core/Debug.hpp"
+#define tlsf_assert ASSERT
+
 /*
 ** Set assert macro, if it has not been provided by the user.
 */

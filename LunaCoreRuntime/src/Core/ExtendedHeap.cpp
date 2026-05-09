@@ -41,13 +41,15 @@ static u32 alignToPageStart(u32 addr) {
 Result ExtendedHeapInit(size_t heapsize) {
     size_t heapsize_b = heapsize * PAGE_SIZE;
 
-    fslib::create_directory_recursively(path_from_string("sdmc:/Minecraft 3DS/LunaCore"));
+    if (!fslib::directory_exists(path_from_string("sdmc:/Minecraft 3DS/LunaCore"))) {
+        if (!fslib::create_directory(path_from_string("sdmc:/Minecraft 3DS/LunaCore"))) return -1;
+    }
     HeapCtx.swapfile.open(path_from_string("sdmc:/Minecraft 3DS/LunaCore/swapfile.bin"), FS_OPEN_CREATE|FS_OPEN_WRITE|FS_OPEN_READ, heapsize_b);
     if (!HeapCtx.swapfile.is_open()) return -1;
     size_t maxLoadedPages = heapsize < MAX_LOADED_PAGES ? heapsize : MAX_LOADED_PAGES;
 
     HeapCtx.heapStart = START_EXTHEAP_ADDR;
-    HeapCtx.heapEnd = HeapCtx.heapStart + heapsize_b;
+    HeapCtx.heapEnd = START_EXTHEAP_ADDR + heapsize_b;
     HeapCtx.maxPages = heapsize;
     HeapCtx.maxLoadedPages = maxLoadedPages;
     
@@ -62,24 +64,34 @@ Result ExtendedHeapInit(size_t heapsize) {
     
     // Initialize pages
     for (size_t i = 0; i < maxLoadedPages; i++) {
-        HeapCtx.mappedPages[i].srcAddr = (u32)aligned_alloc(0x1000, PAGE_SIZE);
-        if (HeapCtx.mappedPages[i].srcAddr == 0) goto error;
-        HeapCtx.mappedPages[i].idx = i;
-        HeapCtx.mappedPages[i].dstAddr = START_EXTHEAP_ADDR + PAGE_SIZE * i;
+        mappedPages[i].srcAddr = (u32)aligned_alloc(0x1000, PAGE_SIZE);
+        if (mappedPages[i].srcAddr == 0) goto error;
+        mappedPages[i].idx = i;
+        mappedPages[i].dstAddr = START_EXTHEAP_ADDR + PAGE_SIZE * i;
     }
 
     // Map pages
     for (size_t i = 0; i < maxLoadedPages; i++) {
-        Result res = svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, HeapCtx.mappedPages[i].dstAddr, CUR_PROCESS_HANDLE, HeapCtx.mappedPages[i].srcAddr, PAGE_SIZE);
+        Result res = svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, mappedPages[i].dstAddr, CUR_PROCESS_HANDLE, mappedPages[i].srcAddr, PAGE_SIZE, MAPEXFLAGS_SHARED);
         if (R_FAILED(res)) {
-            char buffer[0x100];
-            snprintf(buffer, sizeof(buffer), "Failed to map to %08X", HeapCtx.mappedPages[i].dstAddr);
-            Core::Abort(buffer);
+            LOGDEBUG("Failed to map to %08X", mappedPages[i].dstAddr);
+            goto error;
         } else 
-            HeapCtx.mappedPages[i].mapped = true;
+            mappedPages[i].mapped = true;
     }
 
     HeapCtx.allocator = tlsf_create_with_pool((void*)START_EXTHEAP_ADDR, heapsize_b);
+    {
+        LOGDEBUG("Test malloc");
+        void* test = ExtendedHeapMalloc(100);
+        if (test == NULL) {
+            LOGDEBUG("Test malloc failed");
+            goto error;
+        } else {
+            LOGDEBUG("Test free");
+            ExtendedHeapFree(test);
+        }
+    }
     return 0;
 
     error:
@@ -112,7 +124,14 @@ static void loadPageContent(PageMapInfo* info) {
     if (res != PAGE_SIZE) Core::Abort("Failed to load page from swapfile");
 }
 
-void ExtendedHeapAttemptLoadPage(u32 addr) {
+static void swapfileFlush() {
+    HeapCtx.swapfile.flush();
+}
+
+Result ExtendedHeapAttemptLoadPage(u32 addr) {
+    MemInfo info;
+    PageInfo out;
+    Result status;
     const u32 pageStart = alignToPageStart(addr);
     const u32 pageIdx = GET_PAGE_INDEX(pageStart);
 
@@ -133,12 +152,48 @@ void ExtendedHeapAttemptLoadPage(u32 addr) {
     }
     // Save old and load new
     PageMapInfo& pageInfo = HeapCtx.mappedPages[minMappedIdx];
+    //LOGDEBUG("Swaping memory page %08X", pageInfo.dstAddr);
+    svcFlushEntireDataCache();
     writePageContent(&pageInfo);
     svcUnmapProcessMemoryEx(CUR_PROCESS_HANDLE, pageInfo.dstAddr, PAGE_SIZE);
+    status = svcQueryProcessMemory(&info, &out, CUR_PROCESS_HANDLE, pageInfo.dstAddr);
+    if (R_FAILED(status)) return -3;
+    if (info.state == MemState::MEMSTATE_FREE) {
+        LOGDEBUG("Attempt to unmap memory at %08X but it isn't mapped");
+        return -4;
+    }
+    u32 addr_out;
+    // Breaks memory
+    status = svcControlMemoryUnsafe(&addr_out, pageInfo.dstAddr, PAGE_SIZE, MemOp::MEMOP_FREE, (MemPerm)0);
+    if (R_FAILED(status)) {
+        LOGDEBUG("Failed to unmap memory page");
+        LOGDEBUG("Unmap status code: %08X", status);
+        return -1;
+    }
+    status = svcQueryProcessMemory(&info, &out, CUR_PROCESS_HANDLE, pageInfo.dstAddr);
+    if (R_FAILED(status)) return -3;
+    if (info.state != MemState::MEMSTATE_FREE) {
+        LOGDEBUG("Failed to unmap memory at %08X. Expected to be free, instead: %d", pageInfo.dstAddr, info.state);
+        LOGDEBUG("Info: %d, %08X, %d", info.size, info.base_addr, info.perm);
+        LOGDEBUG("Info: %d", out.flags);
+        return -4;
+    }
+    __dsb();
+    __isb();
+    __dmb();
+    swapfileFlush();
     pageInfo.dstAddr = pageStart;
     pageInfo.idx = pageIdx;
+    //LOGDEBUG("Loading memory page %08X", pageInfo.dstAddr);
     loadPageContent(&pageInfo);
-    svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, pageInfo.dstAddr, CUR_PROCESS_HANDLE, pageInfo.srcAddr, PAGE_SIZE);
+    status = svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, pageInfo.dstAddr, CUR_PROCESS_HANDLE, pageInfo.srcAddr, PAGE_SIZE, MAPEXFLAGS_PRIVATE);
+    if (R_FAILED(status)) {
+        LOGDEBUG("Failed to map memory page");
+        return -2;
+    }
+    svcInvalidateEntireInstructionCache();
+    svcFlushEntireDataCache();
+    return 0;
 }
 
 void* ExtendedHeapMalloc(size_t size) {

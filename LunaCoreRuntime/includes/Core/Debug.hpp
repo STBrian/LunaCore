@@ -22,7 +22,7 @@
 #define ASSERT(cond) \
     do { \
         if (!(cond)) { \
-            Core::Debug::LogError("ASSERT failed: " #cond "(" __FILE__ ": " __LINE__ ")"); \
+            Core::Debug::LogErrorf("ASSERT failed: " #cond "(" __FILE__ ": %d)", __LINE__); \
             abort(); \
         } \
     } while (0)

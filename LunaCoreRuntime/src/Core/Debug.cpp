@@ -36,6 +36,10 @@ void Core::Debug::CloseLogFile()
         logFile.Close();
 }
 
+bool Core::Debug::LogFileIsOpen() {
+    return logFile.IsOpen();
+}
+
 void Core::Debug::LogRaw(const std::string& msg)
 {
     if (logFile.IsOpen()) {

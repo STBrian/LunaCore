@@ -9,39 +9,23 @@
 
 namespace CTRPF = CTRPluginFramework;
 
-namespace CTRPluginFramework::ProcessImpl {
-    extern u32 exceptionCount;
-
-    void ReturnFromException(CpuRegisters* regs);
-
-     void    UnlockGameThreads(void);
-}
-
-namespace CTRPluginFrameworkImpl::Services::GSP {
-    void    PauseInterruptReceiver(void);
-}
-
-namespace CTRPluginFramework::ScreenImpl {
-    void    SwitchFrameBuffers(bool game);
-}
-
 static void *reservedMemory = nullptr;
 
 extern "C" void PLGLDR__DisplayErrMessage(const char*, const char*, u32);
-extern "C" void __real_abort(void);
 
 static bool internalAbort = false;
 static void* internalAbortLr = nullptr;
-static void* coreAbortLr = nullptr;
 
 extern "C" void __wrap_abort() {
     internalAbortLr = __builtin_return_address(0);
     if (!reservedMemory || internalAbort) {
-        PLGLDR__DisplayErrMessage("Critical exception", "The console will reboot now", 0);
-        CTRPF::System::Reboot();
+        PLGLDR__DisplayErrMessage("Critical exception", "An unhandled critical exception ocurred", 0);
+        //CTRPF::System::Reboot();
+        *(u32*)nullptr = 0; // Double call. Make it crash (so the exception handler can throw the old exception)
+        for (;;);
     }
     internalAbort = true;
-    *(u32*)nullptr = 0;
+    Core::CrashHandler::ExceptionCallback(nullptr, nullptr);
     for (;;);
 }
 
@@ -77,19 +61,31 @@ static const char* gameStateStr[] = {
 
 namespace Core {
     static bool coreAbort = false;
+    static void* coreAbortLr = nullptr;
     static const char* coreAbortMsg = nullptr;
 
     CrashHandler::PluginState CrashHandler::plg_state = CrashHandler::PLUGIN_PATCHPROCESS;
     CrashHandler::CoreState CrashHandler::core_state = CrashHandler::CORE_INIT;
     CrashHandler::GameState CrashHandler::game_state = CrashHandler::GAME_LOADING;
+    CrashHandler::CrashHandlerCallback CrashHandler::callback = nullptr;
 
-    void CrashHandler::ReserveMemory() {
+    void CrashHandler::Init() {
+        CTRPF::Process::exceptionCallback = CrashHandler::ExceptionCallback;
+        #ifdef DEBUG
+        CTRPF::Process::ThrowOldExceptionOnCallbackException = false;
+        #else
+        CTRPF::Process::ThrowOldExceptionOnCallbackException = true;
+        #endif
         reservedMemory = malloc(4 * 1024);
     }
 
     void CrashHandler::Abort(const char* errMsg, const std::source_location& location) {
         coreAbortLr = __builtin_return_address(0);
-        if (coreAbort) *(u32*)nullptr = 0; // Double call. Make it crash
+        if (coreAbort) {
+            PLGLDR__DisplayErrMessage("Critical exception", "An unhandled critical exception ocurred", 0);
+            //CTRPF::System::Reboot();
+            *(u32*)nullptr = 0; // Double call. Make it crash (so the exception handler can throw the old exception)
+        }
         coreAbort = true;
         coreAbortMsg = errMsg;
         if (reservedMemory) { // Free reserved memory cause ReportInternalError may need that memory if OOM
@@ -116,7 +112,11 @@ namespace Core {
 
     void CrashHandler::Abort(ErrorCode errCode) {
         coreAbortLr = __builtin_return_address(0);
-        if (coreAbort) *(u32*)nullptr = 0; // Double call. Make it crash
+        if (coreAbort) {
+            PLGLDR__DisplayErrMessage("Critical exception", "An unhandled critical exception ocurred", 0);
+            //CTRPF::System::Reboot();
+            *(u32*)nullptr = 0; // Double call. Make it crash (so the exception handler can throw the old exception)
+        }
         coreAbort = true;
         coreAbortMsg = ErrorCodeToString(errCode);
         CrashHandler::ExceptionCallback(nullptr, nullptr);
@@ -126,7 +126,7 @@ namespace Core {
     static const char *errorMsg[] = {
         "The game had no desire",
         "It was inevitable",
-        "Got distracted for a second and...",
+        "Got distracted for a second...",
         "Stay calm and call a trusted adult",
         "Don't panic!",
         "Always expect the unexpected",
@@ -136,117 +136,103 @@ namespace Core {
         "[Insert silly comment]",
         "Weird, it works for me",
         "Someone should fix this",
-        "Two guys are walking, and the game falls",
+        "You discovered an easter egg :D!",
         "  (O_O\"\\)  ",
         "I'm sorry :(",
         "You didn't expect this!"
     };
 
     CTRPF::Process::ExceptionCallbackState CrashHandler::ExceptionCallback(ERRF_ExceptionInfo *excep, CpuRegisters *regs) {
-        if (excep != nullptr && regs != nullptr && excep->type == ERRF_ExceptionType::ERRF_EXCEPTION_DATA_ABORT) {
-            u32 status = (excep->fsr & 0xF) | ((excep->fsr >> 6) & 0x10);
-            if ((status == 0x05 || status == 0x07) && ExtendedHeapIsAddressInHeap(excep->far)) { // Section | Page translation fault
-                //LOGDEBUG("Page fault reached at: %08X", excep->far);
-                //CTRPF::ScreenImpl::SwitchFrameBuffers(true);
-                Result status = ExtendedHeapAttemptLoadPage(excep->far);
-                if (R_FAILED(status)) {
-                    coreAbort = true;
-                    coreAbortMsg = "Page swap failed";
-                } else {
-                    AtomicPostDecrement(&CTRPF::ProcessImpl::exceptionCount);
-                    CTRPluginFrameworkImpl::Services::GSP::PauseInterruptReceiver(); 
-                    CTRPF::ProcessImpl::UnlockGameThreads();
-                    LOGDEBUG("Resuming to PC: %08X", regs->pc);
-                    CTRPF::ProcessImpl::ReturnFromException(regs);
-                }
+        if (callback != nullptr) {
+            const char* stateMsg = callback(excep, regs);
+            if (stateMsg != nullptr) {
+                coreAbort = true;
+                coreAbortMsg = stateMsg;
             }
         }
+        const bool manuallyCalled = excep == nullptr || regs == nullptr;
+        const bool gamesFault = manuallyCalled ? false : (regs->pc >= 0x100000 && regs->pc < 0xa19000);
+        const bool luaRuntimeFault = !Lua_Global_Mut.try_lock();
+        
         if (reservedMemory) {
             free(reservedMemory);
             reservedMemory = nullptr;
         }
-        bool possibleOOM = false;
-        bool luaEnvBusy = !Lua_Global_Mut.try_lock();
+        
         Lua_Global_Mut.unlock();
-        /*if (Lua_global != NULL) {
-            if (!luaEnvBusy)
-                possibleOOM = lua_gc(Lua_global, LUA_GCCOUNT, 0) >= 2000;
+        if (Lua_global != NULL) {
             lua_close(Lua_global);
-        }*/
-        
-        if (coreAbort || internalAbort)
-            Core::Debug::LogInfof("[CRITICAL] LunaCore aborted due to an unhandled error");
-        else
-            Core::Debug::LogInfof("[CRITICAL] Game crashed due to an unhandled error");
-        
-        u8 rnd = (svcGetSystemTick() & 0xF00) >> 8;
-        Core::Debug::LogRawf("\t\"%s\"\n", errorMsg[rnd]);
-        Core::Debug::LogRawf("\t\tPlugin state: %s\n", pluginStateStr[plg_state]);
-        Core::Debug::LogRawf("\t\tLast Core state: %s\n", coreStateStr[core_state]);
-        Core::Debug::LogRawf("\t\tGame state: %s\n", gameStateStr[game_state]);
-        if (coreAbort) {
-            Core::Debug::LogRawf("\n\tException type: Core abort\n");
-            Core::Debug::LogRawf("\tAbort message:\n");
-            Core::Debug::LogRawf("\t\t%s\n", coreAbortMsg);
-        } else if (internalAbort) {
-            Core::Debug::LogRawf("\n\tException type: Core abort\n");
-            Core::Debug::LogRawf("\tAn unhandled core abort ocurred at %08X\n", (u32)internalAbortLr);
-        } else {
-            Core::Debug::LogRawf("\n\tException type: %s\n", exceptionStr[excep->type]);
-            Core::Debug::LogRawf("\tException at address: %08X\n", regs->pc);
-            Core::Debug::LogRawf("\tLR: %08X\n", regs->lr);
-            Core::Debug::LogRawf("\tSP: %08X\n", regs->sp);
-            Core::Debug::LogRawf("\tCPSR: %08X\n", regs->cpsr);
-            Core::Debug::LogRawf("\tR0: %08X \tR1: %08X\n", regs->r[0], regs->r[1]);
-            Core::Debug::LogRawf("\tR2: %08X \tR3: %08X\n", regs->r[2], regs->r[3]);
-            Core::Debug::LogRawf("\tR4: %08X \tR5: %08X\n", regs->r[4], regs->r[5]);
-            Core::Debug::LogRawf("\tR6: %08X \tR7: %08X\n", regs->r[6], regs->r[7]);
-            Core::Debug::LogRawf("\tR8: %08X \tR9: %08X\n", regs->r[8], regs->r[9]);
-            Core::Debug::LogRawf("\tR10: %08X\tR11: %08X\n", regs->r[10], regs->r[11]);
-            Core::Debug::LogRawf("\tR12: %08X\n", regs->r[12]);
+            Lua_global = nullptr;
         }
         
-        u8 possibleError = 0;
-        if (plg_state == PluginState::PLUGIN_PATCHPROCESS) possibleError = 1;
-        else if (luaEnvBusy) possibleError = 2;
-        else if (possibleOOM) possibleError = 3;
-        u32 pc = 0;
-        u32 pcOriginal = 0;
-        ERRF_ExceptionType errtype = ERRF_EXCEPTION_PREFETCH_ABORT;
-        bool pluginFault = false;
-        if (regs == nullptr || excep == nullptr) {
-            pluginFault = true;
-            pcOriginal = (u32)(coreAbortLr ? coreAbortLr : internalAbortLr);
-            pc = pcOriginal - 0x07000100;
-        } else {
-            if (regs->pc - 0x00100000 < 0x919000) {
-                pc = regs->pc - 0x00100000;
-            } else if (regs->pc < 0x30000000) {
-                pc = regs->pc - 0x07000100;
-                pluginFault = true;
+        // Write exception info to the log file
+        if (Core::Debug::LogFileIsOpen()) {
+            if (manuallyCalled)
+                Core::Debug::LogErrorf("[CRITICAL] LunaCore aborted due to an unhandled error");
+            else {
+                if (gamesFault)
+                    Core::Debug::LogErrorf("[CRITICAL] Game crashed due to an unhandled error");
+                else
+                    Core::Debug::LogErrorf("[CRITICAL] LunaCore crashed due to an unhandled error");
             }
-            pcOriginal = regs->pc;
-            errtype = excep->type;
+            
+            u8 rnd = (svcGetSystemTick() & 0xF00) >> 8;
+            Core::Debug::LogRawf("\t\"%s\"\n", errorMsg[rnd]);
+            Core::Debug::LogRawf("\t\tPlugin state: %s\n", pluginStateStr[plg_state]);
+            Core::Debug::LogRawf("\t\tLast Core state: %s\n", coreStateStr[core_state]);
+            Core::Debug::LogRawf("\t\tGame state: %s\n", gameStateStr[game_state]);
+            if (!manuallyCalled) {
+                Core::Debug::LogRawf("\n\tException type: %s\n", exceptionStr[excep->type]);
+                Core::Debug::LogRawf("\tException at address: %08X\n", regs->pc);
+                Core::Debug::LogRawf("\tLR: %08X\n", regs->lr);
+                Core::Debug::LogRawf("\tSP: %08X\n", regs->sp);
+                Core::Debug::LogRawf("\tCPSR: %08X\n", regs->cpsr);
+                Core::Debug::LogRawf("\tR0: %08X \tR1: %08X\n", regs->r[0], regs->r[1]);
+                Core::Debug::LogRawf("\tR2: %08X \tR3: %08X\n", regs->r[2], regs->r[3]);
+                Core::Debug::LogRawf("\tR4: %08X \tR5: %08X\n", regs->r[4], regs->r[5]);
+                Core::Debug::LogRawf("\tR6: %08X \tR7: %08X\n", regs->r[6], regs->r[7]);
+                Core::Debug::LogRawf("\tR8: %08X \tR9: %08X\n", regs->r[8], regs->r[9]);
+                Core::Debug::LogRawf("\tR10: %08X\tR11: %08X\n", regs->r[10], regs->r[11]);
+                Core::Debug::LogRawf("\tR12: %08X\n", regs->r[12]);
+            } else {
+                Core::Debug::LogRawf("\n\tException type: Core abort\n");
+                if (coreAbort) {
+                    Core::Debug::LogRawf("\tAbort message:\n");
+                    Core::Debug::LogRawf("\t\t%s\n", coreAbortMsg);
+                } else {
+                    Core::Debug::LogRawf("\n\tException type: Core abort\n");
+                    Core::Debug::LogRawf("\tAn unhandled core abort ocurred at %08X\n", (u32)internalAbortLr);
+                }
+            }
         }
-        pc = (pc >> 2) & 0b1111111111111111111111;
-        u32 errorCode = (errtype << 30 | core_state << 27 | game_state << 25 | possibleError << 23 | pluginFault << 22 | pc);
-        Core::Debug::LogRawf("\tError code: %08X\n", errorCode);
-        Core::Debug::CloseLogFile();
+        
+        // Make the error code
+        const u32 pcOriginal = !manuallyCalled ? regs->pc : ((u32)(coreAbortLr ? coreAbortLr : internalAbortLr));
+        const u32 pc = ((gamesFault ? pcOriginal - 0x00100000 : pcOriginal - 0x07000100) >> 2) & 0b1111111111111111111111;
+        const ERRF_ExceptionType errtype = !manuallyCalled ? excep->type : ERRF_EXCEPTION_DATA_ABORT;
+        const u8 errFmt = 3;
+
+        const u32 errorCode = (errtype << 30 | core_state << 27 | game_state << 25 | errFmt << 23 | !gamesFault << 22 | pc);
+        if (Core::Debug::LogFileIsOpen()) {
+            Core::Debug::LogRawf("\tError code: %08X\n", errorCode);
+            Core::Debug::CloseLogFile();
+        }
+        if (plg_state != PluginState::PLUGIN_PATCHPROCESS) {
+            fslib::close_device(u"extdata");
+            fslib::exit();
+        }
 
         const char* errtitle = "Oops... Game crashed!";
         char errcontent[0x100];
         char extrainfobuffer[0x80];
-        const char* extrainfo = "";
-        const char* actionmsg = "The game will exit now";
-        if (plg_state != PluginState::PLUGIN_MAINLOOP) 
-            actionmsg = "The console will reboot now";
+        const char* extrainfo = coreAbortMsg ? coreAbortMsg : "";
+        const char* actionmsg = plg_state == PluginState::PLUGIN_MAINLOOP ? "The game will exit now" : "The console will reboot now";
         if (coreAbortMsg != nullptr) extrainfo = coreAbortMsg;
         if (regs == nullptr || excep == nullptr) {
             errtitle = "Fatal core exception";
         } else {
-            if (internalAbort || coreAbort) errtitle = "Oh no... Things got out of hand!";
+            if (!gamesFault) errtitle = "Oh no... Things got out of hand!";
 
-            if (possibleOOM) errtitle = "Core ran out of memory!";
             if (pcOriginal == 0x00114A98) errtitle = "Game assertion exception";
 
             if (excep->type == ERRF_ExceptionType::ERRF_EXCEPTION_DATA_ABORT) {
@@ -256,13 +242,10 @@ namespace Core {
         }
         snprintf(errcontent, sizeof(errcontent), "An unhandled exception ocurred.\n%s\n%s", extrainfo, actionmsg);
         PLGLDR__DisplayErrMessage(errtitle, errcontent, errorCode);
-        if (plg_state != PluginState::PLUGIN_MAINLOOP) {
+        if (plg_state != PluginState::PLUGIN_MAINLOOP)
             CTRPF::System::Reboot();
-        } else {
-            fslib::close_device(u"extdata");
-            fslib::exit();
+        else
             CTRPF::Process::ReturnToHomeMenu();
-        }
         return CTRPF::Process::EXCB_LOOP;
     }
 }

@@ -45,6 +45,8 @@ namespace Core {
 
         void CloseLogFile();
 
+        bool LogFileIsOpen();
+
         void LogRawf(const char* fmt, ...);
 
         /* Logs to file */

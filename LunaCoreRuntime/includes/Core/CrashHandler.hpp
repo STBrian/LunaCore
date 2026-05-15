@@ -32,8 +32,17 @@ namespace Core {
             static PluginState plg_state;
             static CoreState core_state;
             static GameState game_state;
+            
+            using CrashHandlerCallback = const char* (*)(ERRF_ExceptionInfo*, CpuRegisters*);
+            static CrashHandlerCallback callback;
 
-            static void ReserveMemory();
+            static void Init();
+
+            /* Callback should return nullptr to indicate success. Otherwise, return
+            an error message */
+            static void SetCallback(CrashHandlerCallback fun) {
+                callback = fun;
+            }
 
             NORETURN static void Abort(const char* errMsg, const std::source_location& location = std::source_location::current());
 

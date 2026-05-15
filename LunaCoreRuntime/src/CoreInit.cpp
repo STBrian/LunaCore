@@ -62,7 +62,11 @@ void Core::InitCore() {
     bool loadScripts = G_config.getBool("enable_scripts", true);
     
     Core::Debug::LogInfo("Loading Lua environment");
+    #ifdef EXPERIMENTAL
     Lua_global = lua_newstate(extended_lua_allocator, NULL);
+    #else
+    Lua_global = luaL_newstate();
+    #endif
     Core::LoadLuaEnv();
 
     std::string region;

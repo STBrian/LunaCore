@@ -118,7 +118,7 @@ static void CreateMainMenuCustomLayout(int *ptr) {
     CreateMenuButtons(ptr, btn_ctxs);
 
     // --- Character container ---
-    GameCharacterView *dataPtr = (GameCharacterView*)GameMemalloc(sizeof(GameCharacterView));
+    GameCharacterView *dataPtr = (GameCharacterView*)gstd_malloc(sizeof(GameCharacterView));
     if (dataPtr != NULL) {
         InitMenuCharacter(dataPtr, (int*)ptr[1], MenuLayoutChrt.x, MenuLayoutChrt.y, 
                         0x32, 0x50, 2, 1);

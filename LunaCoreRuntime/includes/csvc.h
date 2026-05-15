@@ -94,7 +94,7 @@ typedef enum MapExFlags
  * @param size Size of the block of the memory to map (truncated to a multiple of 0x1000 bytes)
  * @param flags Extended flags for mapping the memory (see MapExFlags)
 */
-Result svcMapProcessMemoryEx(Handle dstProcessHandle, u32 destAddress, Handle srcProcessHandle, u32 srcAddress, u32 size, MapExFlags flags);
+Result svcMapProcessMemoryEx(Handle dstProcessHandle, u32 destAddress, Handle srcProcessHandle, u32 srcAddress, u32 size);
 
 /**
  * @brief Unmaps a block of process memory.

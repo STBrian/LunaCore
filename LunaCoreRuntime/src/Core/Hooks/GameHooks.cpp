@@ -34,8 +34,6 @@ namespace CTRPF = CTRPluginFramework;
     (((pc_actual) + 8) + (((int32_t)((ins) << 8)) >> 6))
 #define DECODE_TARGET_INS_BL(ins, pc_actual) (DECODE_TARGET_INS_B(ins, pc_actual))
 
-#ifndef LEGACY_HOOKS
-
 #ifdef DEBUG
 static __attribute__((naked)) void GameDebugLogfHook(CoreHookContext* ctx);
 #endif
@@ -304,4 +302,3 @@ void hookSomeFunctions() {
     hookFunction((u32)printf, (u32)CorePrintfHook); 
     #endif
 }
-#endif

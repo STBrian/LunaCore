@@ -209,7 +209,7 @@ namespace Core {
         // Make the error code
         const u32 pcOriginal = !manuallyCalled ? regs->pc : ((u32)(coreAbortLr ? coreAbortLr : internalAbortLr));
         const u32 pc = ((gamesFault ? pcOriginal - 0x00100000 : pcOriginal - 0x07000100) >> 2) & 0b1111111111111111111111;
-        const ERRF_ExceptionType errtype = !manuallyCalled ? excep->type : ERRF_EXCEPTION_DATA_ABORT;
+        const ERRF_ExceptionType errtype = !manuallyCalled ? excep->type : ERRF_EXCEPTION_UNDEFINED;
         const u8 errFmt = 3;
 
         const u32 errorCode = (errtype << 30 | core_state << 27 | game_state << 25 | errFmt << 23 | !gamesFault << 22 | pc);

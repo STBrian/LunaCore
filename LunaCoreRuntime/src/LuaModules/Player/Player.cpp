@@ -41,6 +41,22 @@ static u32* getHungerBarOffset() {
 
 //$Game.LocalPlayer.Position
 
+static Vec3_Float *safePlayerPositionGet() {
+    auto ply = MC3DSPluginFramework::Player::GetInstance();
+    if (ply) {
+        return &ply->Position();
+    }
+    return nullptr;
+}
+
+static Vec3_Float *safePlayerVelocityGet() {
+    auto ply = MC3DSPluginFramework::Player::GetInstance();
+    if (ply) {
+        return &ply->Velocity();
+    }
+    return nullptr;
+}
+
 /*
 - Gets local player position
 ## return: number
@@ -50,11 +66,16 @@ static u32* getHungerBarOffset() {
 */
 static int l_Player_Position_get(lua_State *L)
 {
-    float x, y, z;
-    Minecraft::GetPlayerPosition(x, y, z);
-    lua_pushnumber(L, x);
-    lua_pushnumber(L, y);
-    lua_pushnumber(L, z);
+    Vec3_Float* pos = safePlayerPositionGet();
+    if (pos) {
+        lua_pushnumber(L, pos->x);
+        lua_pushnumber(L, pos->y);
+        lua_pushnumber(L, pos->z);
+    } else {
+        lua_pushnumber(L, 0);
+        lua_pushnumber(L, 0);
+        lua_pushnumber(L, 0);
+    }
     return 3;
 }
 
@@ -70,7 +91,12 @@ static int l_Player_Position_set(lua_State *L)
     float x = luaL_checknumber(L, 1);
     float y = luaL_checknumber(L, 2);
     float z = luaL_checknumber(L, 3);
-    Minecraft::SetPlayerPosition(x, y, z);
+    Vec3_Float* pos = safePlayerPositionGet();
+    if (pos) {
+        pos->x = x;
+        pos->y = y;
+        pos->z = z;
+    }
     return 0;
 }
 
@@ -86,9 +112,12 @@ static int l_Player_Position_add(lua_State *L)
     float x2 = luaL_checknumber(L, 1);
     float y2 = luaL_checknumber(L, 2);
     float z2 = luaL_checknumber(L, 3);
-    float x1, y1, z1;
-    Minecraft::GetPlayerPosition(x1, y1, z1);
-    Minecraft::SetPlayerPosition(x1 + x2, y1 + y2, z1 + z2);
+    Vec3_Float* pos = safePlayerPositionGet();
+    if (pos) {
+        pos->x += x2;
+        pos->y += y2;
+        pos->z += z2;
+    }
     return 0;
 }
 
@@ -113,6 +142,7 @@ static const luaL_Reg player_position_methods[] =
 */
 static int l_Player_Velocity_get(lua_State *L)
 {
+    Vec3_Float* pos = safePlayerPositionGet();  
     float x = Minecraft::GetVelocityX();
     float y = Minecraft::GetVelocityY();
     float z = Minecraft::GetVelocityZ();

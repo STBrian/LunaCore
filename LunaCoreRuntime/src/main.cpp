@@ -37,20 +37,6 @@ using namespace Core;
 
 std::string plgAuthor, plgSummary, plgDescription, plgTitle;
 
-// Note Linux: using commit 14f1aff3
-
-extern "C" Result  PLGLDR__GetPluginPath(char *path);
-
-static void readString(fslib::File& file, std::string& line) {
-    s8 chr;
-    while ((chr = file.get_byte()) != '\0' && chr != -1) {
-        line += chr;
-        file.seek(1, fslib::File::CURRENT);
-    }
-    file.seek(1, fslib::File::CURRENT);
-    return;
-}
-
 namespace CTRPluginFramework
 {
     // This patch the NFC disabling the touchscreen when scanning an amiibo, which prevents ctrpf to be used
@@ -108,7 +94,7 @@ namespace CTRPluginFramework
             return;
         CrashHandler::Init();
         settings.UseGameHidMemory = true;
-        ToggleTouchscreenForceOn();
+        //ToggleTouchscreenForceOn();
 
         if (!fslib::initialize()) Core::Abort("Failed to initialize fs");
 
@@ -118,26 +104,9 @@ namespace CTRPluginFramework
         if (!Debug::OpenLogFile(LOG_FILE))
             OSD::Notify(Utils::Format("Failed to open log file '%s'", LOG_FILE));
 
-        /* I was looking into how to get plugin info from plugin loader or framework
-         but apparently the loader just ignore them, so... manual work */
-        char path[255] = {0};
-        PLGLDR__GetPluginPath(path);
-        std::string fullPath = "sdmc:" + std::string(path);
-        fslib::File pluginFile(path_from_string(fullPath), FS_OPEN_READ);
-        if (!pluginFile.is_open()) Core::Abort(("Failed to open: " + fullPath).c_str());
-
-        pluginFile.seek(0x94, fslib::File::BEGINNING);
-        readString(pluginFile, plgTitle);
-        readString(pluginFile, plgAuthor);
-        readString(pluginFile, plgSummary);
-        readString(pluginFile, plgDescription);
-        pluginFile.close();
-
-        u32 ver = settings.Header->version;
+        Core::GetCoreInfo(plgTitle, plgAuthor, plgSummary, plgDescription);
+        Core::ParseVersion(settings.Header->version);
         
-        Core::Version.major = (ver >> 24);
-        Core::Version.minor = (ver >> 16) & 0xFF;
-        Core::Version.patch = (ver >> 8) & 0xFF;
         Debug::LogInfof("LunaCore version: %d.%d.%d", Core::Version.major, Core::Version.minor, Core::Version.patch);
         Debug::LogInfof("Loading config file '%s'", CONFIG_FILE);
         G_config = LoadConfig(CONFIG_FILE);
@@ -146,7 +115,7 @@ namespace CTRPluginFramework
         bool disableDLandDR = G_config.getBool("disable_dleft_and_dright", false);
 
         if (Core::Utils::checkCompatibility() || System::IsCitra()) {
-            Minecraft::PatchProcess();
+            //Minecraft::PatchProcess();
             SetMainMenuLayoutLoadCallback();
             SetLoadingWorldScreenMessageCallback();
             SetLeaveLevelPromptCallback();
@@ -167,7 +136,7 @@ namespace CTRPluginFramework
     // Useful to save settings, undo patchs or clean up things
     void    OnProcessExit(void)
     {
-        ToggleTouchscreenForceOn();
+        //ToggleTouchscreenForceOn();
         Core::CrashHandler::plg_state = Core::CrashHandler::PLUGIN_EXIT;
         lua_close(Lua_global);
 

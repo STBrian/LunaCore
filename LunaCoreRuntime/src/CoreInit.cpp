@@ -16,16 +16,13 @@
 #include "Core/CrashHandler.hpp"
 #include "Core/Config.hpp"
 #include "Core/Event.hpp"
+#include "Core/Filesystem.hpp"
 
+#include "lua_common.h"
 #include "LuaModules.hpp"
 #include "CoreConstants.hpp"
 #include "CoreGlobals.hpp"
 #include "ExtendedHeap.hpp"
-
-#define IS_VUSA_COMP(id, version) ((id) == 0x00040000001B8700LL && (version) == 9408) // 1.9.19 USA
-#define IS_VEUR_COMP(id, version) ((id) == 0x000400000017CA00LL && (version) == 9392) // 1.9.19 EUR
-#define IS_VJPN_COMP(id, version) ((id) == 0x000400000017FD00LL && (version) == 9424) // 1.9.19 JPN
-#define IS_TARGET_ID(id) ((id) == 0x00040000001B8700LL || (id) == 0x000400000017CA00LL || (id) == 0x000400000017FD00LL)
 
 using json = nlohmann::ordered_json;
 namespace CTRPF = CTRPluginFramework;
@@ -45,10 +42,43 @@ void* extended_lua_allocator(void* ud, void* ptr, size_t osize, size_t nsize) {
     }
 }
 
+static void readString(fslib::File& file, std::string& line) {
+    s8 chr;
+    while ((chr = file.get_byte()) != '\0' && chr != -1) {
+        line += chr;
+        file.seek(1, fslib::File::CURRENT);
+    }
+    file.seek(1, fslib::File::CURRENT);
+    return;
+}
+
+extern "C" Result  PLGLDR__GetPluginPath(char *path);
+
+void Core::GetCoreInfo(std::string& plgTitle, std::string& plgAuthor, std::string& plgSummary, std::string& plgDescription) {
+    /* I was looking into how to get plugin info from plugin loader or framework
+    but apparently the loader just ignore them, so... manual work */
+    char path[255] = {0};
+    PLGLDR__GetPluginPath(path);
+    std::string fullPath = "sdmc:" + std::string(path);
+    fslib::File pluginFile(path_from_string(fullPath), FS_OPEN_READ);
+    if (!pluginFile.is_open()) return;
+
+    pluginFile.seek(0x94, fslib::File::BEGINNING);
+    readString(pluginFile, plgTitle);
+    readString(pluginFile, plgAuthor);
+    readString(pluginFile, plgSummary);
+    readString(pluginFile, plgDescription);
+    pluginFile.close();
+}
+
+void Core::ParseVersion(u32 ver) {
+    Core::Version.major = (ver >> 24);
+    Core::Version.minor = (ver >> 16) & 0xFF;
+    Core::Version.patch = (ver >> 8) & 0xFF;
+}
+
 void Core::InitCore() {
     u64 titleID = CTRPF::Process::GetTitleID();
-        if (!IS_TARGET_ID(titleID))
-            return;
     std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
 
     if (!fslib::open_extra_data(u"extdata", static_cast<uint32_t>(titleID >> 8 & 0x00FFFFFF))) {

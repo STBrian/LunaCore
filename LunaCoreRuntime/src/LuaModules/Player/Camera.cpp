@@ -1,6 +1,7 @@
 #include "LuaModules.hpp"
 
 #include <CTRPluginFramework.hpp>
+#include "MC3DSPluginFramework.hpp"
 
 #include "game/Minecraft.hpp"
 #include "game/memory.hpp"
@@ -47,6 +48,11 @@ static int l_Camera_index(lua_State *L)
     uint32_t key = hash(lua_tostring(L, 2));
     bool valid_key = true;
 
+    auto ply = MC3DSPluginFramework::Player::GetInstance();
+    CameraAngles* camera = nullptr;
+    if (ply)
+        camera = &ply->Camera();
+
     switch (key) {
         case hash("FOV"): {
             float* fov = getCameraFOVPtr();
@@ -54,10 +60,10 @@ static int l_Camera_index(lua_State *L)
             break;
         }
         case hash("Yaw"):
-            lua_pushnumber(L, Minecraft::GetYaw());
+            lua_pushnumber(L, camera ? camera->yaw : 0);
             break;
         case hash("Pitch"):
-            lua_pushnumber(L, Minecraft::GetPitch());
+            lua_pushnumber(L, camera ? camera->pitch : 0);
             break;
         default:
             valid_key = false;
@@ -82,6 +88,11 @@ static int l_Camera_newindex(lua_State *L)
     uint32_t key = hash(lua_tostring(L, 2));
     bool valid_key = true;
 
+    auto ply = MC3DSPluginFramework::Player::GetInstance();
+    CameraAngles* camera = nullptr;
+    if (ply)
+        camera = &ply->Camera();
+
     switch (key) {
         case hash("FOV"): {
             LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
@@ -93,11 +104,13 @@ static int l_Camera_newindex(lua_State *L)
         }
         case hash("Yaw"):
             LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
-            Minecraft::SetYaw(lua_tonumber(L, 3));
+            if (camera)
+                camera->yaw = lua_tonumber(L, 3);
             break;
         case hash("Pitch"):
             LUAUTILS_CHECKTYPE(L, LUA_TNUMBER, 3);
-            Minecraft::SetPitch(lua_tonumber(L, 3));
+            if (camera)
+                camera->pitch = lua_tonumber(L, 3);
             break;
         default:
             valid_key = false;

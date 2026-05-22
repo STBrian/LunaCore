@@ -35,9 +35,9 @@ static int l_Inventory_Slots_index(lua_State *L) {
     else if (lua_type(L, 2) == LUA_TSTRING) {
         uint32_t key = hash(lua_tostring(L, 2));
         if (key == hash("hand"))
-            index = Minecraft::GetHeldSlotNumber();
+            index = MC3DSPluginFramework::Inventory::HeldSlot();
     }
-    LuaObjectUtils::NewObjectCheck(L, "InventorySlot", (InventorySlot*)Minecraft::GetSlotAddress(index));
+    LuaObjectUtils::NewObjectCheck(L, "InventorySlot", (InventorySlot*)MC3DSPluginFramework::Inventory::Get(index));
     return 1;
 }
 

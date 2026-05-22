@@ -58,10 +58,10 @@ static int l_World_index(lua_State *L)
             lua_pushboolean(L, GameState.WorldLoaded.load());
             break;
         case hash("Raining"):
-            lua_pushboolean(L, Minecraft::IsRaining());
+            lua_pushboolean(L, level && level->weather()->get() == MC3DSPluginFramework::Weathers::Rain);
             break;
         case hash("Thunderstorm"):
-            lua_pushboolean(L, Minecraft::IsThundering());
+            lua_pushboolean(L, level && level->weather()->get() == MC3DSPluginFramework::Weathers::Thunder);
             break;
         case hash("CloudsHeight"): {
             float value;
@@ -107,11 +107,19 @@ static int l_World_newindex(lua_State *L)
     switch (key) {
         case hash("Raining"):
             LUACT_CHECKTYPE(L, LUA_TBOOLEAN, 3);
-            Minecraft::SetRain(lua_toboolean(L, 3));
+            if (level) {
+                const u32 weatherv = MC3DSPluginFramework::Weathers::Rain;
+                u32 weather = lua_toboolean(L, 3) ? (level->weather()->get() | weatherv) : (level->weather()->get() | ~weatherv);
+                level->weather()->set(weather);
+            }
             break;
         case hash("Thunderstorm"):
             LUACT_CHECKTYPE(L, LUA_TBOOLEAN, 3);
-            Minecraft::SetThunder(lua_toboolean(L, 3));
+            if (level) {
+                const u32 weatherv = MC3DSPluginFramework::Weathers::Thunder;
+                u32 weather = lua_toboolean(L, 3) ? (level->weather()->get() | weatherv) : (level->weather()->get() | ~weatherv);
+                level->weather()->set(weather);
+            }
             break;
         case hash("CloudsHeight"): {
             LUACT_CHECKTYPE(L, LUA_TNUMBER, 3);
@@ -120,7 +128,7 @@ static int l_World_newindex(lua_State *L)
         }
         case hash("Weather"): {
             Core::EnumItem* val = EnumItemUtils::LuaToEnumItemOrNull(L, 3, "WeatherType", true);
-            if (!val) return -1;
+            if (!val) return LUACT_ERROR;
             if (level) level->weather()->set(val->value);
             break;
         }

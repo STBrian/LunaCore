@@ -1,1 +1,995 @@
 ---@diagnostic disable: missing-return, duplicate-set-field, missing-fields
+
+Async = {}
+
+---@class AsyncTask
+local AsyncTask = {}
+
+---Returns a new task with the given function that can be connected to game events
+---@param func function
+---@return AsyncTask
+function Async.create(func) end
+
+---Adds the function to the queue that will run alongside the game until the functions ends
+---@param func function
+function Async.run(func) end
+
+---Yeilds the current task until time has passed. Always returns true
+---@param seconds number?
+---@return boolean
+function Async.wait(seconds) end
+
+Game = {}
+
+Core = {}
+
+---Returns the full path that corresponds to the modname if registered
+---@param modname string
+---@return string?
+function Core.getModpath(modname) end
+
+---Returns the mod that is currently being loaded
+---@return string
+function Core.getCurrentModname() end
+
+---Returns the title id formated in a hex string
+---@return string
+function Core.getTitleId() end
+
+Core._VERSION = "LunaCore 0.15.0"
+
+Core.Event = {}
+
+---@class EventClass
+local EventClass = {}
+
+---Adds a function to call when this events fires. It also returns the function
+---@param func function|AsyncTask
+---@return function
+function EventClass:Connect(func) end
+
+---Removes a listener previously connected to this event
+---@param func function
+function EventClass:Disconnect(func) end
+
+---Fire this event
+function EventClass:Trigger() end
+
+---@class BaseEvent: EventClass
+Core.Event.BaseEvent = {}
+
+---@class OnGameEntitySpawnStart: EventClass
+Core.Event.OnGameEntitySpawnStart = {}
+
+---@class OnGameEntitySpawn: EventClass
+Core.Event.OnGameEntitySpawn = {}
+
+Core.Graphics = {}
+
+---@class Drawable
+local Drawable = {}
+
+---@class GRect: Drawable
+GRect = {}
+
+---@class GLabel: Drawable
+GLabel = {}
+
+---Stops the game and allows to draw on screen. Until Core.Graphics.close is called the function will be executed every frame
+---Other events and async tasks will continue running. If plugin menu is open, this will wait until it is closed
+---@param func function
+function Core.Graphics.open(func) end
+
+---Resumes the game, the callback function will no longer be called and draw functions will not work
+function Core.Graphics.close() end
+
+---Returns if Graphics are open
+function Core.Graphics.isOpen() end
+
+---Draws a rect on screen. Only can be used when Core.Graphics.open was called
+---@param x integer
+---@param y integer
+---@param width integer
+---@param height integer
+---@param color integer
+function Core.Graphics.drawRect(x, y, width, height, color) end
+
+---Draws a solid rect on screen. Only can be used when Core.Graphics.open was called
+---@param x integer
+---@param y integer
+---@param width integer
+---@param height integer
+---@param color integer
+function Core.Graphics.drawRectFill(x, y, width, height, color) end
+
+---Draws a text on screen. Only can be used when Core.Graphics.open was called
+---@param text string
+---@param x integer
+---@param y integer
+---@param color integer
+function Core.Graphics.drawText(text, x, y, color) end
+
+---Returns the pixel width of the string
+---@param text string
+---@return integer
+function Core.Graphics.getTextWidth(text) end
+
+---Returns a color with the r, g, b values
+---@param r integer
+---@param g integer
+---@param b integer
+---@return integer
+function Core.Graphics.colorRGB(r, g, b) end
+
+---Returns a color with the r, g, b, a values
+---@param r integer
+---@param g integer
+---@param b integer
+---@param a integer
+---@return integer
+function Core.Graphics.colorRGBA(r, g, b, a) end
+
+---Creates a new instance of a rectangle drawable object
+---@param x integer
+---@param y integer
+---@param width integer
+---@param height integer
+---@return GRect
+function Core.Graphics.newRect(x, y, width, height) end
+
+---Creates a new instance of a label drawable object
+---@param x integer
+---@param y integer
+---@param text string
+---@return GLabel
+function Core.Graphics.newLabel(x, y, text) end
+
+---Adds a Drawable object to render on screen
+---@param obj Drawable
+function Core.Graphics.add(obj) end
+
+---Remove a Drawable object from the render
+---@param obj Drawable
+function Core.Graphics.remove(obj) end
+
+---Sets if the object should be drawn
+---@param visible boolean
+function Drawable:setVisible(visible) end
+
+---Sets in which screen should be drawn
+---@param top boolean
+---@param bottom boolean
+function Drawable:setScreens(top, bottom) end
+
+---Sets the position of the object in screen
+---@param x integer
+---@param y integer
+function Drawable:setPosition(x, y) end
+
+---Set the main color of the object
+---@param color integer
+function Drawable:setColor(color) end
+
+---Destroys the reference. Do NOT use the object after calling this
+function Drawable:destroy() end
+
+---Sets if the rect should be filled
+---@param filled boolean
+function GRect:setFilled(filled) end
+
+---Set the width and height of the rect
+---@param width integer
+---@param height integer
+function GRect:setSize(width, height) end
+
+---Set if the label should use SystemFont. Enabling it will disable background
+---@param useSystemFont boolean
+function GLabel:setSystemFont(useSystemFont) end
+
+---Set the bg color that will be used if the label doesn't use system font
+---@param color integer
+function GLabel:setBgColor(color) end
+
+---Set the label text
+---@param text string
+function GLabel:setText(text) end
+
+---@class OnNewFrame: EventClass
+Core.Graphics.OnNewFrame = {}
+
+Core.Debug = {}
+
+---Displays a notification on screen
+---@param msg string
+function Core.Debug.message(msg) end
+
+---Appends the message to log file. Optionally shows the message on screen
+---@param msg string
+---@param showOnScreen boolean?
+function Core.Debug.log(msg, showOnScreen) end
+
+---Appends the error message to log file and shows it on screen
+---@param msg string
+function Core.Debug.logerror(msg) end
+
+---Show error on screen
+---@param msg string
+function Core.Debug.error(msg) end
+
+---@class GameEntity
+local GameEntity = {}
+
+---@class GameSpawnCoords
+local GameSpawnCoords = {}
+
+Game.Entity = {}
+
+GameEntity.X = 0.0
+
+GameEntity.Y = 0.0
+
+GameEntity.Z = 0.0
+
+GameEntity.EntityID = 0
+
+GameSpawnCoords.X = 0.0
+
+GameSpawnCoords.Y = 0.0
+
+GameSpawnCoords.Z = 0.0
+
+Enums = {}
+---@class BaseEnumItem
+---@field Name string
+---@field Value integer
+local BaseEnumItem = {}
+
+---@class EnumItem: BaseEnumItem
+
+---@class EntityState: EnumItem
+EntityState = {}
+
+---@class WeatherType: EnumItem
+WeatherType = {}
+
+Enums.EntityState = {}
+
+---@type EntityState
+Enums.EntityState.Burning = {}
+
+---@type EntityState
+Enums.EntityState.Sneaking = {}
+
+---@type EntityState
+Enums.EntityState.Sprinting = {}
+
+---@type EntityState
+Enums.EntityState.Eating = {}
+
+---@type EntityState
+Enums.EntityState.Invisible = {}
+
+---@type EntityState
+Enums.EntityState.Tempted = {}
+
+---@type EntityState
+Enums.EntityState.InLove = {}
+
+---@type EntityState
+Enums.EntityState.HasSaddle = {}
+
+---@type EntityState
+Enums.EntityState.IsAdult = {}
+
+---@type EntityState
+Enums.EntityState.Named = {}
+
+---@type EntityState
+Enums.EntityState.Tamed = {}
+
+---@type EntityState
+Enums.EntityState.Leaded = {}
+
+---@type EntityState
+Enums.EntityState.Sheared = {}
+
+---@type EntityState
+Enums.EntityState.ElytraFly = {}
+
+Enums.WeatherType = {}
+
+---@type WeatherType
+Enums.WeatherType.Clear = {}
+
+---@type WeatherType
+Enums.WeatherType.Rain = {}
+
+---@type WeatherType
+Enums.WeatherType.Thunder = {}
+
+---@type WeatherType
+Enums.WeatherType.RainThunder = {}
+
+Core.Filesystem = {}
+
+---@class FilesystemFile
+local FilesystemFile = {}
+
+---Opens a file. Returns nil if the file wasn't opened with an error message. Use sdmc:/ for sd card or extdata:/ for game extdata
+---@param fp string
+---@param mode string
+---@return FilesystemFile?
+---@return string?
+function Core.Filesystem.open(fp, mode) end
+
+---Checks if the file exists
+---@param fp string
+---@return boolean
+function Core.Filesystem.fileExists(fp) end
+
+---Checks if the directory exists
+---@param path string
+---@return boolean
+function Core.Filesystem.directoryExists(path) end
+
+---Returns a table with all the elements in a directory
+---@param path string
+---@return table
+function Core.Filesystem.getDirectoryElements(path) end
+
+---Creates a directory and returns if success
+---@param path string
+---@return boolean
+function Core.Filesystem.createDirectory(path) end
+
+---To delete a file. Returns true on success
+---@param file string
+---@return boolean
+function Core.Filesystem.deleteFile(file) end
+
+---To rename a file. Only accepts two paths on the same device. Returns true on success
+---@param oldPath string
+---@param newPath string
+---@return boolean
+function Core.Filesystem.renameFile(oldPath, newPath) end
+
+---Reads the specified amount of bytes to read, or use "*all" to read all file and returns the data in a string or nil if error
+---@param bytes any
+---@return string?
+function FilesystemFile:read(bytes) end
+
+---Writes all data to file of the specified amount of bytes if provided. Returns true is success, false otherwise
+---@param data string
+---@param bytes integer?
+---@return boolean
+function FilesystemFile:write(data, bytes) end
+
+---Returns the actual position in the file
+---@return integer
+function FilesystemFile:tell() end
+
+---Flushes all file data in write buffer
+---@return boolean
+function FilesystemFile:flush() end
+
+---Sets the position in file and returns the new position or nil if error
+---@param offset integer
+---@param whence string?
+---@return integer
+function FilesystemFile:seek(offset, whence) end
+
+---Checks if the file is open
+---@return boolean
+function FilesystemFile:isOpen() end
+
+---Checks if the file is on end of file
+---@return boolean
+function FilesystemFile:isEOF() end
+
+---Returns the size of the file
+---@return integer
+function FilesystemFile:getSize() end
+
+---Closes the file
+function FilesystemFile:close() end
+
+Game.Gamepad = {}
+
+---@class KeyCode: integer
+
+---Returns true if the key is pressed (only counts for the first press, for button held use isDown)
+---@param keycode KeyCode
+---@return boolean
+function Game.Gamepad.isPressed(keycode) end
+
+---Returns true if the key is down
+---@param keycode KeyCode
+---@return boolean
+function Game.Gamepad.isDown(keycode) end
+
+---Returns true if the key just got released
+---@param keycode KeyCode
+---@return boolean
+function Game.Gamepad.isReleased(keycode) end
+
+---Performs a virtual button press
+---@param keycode KeyCode
+function Game.Gamepad.pressButton(keycode) end
+
+---Returns touch x and y position
+---@return number
+---@return number
+function Game.Gamepad.getTouch() end
+
+---@class OnKeyPressed: EventClass
+Game.Gamepad.OnKeyPressed = {}
+
+---@class OnKeyDown: EventClass
+Game.Gamepad.OnKeyDown = {}
+
+---@class OnKeyReleased: EventClass
+Game.Gamepad.OnKeyReleased = {}
+
+Game.Gamepad.KeyCodes = {}
+
+Game.Gamepad.KeyCodes.A = 1
+
+Game.Gamepad.KeyCodes.B = 2
+
+Game.Gamepad.KeyCodes.SELECT = 4
+
+Game.Gamepad.KeyCodes.START = 8
+
+Game.Gamepad.KeyCodes.DPADRIGHT = 16
+
+Game.Gamepad.KeyCodes.DPADLEFT = 32
+
+Game.Gamepad.KeyCodes.DPADUP = 64
+
+Game.Gamepad.KeyCodes.DPADDOWN = 128
+
+Game.Gamepad.KeyCodes.R = 256
+
+Game.Gamepad.KeyCodes.L = 512
+
+Game.Gamepad.KeyCodes.X = 1024
+
+Game.Gamepad.KeyCodes.Y = 2048
+
+Game.Gamepad.KeyCodes.ZL = 16384
+
+Game.Gamepad.KeyCodes.ZR = 32768
+
+Game.Gamepad.KeyCodes.TOUCHPAD = 1048576
+
+Game.Gamepad.KeyCodes.CSTICKRIGHT = 16777216
+
+Game.Gamepad.KeyCodes.CSTICKLEFT = 33554432
+
+Game.Gamepad.KeyCodes.CSTICKUP = 67108864
+
+Game.Gamepad.KeyCodes.CSTICKDOWN = 134217728
+
+Game.Gamepad.KeyCodes.CPADRIGHT = 268435456
+
+Game.Gamepad.KeyCodes.CPADLEFT = 536870912
+
+Game.Gamepad.KeyCodes.CPADUP = 1073741824
+
+Game.Gamepad.KeyCodes.CPADDOWN = 2147483648
+
+Game.Gamepad.KeyCodes.UP = 1073741888
+
+Game.Gamepad.KeyCodes.DOWN = 2147483776
+
+Game.Gamepad.KeyCodes.LEFT = 536870944
+
+Game.Gamepad.KeyCodes.RIGHT = 268435472
+
+Game.Gamepad.KeyCodes.CPAD = 2952790016
+
+Game.Gamepad.KeyCodes.CSTICK = 184549376
+
+Game.Items = {}
+
+---@class MCItem
+local MCItem = {}
+
+---@class MCItemInstance
+local MCItemInstance = {}
+
+---@class MCToolTier
+local MCToolTier = {}
+
+---Find an item using its ID
+---@param name string
+---@return MCItem?
+function Game.Items.findItemByName(name) end
+
+---Find and item using its name
+---@param itemID integer
+---@return MCItem?
+function Game.Items.findItemByID(itemID) end
+
+---Get the item position in creative using the id
+---@param itemID integer
+---@param groupID integer
+---@return number
+function Game.Items.getCreativePosition(itemID, groupID) end
+
+---Returns a new empty ToolTier
+---@return MCToolTier
+function Game.Items.newToolTier() end
+
+---Creates a new item and stores it in the game's items table. Returns the address to the item
+---@param itemName string
+---@param itemId integer
+---@return MCItem?
+function Game.Items.registerItem(itemName, itemId) end
+
+---Creates a new sword tool item and registers it in the game. Returns the address to the item
+---@param itemName string
+---@param itemId integer
+---@param tier MCToolTier
+---@return MCItem?
+function Game.Items.registerSwordItem(itemName, itemId, tier) end
+
+---Creates a new hoe tool item and registers it in the game. Returns the address to the item
+---@param itemName string
+---@param itemId integer
+---@param tier MCToolTier
+---@return MCItem?
+function Game.Items.registerHoeItem(itemName, itemId, tier) end
+
+---Creates a new axe tool item and registers it in the game. Returns the address to the item
+---@param itemName string
+---@param itemId integer
+---@param tier MCToolTier
+---@return MCItem?
+function Game.Items.registerAxeItem(itemName, itemId, tier) end
+
+---Creates a new pickaxe tool item and registers it in the game. Returns the address to the item
+---@param itemName string
+---@param itemId integer
+---@param tier MCToolTier
+---@return MCItem?
+function Game.Items.registerPickaxeItem(itemName, itemId, tier) end
+
+---Creates a new shovel tool item and registers it in the game. Returns the address to the item
+---@param itemName string
+---@param itemId integer
+---@param tier MCToolTier
+---@return MCItem?
+function Game.Items.registerShovelItem(itemName, itemId, tier) end
+
+---Takes a registered item with Game.Items.registerItem, and sets its texture
+---@param item MCItem
+---@param textureName string
+---@param textureIndex integer
+function MCItem:setTexture(item, textureName, textureIndex) end
+
+---Takes a registered item with Game.Items.registerItem, and registers it in creative menu
+---@param item MCItem
+---@param groupId integer
+---@param position integer
+function Game.Items.registerCreativeItem(item, groupId, position) end
+
+---Returns a MCItemInstance
+---@param item MCItem
+---@param count integer
+---@param data integer
+---@return MCItemInstance
+function Game.Items.getItemInstance(item, count, data) end
+
+MCItem.StackSize = 64
+
+MCItem.ID = 1
+
+MCItem.NameID = ""
+
+MCItem.DescriptionID = ""
+
+MCToolTier.MiningLevel = 0
+
+MCToolTier.Durability = 0
+
+MCToolTier.MiningEfficiency = 0
+
+MCToolTier.DamageBonus = 0
+
+MCToolTier.Enchantability = 0
+
+Game.Items.ToolTiers = {}
+
+---@class WOOD: MCToolTier
+Game.Items.ToolTiers.WOOD = {}
+
+---@class STONE: MCToolTier
+Game.Items.ToolTiers.STONE = {}
+
+---@class IRON: MCToolTier
+Game.Items.ToolTiers.IRON = {}
+
+---@class GOLD: MCToolTier
+Game.Items.ToolTiers.GOLD = {}
+
+---@class DIAMOND: MCToolTier
+Game.Items.ToolTiers.DIAMOND = {}
+
+---@class OnRegisterItems: EventClass
+Game.Items.OnRegisterItems = {}
+
+---@class OnRegisterItemsTextures: EventClass
+Game.Items.OnRegisterItemsTextures = {}
+
+---@class OnRegisterCreativeItems: EventClass
+Game.Items.OnRegisterCreativeItems = {}
+
+Core.Keyboard = {}
+
+---Opens the keyboard and returns the user input as string
+---@param message string?
+---@return string?
+function Core.Keyboard.getString(message) end
+
+---Opens the keyboard and returns the user input as number
+---@param message string?
+---@return number?
+function Core.Keyboard.getNumber(message) end
+
+---Opens the keyboard and returns the user input as unsigned integer
+---@param message string?
+---@return integer?
+function Core.Keyboard.getInteger(message) end
+
+---Opens the keyboard and returns the user input as hexadecimal
+---@param message string?
+---@return integer?
+function Core.Keyboard.getHex(message) end
+
+---Opens a selection keyboard. Returns the index of the selected item or nil if none was selected
+---@param options table
+---@return integer?
+function Core.Keyboard.populate(options) end
+
+Core.Memory = {}
+
+---Reads an unsigned integer of 32 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readU32(offset) end
+
+---Reads a signed integer of 32 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readS32(offset) end
+
+---Reads an unsigned integer of 16 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readU16(offset) end
+
+---Reads a signed integer of 16 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readS16(offset) end
+
+---Reads an unsigned integer of 8 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readU8(offset) end
+
+---Reads a signed integer of 8 bits from memory
+---@param offset integer
+---@return integer?
+function Core.Memory.readS8(offset) end
+
+---Reads a float from memory
+---@param offset integer
+---@return number?
+function Core.Memory.readFloat(offset) end
+
+---Reads a double from memory
+---@param offset integer
+---@return number?
+function Core.Memory.readDouble(offset) end
+
+---Reads a string from memory
+---@param offset integer
+---@param size integer
+---@return string?
+function Core.Memory.readString(offset, size) end
+
+---Writes a signed integer of 32 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeS32(offset, value) end
+
+---Writes an unsigned integer of 32 bits to memory offset
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeU32(offset, value) end
+
+---Writes a signed integer of 16 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeS16(offset, value) end
+
+---Writes an unsigned integer of 16 bits to memory offset
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeU16(offset, value) end
+
+---Writes a signed integer of 8 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeS8(offset, value) end
+
+---Writes an unsigned integer of 8 bits to memory offset
+---@param offset integer
+---@param value integer
+---@return boolean
+function Core.Memory.writeU8(offset, value) end
+
+---Writes a float to memory offset
+---@param offset integer
+---@param value number
+---@return boolean
+function Core.Memory.writeFloat(offset, value) end
+
+---Writes a double to memory offset
+---@param offset integer
+---@param value number
+---@return boolean
+function Core.Memory.writeDouble(offset, value) end
+
+---Writes a string to memory offset
+---@param offset integer
+---@param s string
+---@param size integer
+---@return boolean
+function Core.Memory.writeString(offset, s, size) end
+
+---Allocates memory and returns the start offset
+---@param size integer
+---@return integer?
+function Core.Memory.malloc(size) end
+
+---Free memory allocated with malloc
+---@param offset integer
+function Core.Memory.free(offset) end
+
+---Allows to call a function from memory
+---@param foffset integer
+---@param argstype string
+---@param returntype string
+---@return number
+function Core.Memory.call(foffset, argstype, returntype, ...) end
+
+Game.LocalPlayer = {}
+
+Game.LocalPlayer.Position = {}
+
+---Gets local player position
+---@return number
+---@return number
+---@return number
+function Game.LocalPlayer.Position.get() end
+
+---Sets player position
+---@param x number
+---@param y number
+---@param z number
+function Game.LocalPlayer.Position.set(x, y, z) end
+
+---Adds X, Y, Z to current player position
+---@param x number
+---@param y number
+---@param z number
+function Game.LocalPlayer.Position.add(x, y, z) end
+
+Game.LocalPlayer.Velocity = {}
+
+---Gets local player velocity
+---@return number
+---@return number
+---@return number
+function Game.LocalPlayer.Velocity.get() end
+
+---Sets player velocity
+---@param x number
+---@param y number
+---@param z number
+function Game.LocalPlayer.Velocity.set(x, y, z) end
+
+---Adds X, Y, Z velocity to current player velocity
+---@param x number
+---@param y number
+---@param z number
+function Game.LocalPlayer.Velocity.add(x, y, z) end
+
+Game.LocalPlayer.OnGround = false
+
+Game.LocalPlayer.Sneaking = false
+
+Game.LocalPlayer.Jumping = false
+
+Game.LocalPlayer.Sprinting = false
+
+Game.LocalPlayer.Flying = false
+
+Game.LocalPlayer.UnderWater = false
+
+Game.LocalPlayer.TouchingWall = false
+
+Game.LocalPlayer.Invincible = false
+
+Game.LocalPlayer.CanFly = false
+
+Game.LocalPlayer.CanConsumeItems = false
+
+Game.LocalPlayer.BaseMoveSpeed = 0.0
+
+Game.LocalPlayer.MoveSpeed = 0.0
+
+Game.LocalPlayer.SwimSpeed = 0.02
+
+Game.LocalPlayer.FlySpeed = 0.0
+
+Game.LocalPlayer.CurrentHP = 0.0
+
+Game.LocalPlayer.MaxHP = 0.0
+
+Game.LocalPlayer.CurrentHunger = 0.0
+
+Game.LocalPlayer.MaxHunger = 0.0
+
+Game.LocalPlayer.CurrentLevel = 0.0
+
+Game.LocalPlayer.LevelProgress = 0.0
+
+Game.LocalPlayer.Gamemode = 0
+
+Game.LocalPlayer.ReachDistance = 0.0
+
+Game.LocalPlayer.SprintDelay = 0.0
+
+Game.LocalPlayer.Dimension = 0
+
+Game.LocalPlayer.Loaded = false
+
+---Checks if the player is currently in the provided state. stateId: The entity state id from Game.Entity.States
+---@param stateId EntityState
+---@return boolean
+function Game.LocalPlayer.getState(stateId) end
+
+Game.LocalPlayer.Camera = {}
+
+Game.LocalPlayer.Camera.FOV = 0.0
+
+Game.LocalPlayer.Camera.Yaw = 0.0
+
+Game.LocalPlayer.Camera.Pitch = 0.0
+
+Game.LocalPlayer.Inventory = {}
+
+---@type table<"hand"|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36,InventorySlot>
+Game.LocalPlayer.Inventory.Slots = {}
+
+---@type table<"helmet"|"chestplate"|"leggings"|"boots"|1|2|3|4,InventorySlot>
+Game.LocalPlayer.Inventory.ArmorSlots = {}
+
+---@class InventorySlot
+local InventorySlot = {}
+
+---@return boolean
+function InventorySlot:isEmpty() end
+
+---@param item MCItem
+---@param value integer?
+---@return boolean
+function InventorySlot:setItem(item, value) end
+
+---@type MCItem?
+InventorySlot.Item = {}
+
+InventorySlot.ItemCount = 0
+
+InventorySlot.ItemData = 0
+
+Core.Menu = {}
+
+---@class MenuFolder
+local MenuFolder = {}
+
+---Returns a reference to the mods plugin menu folder
+---@return MenuFolder
+function Core.Menu.getMenuFolder() end
+
+---Allows to show a message in the menu
+---@param msg string
+function Core.Menu.showMessageBox(msg) end
+
+---When used, an ask message box will appear on screen. Returns the user selection as boolean
+---@param msg string
+---@return boolean
+function Core.Menu.showAskMessageBox(msg) end
+
+---Returns if the plugin menu is currently open. This won't be useful, only in specific cases
+---@return boolean
+function Core.Menu.isOpen() end
+
+---Creates and appends a new folder to the current folder, and then it returns a reference to the new folder
+---@param name string
+---@return MenuFolder
+function MenuFolder:newFolder(name) end
+
+---Creates and appends a new entry to the current folder. When selected in menu it will execute the callback function
+---@param name string
+---@param callback function
+function MenuFolder:newEntry(name, callback) end
+
+Game.Recipes = {}
+
+---@class RecipesTable
+local RecipesTable = {}
+
+---Allows to register a recipe. Use with the value given in event Game.Recipes.OnRegisterRecipes to get RecipesTable value
+---@param recipesTable RecipesTable
+---@param resultItem MCItemInstance
+---@param categoryId integer
+---@param position integer
+---@param line1 string
+---@param line2 string
+---@param line3 string
+---@param components table
+function Game.Recipes.registerShapedRecipe(recipesTable, resultItem, categoryId, position, line1, line2, line3, components) end
+
+---@class OnRegisterRecipes: EventClass
+Game.Recipes.OnRegisterRecipes = {}
+
+Game.Resources = {}
+
+---Forces the game to reload the current locale
+function Game.Resources.reloadLocale() end
+
+---Returns the current seleted locale
+---@return string?
+function Game.Resources.getLocale() end
+
+Core.System = {}
+
+---Returns UNIX time
+---@return number
+function Core.System.getTime() end
+
+---Returns current state of the 3D Slider
+---@return number
+function Core.System.get3DSliderState() end
+
+Game.World = {}
+
+Game.World.Loaded = false
+
+Game.World.Raining = false
+
+Game.World.Thunderstorm = false
+
+Game.World.CloudsHeight = 0.0
+---@type WeatherType
+Game.World.Weather = {}
+
+---Displays an in-game message in the world screen if the player is currently inside a world. Returns true if success
+---@return boolean
+function Game.World.message() end
+
+---@class OnWorldJoin: EventClass
+Game.World.OnWorldJoin = {}
+
+---@class OnWorldLeave: EventClass
+Game.World.OnWorldLeave = {}

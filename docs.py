@@ -1,27 +1,52 @@
 from glob import iglob
 from pathlib import Path
+import sys
 import re
+import logging
+
+logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
 
 DOCS_FILE = open("./api_docs.lua", "w", encoding="utf-8")
 DEF_CLASSES = ["number", "integer", "table", "nil", "userdata", "lightuserdata", "string", "boolean", "function", "any", "thread"]
 LOADED_FILES = []
 DEF_GLOBALS = {}
 
+class CurrentContext:
+    def __init__(self, lineContent, filename, line) -> None:
+        self.lineContent = lineContent
+        self.filename = filename
+        self.line = line
+    
+    def __str__(self) -> str:
+        return f"'{self.lineContent}' on {self.filename} at line {self.line}"
+
 class MissingSymbolException(Exception):
     def __init__(self, *args: object) -> None:
-        super().__init__(*args)
+        logging.error(args)
+        sys.exit(-1)
 
 class ImportFailedException(Exception):
     def __init__(self, *args: object) -> None:
-        super().__init__(*args)
+        logging.error(args)
+        sys.exit(-1)
 
 class InvalidFunctionNameException(Exception):
     def __init__(self, *args: object) -> None:
-        super().__init__(*args)
+        logging.error(args)
+        sys.exit(-1)
 
 class FunctionDeclarationException(Exception):
     def __init__(self, *args: object) -> None:
-        super().__init__(*args)
+        logging.error(args)
+        sys.exit(-1)
+
+class UndefinedSymbolException(Exception):
+    def __init__(self, symbolName, ctx: CurrentContext, *args: object) -> None:
+        if logging.getLogger(__name__).getEffectiveLevel() == logging.DEBUG:
+            super().__init__(f"Undefined '{symbolName}': {ctx}")
+        else:
+            logging.error(f"UndefinedSymbolException: Undefined '{symbolName}': {ctx}")
+            sys.exit(-1)
 
 def verify_fmt(string: str, allow_dots: bool):
     if len(string) == 0 or not string[0].isalpha():
@@ -66,7 +91,9 @@ def process_data(path: str, lines: list):
                 process_lines(path, segment, i - len(segment) + 1)
                 segment.clear()
         if line.find("//") > -1:
-            lineStripped = line[line.find("//"):].strip()
+            logging.debug("Single line definition")
+            lineStripped = line[line.find("//")+2:].strip()
+            logging.debug(lineStripped)
             if lineStripped.startswith("#") or lineStripped.startswith("-") or lineStripped.startswith("@") or lineStripped.startswith("$") or lineStripped.startswith("="):
                 process_lines(path, [lineStripped], i + 1)
             elif lineStripped.startswith("!include "):
@@ -86,6 +113,8 @@ def process_data(path: str, lines: list):
             val = line[line.find("/*"):].strip()
             if len(val) > 0:
                 segment.append(val)
+            if line.find("*/") > -1:
+                add_to_list = False
 
 def nameIsPath(name: str):
     return "." in name or ":" in name
@@ -100,6 +129,7 @@ def process_lines(path: str, lines: list, segpos: int):
     args = []
     firstClass = True
     for j, doc_line in enumerate(lines):
+        currentCtx = CurrentContext(doc_line, path, segpos + j)
         assert isinstance(doc_line, str)
         if doc_line.startswith("-") and len(doc_line) > 1:
             # Function description
@@ -118,16 +148,17 @@ def process_lines(path: str, lines: list, segpos: int):
                 pathToGlobal = getPathInfo(func_name)
                 curr = DEF_GLOBALS
                 currName = "None"
-                for entry in pathToGlobal["path"]:
+                for entry_idx in range(len(pathToGlobal["path"])-1):
+                    entry = pathToGlobal["path"][entry_idx]
                     if entry in curr:
-                        if isinstance(curr, type(None)):
+                        if curr is None:
                             raise Exception(f"Trying to path '{currName}' is a function: '{doc_line}' on {path} at line {segpos + j}")
                         if isinstance(curr, bool):
                             raise Exception(f"Trying to path '{currName}' is a value: '{doc_line}' on {path} at line {segpos + j}")
                         curr = curr[entry]
                         currName = entry
                     else:
-                        raise Exception(f"Undefined '{entry}': '{doc_line}' on {path} at line {segpos + j}")
+                        raise UndefinedSymbolException(entry, currentCtx)
                 if pathToGlobal["path"][-1] in curr:
                     raise Exception(f"Redefined global/field: '{doc_line}' on {path} at line {segpos + j}")
                 curr[pathToGlobal["path"][-1]] = None
@@ -187,6 +218,7 @@ def process_lines(path: str, lines: list, segpos: int):
                 raise Exception(f"Invalid object class definition: '{doc_line}' on {path} at line {segpos + j}")
             DEF_CLASSES.append(className)
             DEF_GLOBALS[className] = {}
+            logging.info(f"Class defined: {className}")
             if firstClass:
                 DOCS_FILE.write("\n")
                 firstClass = False

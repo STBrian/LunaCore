@@ -156,6 +156,7 @@ void Core::LoadLuaEnv() {
 
 bool Core::LoadBuffer(const char *buffer, size_t size, const char* name) {
     lua_State* L = Lua_global;
+    int topIdx = lua_gettop(L);
     bool success = true;
     lua_newtable(L); // -
     lua_newtable(L); // --
@@ -216,6 +217,11 @@ bool Core::LoadBuffer(const char *buffer, size_t size, const char* name) {
             lua_pop(L, 2);
         }
         lua_sethook(L, nullptr, 0, 0);
+    }
+    lua_settop(L, topIdx);
+    if (!success) {
+        lua_gc(L, LUA_GCCOLLECT, 0);
+        lua_gc(L, LUA_GCCOLLECT, 0);
     }
     return success;
 }

@@ -39,6 +39,8 @@ static inline void checkThreadStatus(Scheduler& ins, std::unordered_map<lua_Stat
         }
         lua_pop(L, 1);
         ins.RemoveTask(L, T);
+        lua_gc(L, LUA_GCCOLLECT, 0);
+        lua_gc(L, LUA_GCCOLLECT, 0);
     } else if (call_result == 0) { // Ended successfully
         ins.RemoveTask(L, T);
     }

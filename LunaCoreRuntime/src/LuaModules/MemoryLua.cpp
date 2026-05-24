@@ -7,6 +7,7 @@
 #include <CTRPluginFramework.hpp>
 
 #include "Helpers/LuaTable.hpp"
+#include "game/gstdlib.h"
 
 namespace CTRPF = CTRPluginFramework;
 
@@ -317,12 +318,21 @@ static int l_Memory_writeString(lua_State *L) {
 /*
 - Allocates memory and returns the start offset
 ## size: integer
+## useGameHeap: boolean?
 ## return: integer?
 ### Core.Memory.malloc
 */
 static int l_Memory_malloc(lua_State *L) {
     size_t size = (size_t)luaL_checknumber(L, 1);
-    void* ptr = malloc(size);
+    bool useGameHeap = false;
+    if (lua_gettop(L) >= 2 && lua_isboolean(L, 2)) {
+        useGameHeap = lua_toboolean(L, 2);
+    }
+    void* ptr;
+    if (useGameHeap)
+        ptr = gstd_malloc(size);
+    else
+        ptr = malloc(size);
     if (ptr) 
         lua_pushnumber(L, (u32)ptr);
     else 
@@ -333,12 +343,21 @@ static int l_Memory_malloc(lua_State *L) {
 /*
 - Free memory allocated with malloc
 ## offset: integer
+## useGameHeap: boolean?
 ### Core.Memory.free
 */
 static int l_Memory_free(lua_State *L) {
     void* offset = (void*)(u32)luaL_checknumber(L, 1);
-    if (offset) 
-        free(offset);
+    bool useGameHeap = false;
+    if (lua_gettop(L) >= 2 && lua_isboolean(L, 2)) {
+        useGameHeap = lua_toboolean(L, 2);
+    }
+    if (offset) {
+        if (useGameHeap)
+            gstd_free(offset);
+        else
+            free(offset);
+    }
     return 0;
 }
 

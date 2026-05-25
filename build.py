@@ -32,6 +32,7 @@ if args.experimental:
 if args.enable_jit:
     make_envvars["BUILD_JIT"] = "1"
     #make_envvars["TARGET_PREFIX"] = "-jit"
+    cflags_extra += "-DBUILD_JIT "
 make_envvars["CFLAGS_EXTRA"] = cflags_extra
 
 cmd_args = ["make"]

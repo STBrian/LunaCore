@@ -211,7 +211,10 @@ static int l_Event_BaseEvent_Trigger(lua_State *L)
                 lua_pushvalue(L, -2);
                 lua_xmove(L, co, 1);
 
+                // LuaJIT only uses a global hook
+                #ifndef BUILD_JIT
                 lua_sethook(co, Core::_TimeoutAsyncHook, LUA_MASKCOUNT, 100);
+                #endif
 
                 Core::Scheduler::getInstance().AddTask(L, -1);
                 lua_pop(L, 2); // pop co and taskF

@@ -20,8 +20,9 @@ void Core::AsyncRestartClock() {
 }
 
 void Core::_TimeoutAsyncHook(lua_State *L, lua_Debug *ar) {
-    if (timeoutAsyncTimer.Expired())
+    if (timeoutAsyncTimer.Expired()) {
         luaL_error(L, "Async coroutine exceeded execution time (5000 ms)");
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -62,7 +63,10 @@ static int l_Async_run(lua_State *L)
     lua_pushvalue(L, 1);
     lua_xmove(L, co, 1);
 
-    lua_sethook(co, Core::_TimeoutAsyncHook, LUA_MASKCOUNT, 100);
+    // LuaJIT only uses a global hook
+    #ifndef BUILD_JIT
+    lua_sethook(co, Core::_TimeoutAsyncHook, LUA_MASKLINE, 10);
+    #endif
 
     Scheduler::getInstance().AddTask(L, -1);
     lua_pop(L, 1); // Pop co

@@ -58,13 +58,27 @@ void Scheduler::Update() {
             int nresults = task.handler->PushValues(T);
             Core::dealloc(task.handler);
             Core::AsyncRestartClock();
+            #ifdef BUILD_JIT
+            // LuaJIT sets the hook as global. So is necessary to set it only when needed
+            lua_sethook(T, Core::_TimeoutAsyncHook, LUA_MASKCOUNT, 100);
+            #endif
             int call_result = lua_resume(T, nresults);
+            #ifdef BUILD_JIT
+            lua_sethook(T, NULL, 0, 0);
+            #endif
             checkThreadStatus(ins, ins.tasks, Lua_global, call_result, T);
             ins.pending.erase(ins.pending.begin() + i);
         } else if (!task.handler) {
             lua_State* T = task.thread;
             Core::AsyncRestartClock();
+            #ifdef BUILD_JIT
+            // LuaJIT sets the hook as global. So is necessary to set it only when needed
+            lua_sethook(T, Core::_TimeoutAsyncHook, LUA_MASKCOUNT, 100);
+            #endif
             int call_result = lua_resume(T, 0);
+            #ifdef BUILD_JIT
+            lua_sethook(T, NULL, 0, 0);
+            #endif
             checkThreadStatus(ins, ins.tasks, Lua_global, call_result, T);
             ins.pending.erase(ins.pending.begin() + i);
         } else {

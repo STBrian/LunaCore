@@ -65,7 +65,7 @@ static int l_Async_run(lua_State *L)
 
     // LuaJIT only uses a global hook
     #ifndef BUILD_JIT
-    lua_sethook(co, Core::_TimeoutAsyncHook, LUA_MASKLINE, 10);
+    lua_sethook(co, Core::_TimeoutAsyncHook, LUA_MASKCOUNT, 100);
     #endif
 
     Scheduler::getInstance().AddTask(L, -1);

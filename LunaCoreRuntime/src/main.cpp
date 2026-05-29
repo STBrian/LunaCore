@@ -90,6 +90,7 @@ namespace CTRPluginFramework
     // Useful to do code edits safely
     void    PatchProcess(FwkSettings &settings)
     {
+        fsInit();
         if (!Core::Utils::checkTitle())
             return;
         CrashHandler::Init();

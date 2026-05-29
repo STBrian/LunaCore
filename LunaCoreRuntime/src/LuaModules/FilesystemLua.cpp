@@ -1,6 +1,7 @@
 #include "LuaModules.hpp"
 
 #include <cstring>
+#include <sys/stat.h>
 
 #include "Core/Debug.hpp"
 #include "Core/Filesystem.hpp"
@@ -11,6 +12,11 @@
 
 using namespace Core;
 
+typedef struct {
+    fslib::File *filePtr;
+    int mode;
+} FilesystemFile;
+
 // ----------------------------------------------------------------------------
 
 //$Core.Filesystem
@@ -20,9 +26,10 @@ using namespace Core;
 //@@FilesystemFile
 
 /*
-- Opens a file. Returns nil if the file wasn't opened with an error message. Use sdmc:/ for sd card or extdata:/ for game extdata
+- Opens a file. Returns nil if the file wasn't opened with an error message. Use sdmc:/ for sd card or extdata:/ for game extdata. Optionally, you can pass a file size when creating a file
 ## fp: string
 ## mode: string
+## size: number?
 ## return: FilesystemFile?
 ## return: string?
 ### Core.Filesystem.open
@@ -30,8 +37,11 @@ using namespace Core;
 static int l_Filesystem_open(lua_State *L) {
     const char* filepath = luaL_checkstring(L, 1);
     const char* filemodec = luaL_checkstring(L, 2);
+    ssize_t filesize = -1;
+    if (lua_gettop(L) >= 3 && lua_isnumber(L, 3)) {
+        filesize = lua_tonumber(L, 3);
+    }
 
-    {
     std::string filemode(filemodec);
 
     bool success = false;
@@ -48,27 +58,47 @@ static int l_Filesystem_open(lua_State *L) {
     else if (filemode == "r+" || filemode == "rb+" || filemode == "rw")
         fileStruct->mode = FS_OPEN_WRITE|FS_OPEN_READ;
     else {
-        lua_pop(L, 1);
-        LUAUTILS_ERRORF(L, "Invalid mode");
+        lua_pushstring(L, "Invalid mode");
+        goto error;
     }
-    fileStruct->filePtr = alloc<fslib::File>(path_from_string(filepath), fileStruct->mode);
+    fileStruct->filePtr = alloc<fslib::File>(path_from_string(filepath), fileStruct->mode, filesize > 0 ? filesize : 0);
     
     if (!fileStruct->filePtr->is_open()) {
-        lua_pop(L, 1);
-        lua_pushnil(L);
         lua_pushstring(L, fslib::error::get_string());
+        goto error;
+    }
+
+    return 1;
+    
+    error:
+    lua_remove(L, -2);
+    lua_pushnil(L);
+    lua_insert(L, -2);
+    return 2;
+}
+
+/*
+- Checks if the file exists
+## fp: string
+## return: integer?
+## return: string?
+### Core.Filesystem.getLastModified
+*/
+static int l_Filesystem_getLastModified(lua_State *L) {
+    if (fslib::file_exists(path_from_string(luaL_checkstring(L, 1)))) {
+        struct stat st;
+        if (stat(lua_tostring(L, 1), &st) == 0) {
+            lua_pushnumber(L, st.st_mtime);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushstring(L, "Failed to retrieve modification time");
+        }
     } else {
-        fileStruct->size = fileStruct->filePtr->get_size();
-        success = true;
+        lua_pushnil(L);
+        lua_pushstring(L, "File doesn't exists");
     }
-
-    if (success)
-        return 1;
-    else
-        return 2;
-    }
-
-    LUAUTILS_SET_ERROR_HANDLER(L);
+    return 2;
 }
 
 /*
@@ -178,7 +208,7 @@ static int l_Filesystem_File_read(lua_State *L) {
         return luaL_error(L, "File closed");
 
     if (bytes == std::string::npos) {
-        bytes = fileStruct->size;
+        bytes = fileStruct->filePtr->get_size();
         fileStruct->filePtr->seek(0, (fslib::File::Origin)SEEK_SET);
     }
     auto fileContent = UniqueAlloc::alloc_array<char>(bytes);
@@ -359,6 +389,7 @@ static const luaL_Reg filesystem_functions[] = {
     {"directoryExists", l_Filesystem_directoryExists},
     {"getDirectoryElements", l_Filesystem_getDirectoryElements},
     {"createDirectory", l_Filesystem_createDirectory},
+    {"getLastModified", l_Filesystem_getLastModified},
     //{"deleteFile", l_Filesystem_deleteFile}, I'm not sure to include a lot of freedom in the filesystem
     //{"renameFile", l_Filesystem_renameFile},
     {NULL, NULL}

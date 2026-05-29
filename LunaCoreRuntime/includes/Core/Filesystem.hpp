@@ -1,7 +1,7 @@
 #pragma once
 
 #include "lua_common.h"
-#include "Core/FilesystemFile.hpp"
+#include <FsLib/fslib.hpp>
 
 fslib::Path path_from_string(const std::string& str);
 

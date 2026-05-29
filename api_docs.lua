@@ -315,12 +315,19 @@ Core.Filesystem = {}
 ---@class FilesystemFile
 local FilesystemFile = {}
 
----Opens a file. Returns nil if the file wasn't opened with an error message. Use sdmc:/ for sd card or extdata:/ for game extdata
+---Opens a file. Returns nil if the file wasn't opened with an error message. Use sdmc:/ for sd card or extdata:/ for game extdata. Optionally, you can pass a file size when creating a file
 ---@param fp string
 ---@param mode string
+---@param size number?
 ---@return FilesystemFile?
 ---@return string?
-function Core.Filesystem.open(fp, mode) end
+function Core.Filesystem.open(fp, mode, size) end
+
+---Checks if the file exists
+---@param fp string
+---@return integer?
+---@return string?
+function Core.Filesystem.getLastModified(fp) end
 
 ---Checks if the file exists
 ---@param fp string
@@ -757,12 +764,14 @@ function Core.Memory.writeString(offset, s, size) end
 
 ---Allocates memory and returns the start offset
 ---@param size integer
+---@param useGameHeap boolean?
 ---@return integer?
-function Core.Memory.malloc(size) end
+function Core.Memory.malloc(size, useGameHeap) end
 
 ---Free memory allocated with malloc
 ---@param offset integer
-function Core.Memory.free(offset) end
+---@param useGameHeap boolean?
+function Core.Memory.free(offset, useGameHeap) end
 
 ---Allows to call a function from memory
 ---@param foffset integer

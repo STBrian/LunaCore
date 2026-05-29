@@ -262,8 +262,19 @@ void Core::PreloadScripts()
     }
 }
 
+typedef struct {
+    int major, minor, patch;
+} SemVer;
+
+static bool parse_semver(const char* v_str, SemVer* out) {
+    return sscanf(v_str, "%d.%d.%d", &out->major, &out->minor, &out->patch) == 3;
+}
+
 bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& modsAvailable, std::vector<u32> &modsLoading, std::vector<u32> &modsLoaded, std::vector<u32> &modsDiscarded)
 {
+    std::vector<u32>::iterator it;
+    json j;
+
     Core::Utils::toLower(modName);
     if (std::find(modsDiscarded.begin(), modsDiscarded.end(), hash(modName.c_str())) != modsDiscarded.end() || 
     std::find(modsLoading.begin(), modsLoading.end(), hash(modName.c_str())) != modsLoading.end())
@@ -274,17 +285,49 @@ bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& 
     modsLoading.emplace_back(hash(modName.c_str()));
     std::string fileContent = Core::Utils::LoadFile(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/mod.json");
     if (fileContent.empty()) {
-        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to open 'mod.json'", modsAvailable[modName].c_str()));
-        modsDiscarded.emplace_back(hash(modName.c_str()));
-        return false;
+        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to open 'mod.json'", modName.c_str()));
+        goto errorDiscard;
     }
     
-    json j = json::parse(std::string(fileContent), nullptr, false);
+    j = json::parse(std::string(fileContent), nullptr, false);
     fileContent.clear();
     if (j.is_discarded()) {
-        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to parse 'mod.json'", modsAvailable[modName].c_str()));
-        modsDiscarded.emplace_back(hash(modName.c_str()));
-        return false;
+        Core::Debug::LogErrorf("Failed to load '%s'. Failed to parse 'mod.json'", modName.c_str());
+        goto errorDiscard;
+    }
+
+    if (j.contains("min_core_version")) {
+        bool compatible = true;
+        auto& value = j["min_core_version"];
+        SemVer min_core_ver = (SemVer){0};
+        if (value.is_array() && value.size() == 3) {
+            if (value[0].is_number_integer())
+                min_core_ver.major = value[0];
+            if (value[1].is_number_integer())
+                min_core_ver.minor = value[1];
+            if (value[2].is_number_integer())
+                min_core_ver.patch = value[2];
+        } else if (value.is_string() && parse_semver(value.get<std::string>().c_str(), &min_core_ver)) {
+        } else {
+            Core::Debug::LogErrorf("Failed to load '%s'. The mod config file has an invalid 'min_core_version'", modName.c_str());
+            goto errorDiscard;
+        }
+        if (Core::Version.major < min_core_ver.major) {
+            compatible = false;
+        } else if (Core::Version.major == min_core_ver.major) {
+            if (Core::Version.minor < min_core_ver.minor) {
+                compatible = false;
+            } else if (Core::Version.minor == min_core_ver.minor) {
+                if (Core::Version.patch < min_core_ver.patch) {
+                    compatible = false;
+                }
+            }
+        }
+
+        if (!compatible) {
+            Core::Debug::LogErrorf("Failed to load '%s'. '%s' expects LunaCore >= \"%d.%d.%d\"", modName.c_str(), modName.c_str(), min_core_ver.major, min_core_ver.minor, min_core_ver.patch);
+            goto errorDiscard;
+        }
     }
 
     if (j.contains("dependencies") && j["dependencies"].is_array()) {
@@ -296,9 +339,8 @@ bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& 
                     sucess = LoadMod(modDNameLower, modsAvailable, modsLoading, modsLoaded, modsDiscarded);
 
                 if (!sucess) {
-                    Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to load dependency '%s'", modName.c_str(), modDNameLower.c_str()));
-                    modsDiscarded.emplace_back(hash(modName.c_str()));
-                    return false;
+                    Core::Debug::LogErrorf("Failed to load '%s'. Failed to load dependency '%s'", modName.c_str(), modDNameLower.c_str());
+                    goto errorDiscard;
                 }
             }
         }
@@ -315,23 +357,27 @@ bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& 
     }
 
     if (!CTRPF::File::Exists(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/init.lua")) {
-        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to open 'init.lua'", modName.c_str()));
-        modsDiscarded.emplace_back(hash(modName.c_str()));
-        return false;
+        Core::Debug::LogErrorf("Failed to load '%s'. Failed to open 'init.lua'", modName.c_str());
+        goto errorDiscard;
     }
     currentLoadingMod = modName;
     modPaths[modName] = PLUGIN_FOLDER "/mods/" + modsAvailable[modName];
     if (!Core::LoadScript(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/init.lua", "mods/" + modsAvailable[modName] + "/init.lua")) {
-        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to load 'init.lua'", modName.c_str()));
-        modsDiscarded.emplace_back(hash(modName.c_str()));
+        Core::Debug::LogErrorf("Failed to load '%s'. Failed to load 'init.lua'", modName.c_str());
         modPaths.erase(modName);
-        return false;
+        goto errorDiscard;
     }
-    auto it = std::find(modsLoading.begin(), modsLoading.end(), hash(modName.c_str()));
+
+    it = std::find(modsLoading.begin(), modsLoading.end(), hash(modName.c_str()));
     if (it != modsLoading.end())
         modsLoading.erase(it);
     modsLoaded.emplace_back(hash(modName.c_str()));
+
     return true;
+
+    errorDiscard:
+    modsDiscarded.emplace_back(hash(modName.c_str()));
+    return false;
 }
 
 void Core::LoadMods() 

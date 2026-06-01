@@ -97,8 +97,7 @@ void PCConnectionThreadFunction(Core::Network::TCPServer* tcp) {
                 Core::dealloc_array(pathData);
                 
                 tcp->recv(&fileSize, 4);
-                fslib::File dstFile;
-                dstFile.open(path_from_string(pathName), FS_OPEN_WRITE|FS_OPEN_CREATE);
+                Core::File dstFile(pathName, FS_OPEN_WRITE|FS_OPEN_CREATE);
                 char buffer[0x100];
                 u32 currentRecv = 0;
                 while (currentRecv < fileSize) {
@@ -265,16 +264,14 @@ void InitMenu(PluginMenu &menu)
             if (Core::LoadBuffer(buffer.get(), size, ("net:/" + std::string(namebuf.get()).substr(0, fnameSize-1)).c_str())) {
                 MessageBox("Script loaded")();
                 if (MessageBox("Do you want to save this script to the sd card?", DialogType::DialogYesNo)()) {
-                    if (!Directory::IsExists(PLUGIN_FOLDER "/scripts/"))
-                        Directory::Create(PLUGIN_FOLDER "/scripts/");
-                    File scriptOut;
-                    File::Open(scriptOut, PLUGIN_FOLDER "/scripts/" + std::string(namebuf.get()).substr(0, fnameSize-1), File::WRITE|File::CREATE);
-                    if (!scriptOut.IsOpen()) {
+                    if (!Core::Filesystem::DirectoryExists(LC_FS "/scripts"))
+                        Core::Filesystem::CreateDirectory(LC_FS "/scripts");
+                    Core::File scriptOut(LC_FS "/scripts/" + std::string(namebuf.get()).substr(0, fnameSize-1), FS_OPEN_WRITE|FS_OPEN_CREATE);
+                    if (!scriptOut.isOpen()) {
                         MessageBox("Failed to write to sd card")();
                     } else {
-                        scriptOut.Clear();
-                        scriptOut.Write(buffer.get(), size);
-                        scriptOut.Flush();
+                        scriptOut.write(buffer.get(), size);
+                        scriptOut.flush();
                     }
                 }
             } else

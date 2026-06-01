@@ -1,10 +1,12 @@
 #include "LuaModules.hpp"
 
+#include <new>
 #include <cstring>
 #include <sys/stat.h>
 
 #include "Core/Debug.hpp"
 #include "Core/Filesystem.hpp"
+#include "Core/Utils/Utils.hpp"
 
 #include "string_hash.hpp"
 #include "lua_utils.hpp"
@@ -13,7 +15,7 @@
 using namespace Core;
 
 typedef struct {
-    fslib::File *filePtr;
+    Core::File file;
     int mode;
 } FilesystemFile;
 
@@ -41,11 +43,16 @@ static int l_Filesystem_open(lua_State *L) {
     if (lua_gettop(L) >= 3 && lua_isnumber(L, 3)) {
         filesize = lua_tonumber(L, 3);
     }
-
     std::string filemode(filemodec);
+    if (Core::Utils::startsWith(filepath, "lcfs:")) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Device is invalid or not mounted");
+        return 2;
+    }
 
     bool success = false;
     FilesystemFile* fileStruct = (FilesystemFile*)lua_newuserdata(L, sizeof(FilesystemFile));
+    new (fileStruct) FilesystemFile;
     luaC_setmetatable(L, "FilesystemFile");
     if (filemode == "w" || filemode == "wb")
         fileStruct->mode = FS_OPEN_WRITE|FS_OPEN_CREATE;
@@ -61,10 +68,27 @@ static int l_Filesystem_open(lua_State *L) {
         lua_pushstring(L, "Invalid mode");
         goto error;
     }
-    fileStruct->filePtr = alloc<fslib::File>(path_from_string(filepath), fileStruct->mode, filesize > 0 ? filesize : 0);
+    fileStruct->file.open(filepath, fileStruct->mode, filesize > 0 ? filesize : 0);
     
-    if (!fileStruct->filePtr->is_open()) {
-        lua_pushstring(L, fslib::error::get_string());
+    if (!fileStruct->file.isOpen()) {
+        switch (fileStruct->file.getStatus())
+        {
+        case Core::Filesystem::OpResult::INVALID_DEVICE :
+            lua_pushstring(L, "Device is invalid or not mounted");
+            break;
+
+        case Core::Filesystem::OpResult::INVALID_MODE :
+            lua_pushstring(L, "Open mode is invalid for this device");
+            break;
+
+        case Core::Filesystem::OpResult::INVALID_PATH :
+            lua_pushstring(L, "Path is invalid");
+            break;
+
+        default:
+            lua_pushstring(L, "Failed to open");
+            break;
+        }
         goto error;
     }
 
@@ -80,35 +104,12 @@ static int l_Filesystem_open(lua_State *L) {
 /*
 - Checks if the file exists
 ## fp: string
-## return: integer?
-## return: string?
-### Core.Filesystem.getLastModified
-*/
-static int l_Filesystem_getLastModified(lua_State *L) {
-    if (fslib::file_exists(path_from_string(luaL_checkstring(L, 1)))) {
-        struct stat st;
-        if (stat(lua_tostring(L, 1), &st) == 0) {
-            lua_pushnumber(L, st.st_mtime);
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushstring(L, "Failed to retrieve modification time");
-        }
-    } else {
-        lua_pushnil(L);
-        lua_pushstring(L, "File doesn't exists");
-    }
-    return 2;
-}
-
-/*
-- Checks if the file exists
-## fp: string
 ## return: boolean
 ### Core.Filesystem.fileExists
 */
 static int l_Filesystem_fileExists(lua_State *L) {
-    lua_pushboolean(L, fslib::file_exists(path_from_string(luaL_checkstring(L, 1))));
+    const char* fp = luaL_checkstring(L, 1);
+    lua_pushboolean(L, Core::Filesystem::FileExists(fp));
     return 1;
 }
 
@@ -119,7 +120,8 @@ static int l_Filesystem_fileExists(lua_State *L) {
 ### Core.Filesystem.directoryExists
 */
 static int l_Filesystem_directoryExists(lua_State *L) {
-    lua_pushboolean(L, fslib::directory_exists(path_from_string(luaL_checkstring(L, 1))));
+    const char* fp = luaL_checkstring(L, 1);
+    lua_pushboolean(L, Core::Filesystem::DirectoryExists(fp));
     return 1;
 }
 
@@ -130,16 +132,14 @@ static int l_Filesystem_directoryExists(lua_State *L) {
 ### Core.Filesystem.getDirectoryElements
 */
 static int l_Filesystem_getDirectoryElements(lua_State *L) {
-    fslib::Directory dir(path_from_string(luaL_checkstring(L, 1)));
-    if (!dir.is_open()) {
-        lua_newtable(L);
+    lua_newtable(L);
+    if (!lua_isstring(L, 1)) {
         return 1;
     }
-    size_t filesCount = dir.get_count();
-    lua_newtable(L);
+    std::vector<std::string> elements;
+    size_t filesCount = Core::Filesystem::GetDirectoryEntries(lua_tostring(L, 1), elements);
     for (int i = 0; i < filesCount; i++) {
-        std::u16string_view entry = dir.get_entry(i).get_filename();
-        lua_pushstring(L, path_to_string(std::u16string(entry.data(), entry.size())).c_str());
+        lua_pushstring(L, elements[i].c_str());
         lua_rawseti(L, -2, i + 1);
     }
     return 1;
@@ -152,7 +152,8 @@ static int l_Filesystem_getDirectoryElements(lua_State *L) {
 ### Core.Filesystem.createDirectory
 */
 static int l_Filesystem_createDirectory(lua_State *L) {
-    lua_pushboolean(L, fslib::create_directory(path_from_string(luaL_checkstring(L, 1))));
+    const char* fp = luaL_checkstring(L, 1);
+    lua_pushboolean(L, Core::Filesystem::CreateDirectory(fp));
     return 1;
 }
 
@@ -163,7 +164,8 @@ static int l_Filesystem_createDirectory(lua_State *L) {
 ### Core.Filesystem.deleteFile
 */
 static int l_Filesystem_deleteFile(lua_State *L) {
-    lua_pushboolean(L, fslib::delete_file(path_from_string(luaL_checkstring(L, 1))));
+    const char* fp = luaL_checkstring(L, 1);
+    lua_pushboolean(L, Core::Filesystem::DeleteFile(fp));
     return 1;
 }
 
@@ -177,7 +179,7 @@ static int l_Filesystem_deleteFile(lua_State *L) {
 static int l_Filesystem_renameFile(lua_State *L) {
     const char* oldPath = luaL_checkstring(L, 1);
     const char* newPath = luaL_checkstring(L, 2);
-    lua_pushboolean(L, fslib::rename_file(path_from_string(oldPath), path_from_string(newPath)));
+    lua_pushboolean(L, Core::Filesystem::RenameFile(oldPath, newPath));
     return 1;
 }
 
@@ -204,20 +206,24 @@ static int l_Filesystem_File_read(lua_State *L) {
     if ((fileStruct->mode & FS_OPEN_READ) == 0)
         return luaL_error(L, "File not opened with read mode");
 
-    if (!fileStruct->filePtr->is_open())
+    if (!fileStruct->file.isOpen())
         return luaL_error(L, "File closed");
 
     if (bytes == std::string::npos) {
-        bytes = fileStruct->filePtr->get_size();
-        fileStruct->filePtr->seek(0, (fslib::File::Origin)SEEK_SET);
+        bytes = fileStruct->file.seek(0, SEEK_END);
+        fileStruct->file.rewind();
     }
-    auto fileContent = UniqueAlloc::alloc_array<char>(bytes);
-    size_t bytesRead = fileStruct->filePtr->read(fileContent.get(), bytes);
-    if (bytesRead == -1 || bytes != bytesRead)
+    auto fileContent = UniqueAlloc::alloc_array_raw<char>(bytes);
+    if (fileContent.get() == nullptr)
         lua_pushnil(L);
-    else
-        lua_pushlstring(L, fileContent.get(), bytesRead);
-        
+    else {
+        size_t bytesRead = fileStruct->file.read(fileContent.get(), bytes);
+        if (bytesRead == -1 || bytes != bytesRead)
+            lua_pushnil(L);
+        else
+            lua_pushlstring(L, fileContent.get(), bytesRead);
+    }
+    
     return 1;
 }
 
@@ -238,10 +244,10 @@ static int l_Filesystem_File_write(lua_State *L) {
     if ((fileStruct->mode & (FS_OPEN_WRITE|FS_OPEN_APPEND)) == 0)
         return luaL_error(L, "File not opened with write mode");
 
-    if (!fileStruct->filePtr->is_open())
+    if (!fileStruct->file.isOpen())
         return luaL_error(L, "File closed");
     
-    lua_pushboolean(L, fileStruct->filePtr->write(data, bytes) != -1);
+    lua_pushboolean(L, fileStruct->file.write(data, bytes) != -1);
 
     return 1;
 }
@@ -253,7 +259,7 @@ static int l_Filesystem_File_write(lua_State *L) {
 */
 static int l_Filesystem_File_tell(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
-    lua_pushnumber(L, fileStruct->filePtr->tell());
+    lua_pushnumber(L, fileStruct->file.tell());
     return 1;
 }
 
@@ -264,7 +270,7 @@ static int l_Filesystem_File_tell(lua_State *L) {
 */
 static int l_Filesystem_File_flush(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
-    lua_pushboolean(L, fileStruct->filePtr->flush());
+    lua_pushboolean(L, fileStruct->file.flush());
     return 1;
 }
 
@@ -296,8 +302,7 @@ static int l_Filesystem_File_seek(lua_State *L) {
     else
         LUAUTILS_ERRORF(L, "Invalid seek pos");
 
-    fileStruct->filePtr->seek(offset, (fslib::File::Origin)seekPos);
-    lua_pushnumber(L, fileStruct->filePtr->tell());
+    lua_pushnumber(L, fileStruct->file.seek(offset, seekPos));
     return 1;
     }
 
@@ -311,7 +316,7 @@ static int l_Filesystem_File_seek(lua_State *L) {
 */
 static int l_Filesystem_File_isOpen(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
-    lua_pushboolean(L, fileStruct->filePtr->is_open());
+    lua_pushboolean(L, fileStruct->file.isOpen());
     return 1;
 }
 
@@ -322,7 +327,10 @@ static int l_Filesystem_File_isOpen(lua_State *L) {
 */
 static int l_Filesystem_File_isEOF(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
-    lua_pushboolean(L, fileStruct->filePtr->end_of_file());
+    int oldPos = fileStruct->file.tell();
+    int size = fileStruct->file.seek(0, SEEK_END);
+    fileStruct->file.seek(oldPos, SEEK_SET);
+    lua_pushboolean(L, oldPos == size);
     return 1;
 }
 
@@ -333,7 +341,10 @@ static int l_Filesystem_File_isEOF(lua_State *L) {
 */
 static int l_Filesystem_File_getSize(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
-    lua_pushnumber(L, fileStruct->filePtr->get_size());
+    int oldPos = fileStruct->file.tell();
+    int size = fileStruct->file.seek(0, SEEK_END);
+    fileStruct->file.seek(oldPos, SEEK_SET);
+    lua_pushnumber(L, size);
     return 1;
 }
 
@@ -343,16 +354,14 @@ static int l_Filesystem_File_getSize(lua_State *L) {
 */
 static int l_Filesystem_File_close(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
-    if (fileStruct->filePtr->is_open())
-        fileStruct->filePtr->close();
+    if (fileStruct->file.isOpen())
+        fileStruct->file.close();
     return 0;
 }
 
 static int l_Filesystem_File_gc(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)lua_touserdata(L, 1);
-    if (fileStruct->filePtr->is_open())
-        fileStruct->filePtr->close();
-    dealloc(fileStruct->filePtr);
+    fileStruct->file.~File();
     return 0;
 }
 
@@ -389,9 +398,8 @@ static const luaL_Reg filesystem_functions[] = {
     {"directoryExists", l_Filesystem_directoryExists},
     {"getDirectoryElements", l_Filesystem_getDirectoryElements},
     {"createDirectory", l_Filesystem_createDirectory},
-    {"getLastModified", l_Filesystem_getLastModified},
-    //{"deleteFile", l_Filesystem_deleteFile}, I'm not sure to include a lot of freedom in the filesystem
-    //{"renameFile", l_Filesystem_renameFile},
+    {"deleteFile", l_Filesystem_deleteFile},
+    {"renameFile", l_Filesystem_renameFile},
     {NULL, NULL}
 };
 

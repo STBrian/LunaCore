@@ -90,26 +90,22 @@ namespace CTRPluginFramework
     // Useful to do code edits safely
     void    PatchProcess(FwkSettings &settings)
     {
-        fsInit();
         if (!Core::Utils::checkTitle())
             return;
         CrashHandler::Init();
         settings.UseGameHidMemory = true;
         //ToggleTouchscreenForceOn();
 
-        if (!fslib::initialize()) Core::Abort("Failed to initialize fs");
-
-        if (!fslib::directory_exists(path_from_string(PLUGIN_FOLDER)))
-            !fslib::create_directory(path_from_string(PLUGIN_FOLDER));
+        Core::FsInit();
 
         if (!Debug::OpenLogFile(LOG_FILE))
-            OSD::Notify(Utils::Format("Failed to open log file '%s'", LOG_FILE));
+            OSD::Notify(Utils::Format("Failed to open log file"));
 
         Core::GetCoreInfo(plgTitle, plgAuthor, plgSummary, plgDescription);
         Core::ParseVersion(settings.Header->version);
         
         Debug::LogInfof("LunaCore version: %d.%d.%d", Core::Version.major, Core::Version.minor, Core::Version.patch);
-        Debug::LogInfof("Loading config file '%s'", CONFIG_FILE);
+        Debug::LogInfof("Loading config file '%s'", Core::Filesystem::GetRealPath(CONFIG_FILE).c_str());
         G_config = LoadConfig(CONFIG_FILE);
 
         bool disableZLandZR = G_config.getBool("disable_zl_and_zr", false);

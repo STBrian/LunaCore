@@ -5,6 +5,7 @@
 #include <CTRPluginFramework.hpp>
 
 #include "Core/Debug.hpp"
+#include "Core/Filesystem.hpp"
 #include "Helpers/Allocation.hpp"
 
 #define USA_REG 0x00040000001B8700LL
@@ -83,19 +84,17 @@ namespace Core::Utils {
 
     std::string LoadFile(const std::string& filepath) {
         std::string content;
-        if (!CTRPF::File::Exists(filepath)) return content;
+        if (!Core::Filesystem::FileExists(filepath)) return content;
         
-        CTRPF::File file_ptr;
-        CTRPF::File::Open(file_ptr, filepath, CTRPF::File::READ);
-        if (!file_ptr.IsOpen()) return content;
+        Core::File file_ptr(filepath, FS_OPEN_READ);
+        if (!file_ptr.isOpen()) return content;
 
-        file_ptr.Seek(0, CTRPF::File::SeekPos::END);
-        size_t fileSize = file_ptr.Tell();
-        file_ptr.Seek(0, CTRPF::File::SeekPos::SET);
+        size_t fileSize = file_ptr.seek(0, SEEK_END);
+        file_ptr.rewind();
         auto fileContent = UniqueAlloc::alloc_array_raw<char>(fileSize + 1);
         if (!fileContent) return content;
 
-        file_ptr.Read(fileContent.get(), fileSize);
+        file_ptr.read(fileContent.get(), fileSize);
         fileContent.get()[fileSize] = '\0';
         content = std::string(fileContent.get());
         return content;

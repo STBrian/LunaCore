@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdlib.h>
+#include <source_location>
 #include <new>
 #include <utility>
 #include <memory>
@@ -12,16 +13,16 @@
 namespace Core {
 
 template <typename T, typename... Args>
-T* alloc(Args&&... args) {
+inline T* alloc(Args&&... args) {
     void* ptr = std::malloc(sizeof(T));
-    if (ptr == nullptr) CrashHandler::Abort(ErrorCode::Allocation_Error);
+    if (ptr == nullptr) CrashHandler::Abort("Allocation error normal");
     return new (ptr) T(std::forward<Args>(args)...);
 }
 
 template <typename T>
-T* alloc_array(size_t count) {
+inline T* alloc_array(size_t count) {
     void* memory = std::malloc(sizeof(T) * count + 0x8);
-    if (memory == nullptr) CrashHandler::Abort(ErrorCode::Allocation_Error);
+    if (memory == nullptr) CrashHandler::Abort("Allocation error array");
 
     *reinterpret_cast<u32*>(memory) = count;
     T* ptr = reinterpret_cast<T*>(reinterpret_cast<u32>(memory) + 0x8);

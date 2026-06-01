@@ -42,13 +42,13 @@ void* extended_lua_allocator(void* ud, void* ptr, size_t osize, size_t nsize) {
     }
 }
 
-static void readString(fslib::File& file, std::string& line) {
+static void readString(Core::File& file, std::string& line) {
     s8 chr;
-    while ((chr = file.get_byte()) != '\0' && chr != -1) {
+    while ((chr = file.getByte()) != '\0' && chr != -1) {
         line += chr;
-        file.seek(1, fslib::File::CURRENT);
+        file.seek(1, SEEK_CUR);
     }
-    file.seek(1, fslib::File::CURRENT);
+    file.seek(1, SEEK_CUR);
     return;
 }
 
@@ -60,10 +60,10 @@ void Core::GetCoreInfo(std::string& plgTitle, std::string& plgAuthor, std::strin
     char path[255] = {0};
     PLGLDR__GetPluginPath(path);
     std::string fullPath = "sdmc:" + std::string(path);
-    fslib::File pluginFile(path_from_string(fullPath), FS_OPEN_READ);
-    if (!pluginFile.is_open()) return;
+    Core::File pluginFile(fullPath, FS_OPEN_READ);
+    if (!pluginFile.isOpen()) return;
 
-    pluginFile.seek(0x94, fslib::File::BEGINNING);
+    pluginFile.seek(0x94, SEEK_SET);
     readString(pluginFile, plgTitle);
     readString(pluginFile, plgAuthor);
     readString(pluginFile, plgSummary);
@@ -81,13 +81,8 @@ void Core::InitCore() {
     u64 titleID = CTRPF::Process::GetTitleID();
     std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
 
-    if (!fslib::open_extra_data(u"extdata", static_cast<uint32_t>(titleID >> 8 & 0x00FFFFFF))) {
-        Core::Debug::LogError("Failed to open extdata");
-        Core::Debug::LogRaw(std::string(fslib::error::get_string()) + "\n");
-    }
-
-    if (!CTRPF::Directory::IsExists(PLUGIN_FOLDER"/scripts"))
-        CTRPF::Directory::Create(PLUGIN_FOLDER"/scripts");
+    if (!Core::Filesystem::DirectoryExists(LC_FS"/scripts"))
+        Core::Filesystem::CreateDirectory(LC_FS"/scripts");
 
     bool loadScripts = G_config.getBool("enable_scripts", true);
     
@@ -240,21 +235,19 @@ bool Core::LoadScript(const std::string& fp, const std::string& name)
 
 void Core::PreloadScripts()
 {
-    CTRPF::Directory dir;
-    CTRPF::Directory::Open(dir, PLUGIN_FOLDER"/scripts");
-    if (!dir.IsOpen())
-        return;
-
     std::vector<std::string> files;
-    dir.ListFiles(files, ".lua");
+    Core::Filesystem::GetDirectoryEntries(PLUGIN_FOLDER"/scripts", files);
     if (files.size() > 0) {
         Core::Debug::LogInfo("Loading scripts");
         for (auto &file : files) {
-            if (strcmp(file.c_str() + file.size() - 4, ".lua") != 0) // Double check to skip not .lua files
+            if (!Core::Utils::endsWith(file, ".lua"))
                 continue;
 
-            std::string fullPath("sdmc:" + dir.GetFullName() + "/" + file);
-            Core::Debug::LogInfo("Loading script '"+fullPath+"'");
+            std::string fullPath(PLUGIN_FOLDER"/scripts/" + file);
+            if (!Core::Filesystem::FileExists(file))
+                continue;
+
+            Core::Debug::LogInfo("Loading script "+fullPath);
             if (LoadScript(fullPath, "scripts/" + file))
                 loadedScripts++;
         }
@@ -285,7 +278,7 @@ bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& 
     modsLoading.emplace_back(hash(modName.c_str()));
     std::string fileContent = Core::Utils::LoadFile(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/mod.json");
     if (fileContent.empty()) {
-        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to open 'mod.json'", modName.c_str()));
+        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to load 'mod.json'", modName.c_str()));
         goto errorDiscard;
     }
     
@@ -356,8 +349,8 @@ bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& 
         }
     }
 
-    if (!CTRPF::File::Exists(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/init.lua")) {
-        Core::Debug::LogErrorf("Failed to load '%s'. Failed to open 'init.lua'", modName.c_str());
+    if (!Core::Filesystem::FileExists(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/init.lua")) {
+        Core::Debug::LogErrorf("Failed to load '%s'. Required 'init.lua' but it's missing", modName.c_str());
         goto errorDiscard;
     }
     currentLoadingMod = modName;
@@ -382,37 +375,33 @@ bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& 
 
 void Core::LoadMods() 
 {
-    CTRPF::Directory modsDir;
-    CTRPF::Directory::Open(modsDir, PLUGIN_FOLDER "/mods");
-    if (!modsDir.IsOpen()) {
-        Core::Debug::LogInfo("No mods loaded");
-        return;
-    }
-
     std::unordered_map<std::string, std::string> modsAvailable;
     std::vector<u32> modsLoading;
     std::vector<u32> modsLoaded;
     std::vector<u32> modsDiscarded;
-
     std::vector<std::string> mods;
-    modsDir.ListDirectories(mods);
+    Core::Filesystem::GetDirectoryEntries(PLUGIN_FOLDER "/mods", mods);
+    
     for (auto& dir : mods) {
+        if (!Core::Filesystem::DirectoryExists(dir))
+            continue;
+
         std::string fileContent = Core::Utils::LoadFile(PLUGIN_FOLDER "/mods/" + dir + "/mod.json");
         if (fileContent.empty()) {
-            Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to open 'mod.json'", dir.c_str()));
+            Core::Debug::LogErrorf("Failed to load '%s'. Failed to load 'mod.json'", dir.c_str());
             continue;
         }
         
         json j = json::parse(std::string(fileContent), nullptr, false);
         if (j.is_discarded()) {
-            Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to parse 'mod.json'", dir.c_str()));
+            Core::Debug::LogErrorf("Failed to load '%s'. Failed to parse 'mod.json'", dir.c_str());
             continue;
         }
 
         if (j.contains("name") && j["name"].is_string()) {
             modsAvailable[Core::Utils::convertToLower(j["name"])] = dir;
         } else {
-            Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Missing name in 'mod.json'", dir.c_str()));
+            Core::Debug::LogErrorf("Failed to load '%s'. Missing name in 'mod.json'", dir.c_str());
             continue;
         }
     }

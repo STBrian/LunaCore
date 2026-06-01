@@ -10,7 +10,7 @@
 
 namespace CTRPF = CTRPluginFramework;
 
-static CTRPF::File logFile;
+static Core::File logFile;
 
 void Core::Debug::ReportInternalError(const std::string& msg, const std::source_location& location) {
     Core::Debug::LogError("Internal core exception! \n\tAt function: " + 
@@ -22,31 +22,27 @@ void Core::Debug::ReportInternalError(const std::string& msg, const std::source_
 
 bool Core::Debug::OpenLogFile(const std::string& filepath)
 {
-    if (!CTRPF::File::Exists(filepath))
-        CTRPF::File::Create(filepath);
-    CTRPF::File::Open(logFile, filepath);
-    if (logFile.IsOpen())
-        logFile.Clear();
-    return logFile.IsOpen();
+    Core::Filesystem::Open(logFile, filepath, FS_OPEN_WRITE|FS_OPEN_CREATE);
+    return logFile.isOpen();
 }
 
 void Core::Debug::CloseLogFile()
 {
-    if (logFile.IsOpen())
-        logFile.Close();
+    if (logFile.isOpen())
+        logFile.close();
 }
 
 bool Core::Debug::LogFileIsOpen() {
-    return logFile.IsOpen();
+    return logFile.isOpen();
 }
 
 void Core::Debug::LogRaw(const std::string& msg)
 {
-    if (logFile.IsOpen()) {
+    if (logFile.isOpen()) {
         std::string newMsg(msg);
         Core::Utils::Replace(newMsg, "\t", "    ");
-        logFile.Write(newMsg.c_str(), newMsg.size());
-        logFile.Flush();
+        logFile.write(newMsg.c_str(), newMsg.size());
+        logFile.flush();
     }
 }
 

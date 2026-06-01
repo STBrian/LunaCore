@@ -25,7 +25,7 @@ typedef struct {
 } PageMapInfo;
 
 typedef struct {
-    CTRPluginFramework::File swapfile;
+    Core::File swapfile;
     PageMapInfo* mappedPages;
     u16* pageMissCount;
     u16 maxLoadedPages;
@@ -103,14 +103,12 @@ Result ExtendedHeapInit(size_t heapsize) {
 
     LOGDEBUG("Init extended heap");
     //svcBackdoor(&ctr_enable_all_svc_kernel);
-    if (!fslib::directory_exists(path_from_string("sdmc:/Minecraft 3DS/LunaCore"))) {
-        if (!fslib::create_directory(path_from_string("sdmc:/Minecraft 3DS/LunaCore"))) 
+    if (!Core::Filesystem::DirectoryExists("lcfs:/LunaCore")) {
+        if (!Core::Filesystem::CreateDirectory("lcfs:/LunaCore")) 
             return -1;
     }
-    CTRPluginFramework::File::Open(HeapCtx.swapfile, "sdmc:/Minecraft 3DS/LunaCore/swapfile.bin", CTRPluginFramework::File::RWC);
-    //HeapCtx.swapfile.open(path_from_string("sdmc:/Minecraft 3DS/LunaCore/swapfile.bin"), FS_OPEN_CREATE|FS_OPEN_WRITE|FS_OPEN_READ, heapsize_b);
-    //if (!HeapCtx.swapfile.is_open()) return -1;
-    if (!HeapCtx.swapfile.IsOpen()) return -1;
+    HeapCtx.swapfile.open("lcfs:/LunaCore/swapfile.bin", FS_OPEN_CREATE|FS_OPEN_READ|FS_OPEN_WRITE);
+    if (!HeapCtx.swapfile.isOpen()) return -1;
 
     HeapCtx.heapStart = START_EXTHEAP_ADDR;
     HeapCtx.heapEnd = START_EXTHEAP_ADDR + heapsize_b;
@@ -171,8 +169,7 @@ Result ExtendedHeapInit(size_t heapsize) {
     return 0;
 
     error:
-    //HeapCtx.swapfile.close();
-    HeapCtx.swapfile.Close();
+    HeapCtx.swapfile.close();
     if (pageMissCount) free(pageMissCount);
     if (mappedPages) {
         // Free blocks if any
@@ -191,16 +188,16 @@ bool ExtendedHeapIsAddressInHeap(u32 addr) {
 }
 
 static void swapfileFlush() {
-    HeapCtx.swapfile.Flush();
+    HeapCtx.swapfile.flush();
 }
 
 static void writePageContent(u32 addr) {
     const size_t fileOffset = addr - START_EXTHEAP_ADDR;
-    HeapCtx.swapfile.Seek(fileOffset, CTRPluginFramework::File::SET);
+    HeapCtx.swapfile.seek(fileOffset, SEEK_SET);
     u32 bytesWritten = 0;
     while (bytesWritten < PAGE_SIZE) {
-        int status = HeapCtx.swapfile.Write((void*)(addr + bytesWritten), 0x800);
-        if (status != CTRPluginFramework::File::OPResult::SUCCESS) Core::Abort("Failed to write page to swapfile");
+        int status = HeapCtx.swapfile.write((void*)(addr + bytesWritten), 0x800);
+        if (status != 0x800) Core::Abort("Failed to write page to swapfile");
         bytesWritten += 0x800;
     }
     swapfileFlush();
@@ -208,11 +205,11 @@ static void writePageContent(u32 addr) {
 
 static void loadPageContent(u32 addr) {
     const size_t fileOffset = addr - START_EXTHEAP_ADDR;
-    HeapCtx.swapfile.Seek(fileOffset, CTRPluginFramework::File::SET);
+    HeapCtx.swapfile.seek(fileOffset, SEEK_SET);
     u32 bytesRead = 0;
     while (bytesRead < PAGE_SIZE) {
-        int status = HeapCtx.swapfile.Read((void*)(addr + bytesRead), 0x800);
-        if (status != CTRPluginFramework::File::OPResult::SUCCESS) Core::Abort("Failed to read page from swapfile");
+        int status = HeapCtx.swapfile.read((void*)(addr + bytesRead), 0x800);
+        if (status != 0x800) Core::Abort("Failed to read page from swapfile");
         bytesRead += 0x800;
     }
 }

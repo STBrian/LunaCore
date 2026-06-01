@@ -2,6 +2,7 @@
 
 #include <CTRPluginFramework.hpp>
 #include "CoreGlobals.hpp"
+#include "Core/Filesystem.hpp"
 
 #include <unordered_map>
 
@@ -59,25 +60,14 @@ namespace Core {
         /* save method is already called when something is changed. This is done this way
         to avoid the repetition of save code fragments across files */
         bool save() {
-            CTRPF::File configFile;
-            CTRPF::File::Open(configFile, _path, CTRPF::File::WRITE);
-            if (!configFile.IsOpen()) {
-                if (!CTRPF::File::Exists(_path)) {
-                    CTRPF::File::Create(_path);
-                    CTRPF::File::Open(configFile, _path);
-                    if (!configFile.IsOpen()) {
-                        Core::Debug::LogWarn("Failed to save configs");
-                        return false;
-                    }
-                } else {
-                    Core::Debug::LogWarn("Failed to save configs");
-                    return false;
-                }
+            Core::File configFile(_path, FS_OPEN_WRITE|FS_OPEN_CREATE);
+            if (!configFile.isOpen()) {
+                Core::Debug::LogWarn("Failed to save configs");
+                return false;
             }
-            configFile.Clear();
             for (auto key : this->values) {
                 std::string writeContent = CTRPF::Utils::Format("%s = %s\n", key.first.c_str(), key.second.c_str());
-                configFile.Write(writeContent.c_str(), writeContent.size());
+                configFile.write(writeContent.c_str(), writeContent.size());
             }
             return true;
         }
@@ -85,7 +75,7 @@ namespace Core {
 
     inline Config LoadConfig(const std::string& filepath) {
         Config config(filepath);
-        if (!CTRPF::File::Exists(filepath)) {
+        if (!Core::Filesystem::FileExists(filepath)) {
             Core::Debug::LogWarn("Config file not found. Using defaults");
             return config;
         }

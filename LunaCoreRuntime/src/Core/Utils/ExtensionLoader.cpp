@@ -30,11 +30,11 @@ typedef struct {
 
 namespace Core {
     ModuleEntryFun LoadExtension(const char* filename) {
-        fslib::File extfile;
-        extfile.open(path_from_string(filename), FS_OPEN_READ);
-        if (!extfile.is_open())
+        Core::File extfile(filename, FS_OPEN_READ);
+        if (!extfile.isOpen())
             return nullptr;
-        size_t fsize = extfile.get_size();
+        size_t fsize = extfile.seek(0, SEEK_END);
+        extfile.rewind();
         auto buffer = UniqueAlloc::alloc_array_raw<char>(fsize);
         extfile.read(buffer.get(), fsize);
         extfile.close();

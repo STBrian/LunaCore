@@ -137,9 +137,7 @@ static bool ctrpf_create_directory(const char* fp) {
 
 static bool ctrpf_directory_exists(const char* fp) {
     // This doesn't work either I don't know why
-    // return CTRPF::Directory::IsExists(fp);
-    CTRPF::Directory dir(fp);
-    return dir.IsOpen();
+    return CTRPF::Directory::IsExists(fp);
 }
 
 static unsigned int ctrpf_get_directory_elements(const char* fp, std::vector<std::string>* out) {

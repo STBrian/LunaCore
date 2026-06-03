@@ -296,6 +296,21 @@ Enums.EntityState.Sheared = {}
 ---@type EntityState
 Enums.EntityState.ElytraFly = {}
 
+---@type EntityState
+Enums.EntityState.Gliding = {}
+
+---@type EntityState
+Enums.EntityState.Chested = {}
+
+---@type EntityState
+Enums.EntityState.Sitting = {}
+
+---@type EntityState
+Enums.EntityState.Angry = {}
+
+---@type EntityState
+Enums.EntityState.ShowBottom = {}
+
 Enums.WeatherType = {}
 
 ---@type WeatherType
@@ -322,12 +337,6 @@ local FilesystemFile = {}
 ---@return FilesystemFile?
 ---@return string?
 function Core.Filesystem.open(fp, mode, size) end
-
----Checks if the file exists
----@param fp string
----@return integer?
----@return string?
-function Core.Filesystem.getLastModified(fp) end
 
 ---Checks if the file exists
 ---@param fp string
@@ -901,7 +910,6 @@ function InventorySlot:isEmpty() end
 
 ---@param item MCItem
 ---@param value integer?
----@return boolean
 function InventorySlot:setItem(item, value) end
 
 ---@type MCItem?
@@ -994,8 +1002,33 @@ Game.World.CloudsHeight = 0.0
 Game.World.Weather = {}
 
 ---Displays an in-game message in the world screen if the player is currently inside a world. Returns true if success
+---@param msg string
 ---@return boolean
-function Game.World.message() end
+function Game.World.message(msg) end
+
+---Returns the entity that the player is looking at
+---@return table?
+function Game.World.getTargetEntity() end
+
+---Returns the block that the player is looking at
+---@return table?
+function Game.World.getTargetBlock() end
+
+---Sets the block at the provided coordinates
+---@param x integer
+---@param y integer
+---@param z integer
+---@param blockId integer
+---@param blockData integer
+function Game.World.setBlock(x, y, z, blockId, blockData) end
+
+---Gets the properties of the block at the specified coordinates
+---@param x integer
+---@param y integer
+---@param z integer
+---@return integer
+---@return integer
+function Game.World.getBlock(x, y, z) end
 
 ---@class OnWorldJoin: EventClass
 Game.World.OnWorldJoin = {}

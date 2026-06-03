@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <CTRPluginFramework.hpp>
 #include "Helpers/Mutex.hpp"
 #include "lua_common.h"
 
@@ -105,6 +106,9 @@ namespace Core {
         static Core::Mutex currentTask_lock;
 
         static void RunOnMainThreadAndWait(CallbackType callback, void* ud) {
+            if (CTRPluginFramework::Process::IsPaused())
+                return;
+                
             currentTask_lock.lock();
             LightEvent_Init(&currentTask.finished, RESET_STICKY);
             currentTask.waiting = true;

@@ -62,10 +62,12 @@ static int l_InventorySlot_isEmpty(lua_State *L) {
 /*
 ## item: MCItem
 ## value: integer?
-## return: boolean
 ### InventorySlot:setItem
 */
 static int l_InventorySlot_setItem(lua_State *L) {
+    if (CTRPF::Process::IsPaused())
+        return 0;
+        
     auto slotData = LuaObjectUtils::CheckObject<MC3DSPluginFramework::ItemInstance>(L, 1, "InventorySlot").get();
     Item* item = LuaObjectUtils::CheckObject<Item>(L, 2, "MCItem").get();
     u16 dataValue = 0;
@@ -77,7 +79,7 @@ static int l_InventorySlot_setItem(lua_State *L) {
     else if (count == 0)
         count = 1;
     slotData->init(item->itemId, count, dataValue);
-    return 1;
+    return 0;
 }
 
 /*

@@ -6,6 +6,7 @@
 #include "CoreGlobals.hpp"
 #include "Core/Event.hpp"
 #include "string_hash.hpp"
+#include "Core/Scheduler.hpp"
 
 #include "Enums.hpp"
 #include "Helpers/LuaObject.hpp"
@@ -45,12 +46,12 @@ static int l_World_index(lua_State *L)
     shash key = hash(lua_tostring(L, 2));
     bool valid_key = true;
 
-    auto ply = MC3DSPluginFramework::Player::GetInstance();
+    auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
     MC3DSPluginFramework::BlockSource* blockSrc = nullptr;
     MC3DSPluginFramework::Level* level = nullptr;
     if (ply) {
-        blockSrc = ply->GetBlockSource();
-        level = ply->GetLevel();
+        // blockSrc = ply->getBlo();
+        level = &ply->getLevel();
     }
 
     switch (key) {
@@ -69,17 +70,26 @@ static int l_World_index(lua_State *L)
             lua_pushnumber(L, value);
             break;
         }
-        case hash("Weather"): {
-            MC3DSPluginFramework::WeatherState* weather = level->weather();
-            Core::EnumGroup& group = EnumGroups::getInstance().getGroup("WeatherType");
-            if (weather->get() & MC3DSPluginFramework::Weathers::Thunder)
-                LuaObjectUtils::NewObject(L, group.enumType, group.getItemByName("Thunder"));
-            else if (weather->get() & MC3DSPluginFramework::Weathers::Rain)
-                LuaObjectUtils::NewObject(L, group.enumType, group.getItemByName("Rain"));
-            else
+        case hash("Weather"):
+            if (level) {
+                MC3DSPluginFramework::WeatherState* weather = level->weather();
+                Core::EnumGroup& group = EnumGroups::getInstance().getGroup("WeatherType");
+                if (weather->get() & MC3DSPluginFramework::Weathers::Thunder)
+                    LuaObjectUtils::NewObject(L, group.enumType, group.getItemByName("Thunder"));
+                else if (weather->get() & MC3DSPluginFramework::Weathers::Rain)
+                    LuaObjectUtils::NewObject(L, group.enumType, group.getItemByName("Rain"));
+                else
+                    LuaObjectUtils::NewObject(L, group.enumType, group.getItemByName("Clear"));
+            } else {
+                Core::EnumGroup& group = EnumGroups::getInstance().getGroup("WeatherType");
                 LuaObjectUtils::NewObject(L, group.enumType, group.getItemByName("Clear"));
+            }
             break;
-        }
+
+        case hash("TargetBlock"):
+            
+            break;
+
         default:
             valid_key = false;
             break;
@@ -96,13 +106,13 @@ static int l_World_newindex(lua_State *L)
     shash key = hash(lua_tostring(L, 2));
     bool valid_key = true;
 
-    auto ply = MC3DSPluginFramework::Player::GetInstance();
+    auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
     MC3DSPluginFramework::BlockSource* blockSrc = nullptr;
     MC3DSPluginFramework::Level* level = nullptr;
-    if (ply) {
-        blockSrc = ply->GetBlockSource();
-        level = ply->GetLevel();
-    }
+    // if (ply) {
+    //     blockSrc = ply->GetBlockSource();
+    //     level = ply->GetLevel();
+    // }
 
     switch (key) {
         case hash("Raining"):
@@ -143,6 +153,7 @@ static int l_World_newindex(lua_State *L)
 
 /*
 - Displays an in-game message in the world screen if the player is currently inside a world. Returns true if success
+## msg: string
 ## return: boolean
 ### Game.World.message
 */
@@ -153,6 +164,113 @@ static int l_World_message(lua_State *L) {
     }
     lua_pushboolean(L, MC3DSPluginFramework::SystemMessagesScreen::RunningInstance != nullptr);
     return 1;
+}
+
+/*
+- Returns the entity that the player is looking at
+## return: table?
+### Game.World.getTargetEntity
+*/
+static int l_World_getTargetEntity(lua_State* L) {
+    auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
+    if (ply) {
+        auto& level = ply->getLevel();
+        u8 type = level.getHitResult().mType;
+        if (type == MC3DSPluginFramework::HitResult::HitType::Entity) {
+            MC3DSPluginFramework::Entity* entity = level.getHitResult().mEntity;
+            lua_pushlightuserdata(L, entity);
+        } else {
+            lua_pushnil(L);
+        }
+    }
+    return 0;
+}
+
+/*
+- Returns the block that the player is looking at
+## return: table?
+### Game.World.getTargetBlock
+*/
+static int l_World_getTargetBlock(lua_State* L) {
+    auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
+    if (ply) {
+        auto& level = ply->getLevel();
+        u8 type = level.getHitResult().mType;
+        if (type == MC3DSPluginFramework::HitResult::HitType::Block) {
+            MC3DSPluginFramework::BlockPos blockPos = level.getHitResult().mBlockPos;
+            lua_newtable(L);
+            lua_pushnumber(L, blockPos.x);
+            lua_setfield(L, -2, "x");
+            lua_pushnumber(L, blockPos.y);
+            lua_setfield(L, -2, "y");
+            lua_pushnumber(L, blockPos.z);
+            lua_setfield(L, -2, "z");
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/*
+- Sets the block at the provided coordinates
+## x: integer
+## y: integer
+## z: integer
+## blockId: integer
+## blockData: integer
+### Game.World.setBlock
+*/
+static void l_World_setBlock_impl(void* ud) {
+    lua_State* L = (lua_State*)ud;
+    int x = luaL_checknumber(L, 1);
+    int y = luaL_checknumber(L, 2);
+    int z = luaL_checknumber(L, 3);
+    u16 blockId = luaL_checknumber(L, 4);
+    u8 blockData = luaL_checknumber(L, 5);
+    auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
+    using BlockPos = MC3DSPluginFramework::BlockPos;
+    using BlockData = MC3DSPluginFramework::BlockData;
+    using BlockId = MC3DSPluginFramework::BlockId;
+    using UpdateFlag = MC3DSPluginFramework::UpdateFlag;
+    if (ply) {
+        ply->getRegion().setBlockData(BlockPos(x, y, z), BlockData((BlockId)blockId, blockData), UpdateFlag::Default, ply);
+    }
+    // return 0;
+}
+
+static int l_World_setBlock(lua_State* L) {
+    auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
+    if (ply)
+        // setBlockData requires to be executed in the game's MainThread
+        Core::GameMainThreadScheduler::RunOnMainThreadAndWait(l_World_setBlock_impl, L);
+    return 0;
+}
+
+/*
+- Gets the properties of the block at the specified coordinates
+## x: integer
+## y: integer
+## z: integer
+## return: integer
+## return: integer
+### Game.World.getBlock
+*/
+static int l_World_getBlock(lua_State* L) {
+    int x = luaL_checknumber(L, 1);
+    int y = luaL_checknumber(L, 2);
+    int z = luaL_checknumber(L, 3);
+    auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
+    using BlockPos = MC3DSPluginFramework::BlockPos;
+    using BlockData = MC3DSPluginFramework::BlockData;
+    if (ply) {
+        BlockData data = ply->getRegion().getBlockIdAndData(BlockPos(x, y, z));
+        lua_pushnumber(L, (u16)data.blockId);
+        lua_pushnumber(L, data.dataId);
+    } else {
+        lua_pushnumber(L, 0);
+        lua_pushnumber(L, 0);
+    }
+    return 2;
 }
 
 // ----------------------------------------------------------------------------
@@ -169,6 +287,14 @@ bool Core::Module::RegisterWorldModule(lua_State *L) {
 
     lua_pushcfunction(L, l_World_message);
     lua_setfield(L, -2, "message");
+    lua_pushcfunction(L, l_World_getTargetEntity);
+    lua_setfield(L, -2, "getTargetEntity");
+    lua_pushcfunction(L, l_World_getTargetBlock);
+    lua_setfield(L, -2, "getTargetBlock");
+    lua_pushcfunction(L, l_World_setBlock);
+    lua_setfield(L, -2, "setBlock");
+    lua_pushcfunction(L, l_World_getBlock);
+    lua_setfield(L, -2, "getBlock");
 
     lua_pop(L, 1); // Pop index table
     lua_getglobal(L, "Game");

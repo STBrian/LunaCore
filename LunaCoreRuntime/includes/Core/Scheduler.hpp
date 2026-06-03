@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include "Helpers/Mutex.hpp"
 #include "lua_common.h"
 
 #include "Helpers/Allocation.hpp"
@@ -87,5 +88,30 @@ namespace Core {
         
         std::vector<PendingTask> pending;
         std::unordered_map<lua_State*, int> tasks;
+    };
+
+    struct GameSyncTask {
+        void(*callback)(void*);
+        void* userdata;
+        LightEvent finished;
+        bool waiting;
+    };
+
+    class GameMainThreadScheduler {
+        public:
+        using CallbackType = void(*)(void*);
+
+        static GameSyncTask currentTask;
+        static Core::Mutex currentTask_lock;
+
+        static void RunOnMainThreadAndWait(CallbackType callback, void* ud) {
+            currentTask_lock.lock();
+            LightEvent_Init(&currentTask.finished, RESET_STICKY);
+            currentTask.waiting = true;
+            currentTask.callback = callback;
+            currentTask.userdata = ud;
+            currentTask_lock.unlock();
+            LightEvent_Wait(&currentTask.finished);
+        }
     };
 } // namespace Core

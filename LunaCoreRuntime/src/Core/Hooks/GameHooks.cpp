@@ -14,6 +14,7 @@
 #include "Core/Event.hpp"
 #include "CoreGlobals.hpp"
 #include "CoreInit.hpp"
+#include "Core/Scheduler.hpp"
 
 #include "game/world/item/Item.hpp"
 #include "game/entity/Entity.hpp"
@@ -36,10 +37,11 @@ namespace CTRPF = CTRPluginFramework;
 
 #ifdef DEBUG
 static __attribute__((naked)) void GameDebugLogfHook(CoreHookContext* ctx);
+static void CoreGameMainThreadWorker(CoreHookContext* ctx);
 #endif
 extern "C" void lc_setCoreHookState(CoreHookContext* ctx) {
     #ifdef DEBUG
-    if (ctx->callbackAddress != (u32)GameDebugLogfHook) {
+    if (ctx->callbackAddress != (u32)GameDebugLogfHook && ctx->callbackAddress != (u32)CoreGameMainThreadWorker) {
         LOGDEBUG("Hook reached: 0x%08X", ctx);
     }
     #endif
@@ -287,6 +289,21 @@ static __attribute__((naked)) void CorePrintfHook(CoreHookContext* ctx) {
 }
 #endif
 
+Core::GameSyncTask Core::GameMainThreadScheduler::currentTask = (Core::GameSyncTask){0};
+Core::Mutex Core::GameMainThreadScheduler::currentTask_lock;
+
+static void CoreGameMainThreadWorker(CoreHookContext* ctx) {
+    if (Core::GameMainThreadScheduler::currentTask.waiting) {
+        Core::GameMainThreadScheduler::currentTask_lock.lock();
+
+        Core::GameMainThreadScheduler::currentTask.callback(Core::GameMainThreadScheduler::currentTask.userdata);
+        LightEvent_Signal(&Core::GameMainThreadScheduler::currentTask.finished);
+
+        Core::GameMainThreadScheduler::currentTask = (Core::GameSyncTask){0};
+        Core::GameMainThreadScheduler::currentTask_lock.unlock();
+    }
+}
+
 void hookSomeFunctions() {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOKING;
     hookFunction(0x0056c2ac, (u32)RegisterItemsHook);
@@ -298,7 +315,8 @@ void hookSomeFunctions() {
     //hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
     #ifdef DEBUG
     hookFunction(0x0059d758, (u32)ModifyColdTaiga);
-    hookFunction(0x3f7480, (u32)ModifyCreateWorldScreen);
+    hookFunction(0x003f7480, (u32)ModifyCreateWorldScreen);
     hookFunction((u32)printf, (u32)CorePrintfHook); 
+    hookFunction(0x00105f6c, (u32)CoreGameMainThreadWorker);
     #endif
 }

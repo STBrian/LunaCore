@@ -16,6 +16,7 @@ namespace Minecraft {
             float x, y, z;
         } coordsComponents;
 
+        public:
         typedef struct {
             float pitch, yaw;
         } cameraAngle;

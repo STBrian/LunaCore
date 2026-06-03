@@ -12,7 +12,7 @@
                 "c:/devkitPro/devkitARM/arm-none-eabi/include/",
                 "${workspaceFolder}/LunaCoreRuntime/includes/",
                 "c:/devkitPro/libctrpf/include/",
-                "${workspaceFolder}/LunaCoreRuntime/externals/MC3DSPluginFramework/Includes"
+                "${workspaceFolder}/LunaCoreRuntime/externals/MC3DSPluginFramework/Sources"
             ],
             "defines": [
                 "DEBUG",

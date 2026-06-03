@@ -30,14 +30,18 @@ using Item = Minecraft::Item;
 
 static int l_Inventory_Slots_index(lua_State *L) {
     int index = 0;
+    auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
+    if (!ply)
+        return 0;
+    auto& inventory = ply->getSupplies();
     if (lua_type(L, 2) == LUA_TNUMBER)
         index = lua_tonumber(L, 2);
     else if (lua_type(L, 2) == LUA_TSTRING) {
         uint32_t key = hash(lua_tostring(L, 2));
         if (key == hash("hand"))
-            index = MC3DSPluginFramework::Inventory::HeldSlot();
+            index = inventory.getSelectedSlot();
     }
-    LuaObjectUtils::NewObjectCheck(L, "InventorySlot", (InventorySlot*)MC3DSPluginFramework::Inventory::Get(index));
+    LuaObjectUtils::NewObjectCheck(L, "InventorySlot", (InventorySlot*)inventory.getSlots()[index]);
     return 1;
 }
 
@@ -70,7 +74,9 @@ static int l_InventorySlot_setItem(lua_State *L) {
     u8 count = slotData->mCount;
     if (count > item->maxStackSize)
         count = item->maxStackSize;
-    slotData->init((MC3DSPluginFramework::ItemId)item->itemId, count, dataValue);
+    else if (count == 0)
+        count = 1;
+    slotData->init(item->itemId, count, dataValue);
     return 1;
 }
 

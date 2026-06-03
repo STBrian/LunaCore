@@ -29,7 +29,7 @@ EnumGroups& EnumGroups::getInstance() {
 // ----------------------------------------------------------------------------
 
 #define SETNEWENUM(group, name, value) do { \
-    LuaObjectUtils::NewObject(L, group.enumType, group.addItem(name, value)); \
+    LuaObjectUtils::NewObject(L, group.enumType, group.addItem(name, (int)(value))); \
     lua_setfield(L, -2, name); \
     } while (0)
 
@@ -47,37 +47,48 @@ bool Core::Module::RegisterEnumsModule(lua_State *L) {
 
     lua_newtable(L);
 
+    using EntityState = MC3DSPluginFramework::SynchedEntityData::EntitySharedFlag;
     //$Enums.EntityState
     lua_newtable(L);
     EnumGroup& entityState = EnumGroups::getInstance().addGroup("EntityState");
     //#$Enums.EntityState.Burning : ---@type EntityState
-    SETNEWENUM(entityState, "Burning", 0);
+    SETNEWENUM(entityState, "Burning", EntityState::Burning);
     //#$Enums.EntityState.Sneaking : ---@type EntityState
-    SETNEWENUM(entityState, "Sneaking", 1);
+    SETNEWENUM(entityState, "Sneaking", EntityState::Sneak);
     //#$Enums.EntityState.Sprinting : ---@type EntityState
-    SETNEWENUM(entityState, "Sprinting", 3);
+    SETNEWENUM(entityState, "Sprinting", EntityState::Sprint);
     //#$Enums.EntityState.Eating : ---@type EntityState
-    SETNEWENUM(entityState, "Eating", 4);
+    SETNEWENUM(entityState, "Eating", EntityState::Eating);
     //#$Enums.EntityState.Invisible : ---@type EntityState
-    SETNEWENUM(entityState, "Invisible", 5);
+    SETNEWENUM(entityState, "Invisible", EntityState::InVisible);
     //#$Enums.EntityState.Tempted : ---@type EntityState
-    SETNEWENUM(entityState, "Tempted", 6);
+    SETNEWENUM(entityState, "Tempted", EntityState::IsTempted);
     //#$Enums.EntityState.InLove : ---@type EntityState
-    SETNEWENUM(entityState, "InLove", 7);
+    SETNEWENUM(entityState, "InLove", EntityState::Love);
     //#$Enums.EntityState.HasSaddle : ---@type EntityState
-    SETNEWENUM(entityState, "HasSaddle", 8);
+    SETNEWENUM(entityState, "HasSaddle", EntityState::Saddled);
     //#$Enums.EntityState.IsAdult : ---@type EntityState
-    SETNEWENUM(entityState, "IsAdult", 11);
+    SETNEWENUM(entityState, "IsAdult", EntityState::Baby);
     //#$Enums.EntityState.Named : ---@type EntityState
-    SETNEWENUM(entityState, "Named", 14);
+    SETNEWENUM(entityState, "Named", EntityState::Named);
     //#$Enums.EntityState.Tamed : ---@type EntityState
-    SETNEWENUM(entityState, "Tamed", 27);
+    SETNEWENUM(entityState, "Tamed", EntityState::Tamed);
     //#$Enums.EntityState.Leaded : ---@type EntityState
     SETNEWENUM(entityState, "Leaded", 28);
     //#$Enums.EntityState.Sheared : ---@type EntityState
-    SETNEWENUM(entityState, "Sheared", 29);
+    SETNEWENUM(entityState, "Sheared", EntityState::Sheared);
     //#$Enums.EntityState.ElytraFly : ---@type EntityState
-    SETNEWENUM(entityState, "ElytraFly", 30);
+    SETNEWENUM(entityState, "ElytraFly", EntityState::Gliding);
+    //#$Enums.EntityState.Gliding : ---@type EntityState
+    SETNEWENUM(entityState, "Gliding", EntityState::Gliding);
+    //#$Enums.EntityState.Chested : ---@type EntityState
+    SETNEWENUM(entityState, "Chested", EntityState::Chested);
+    //#$Enums.EntityState.Sitting : ---@type EntityState
+    SETNEWENUM(entityState, "Sitting", EntityState::Sitting);
+    //#$Enums.EntityState.Angry : ---@type EntityState
+    SETNEWENUM(entityState, "Angry", EntityState::Angry);
+    //#$Enums.EntityState.ShowBottom : ---@type EntityState
+    SETNEWENUM(entityState, "ShowBottom", EntityState::ShowBottom);
     lua_setfield(L, -2, "EntityState");
 
     //$Enums.WeatherType

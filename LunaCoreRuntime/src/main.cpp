@@ -2,6 +2,7 @@
 #include "csvc.h"
 #include <CTRPluginFramework.hpp>
 #include <FsLib/fslib.hpp>
+#include "MC3DSPluginFramework.hpp"
 
 #include <string>
 #include <unordered_map>
@@ -125,6 +126,7 @@ namespace CTRPluginFramework
                 Process::Write32(0x919530-(4*7), 0); // Pos keycode for DPADLEFT
             }
             hookSomeFunctions();
+            //MC3DSPluginFramework::Hooks::install();
             patchEnabled = true;
         }
     }
@@ -163,6 +165,7 @@ namespace CTRPluginFramework
                 PatchGameMenuLayoutFunction();
         }
 
+        MC3DSPluginFramework::Hooks::pushPluginThreadId(std::this_thread::get_id());
         #ifdef EXPERIMENTAL
         if (R_FAILED(ExtendedHeapInit(0x800))) Core::Abort("Failed to initialize heap");
         #endif

@@ -41,18 +41,18 @@ static u32* getHungerBarOffset() {
 
 //$Game.LocalPlayer.Position
 
-static Vec3_Float *safePlayerPositionGet() {
-    auto ply = MC3DSPluginFramework::Player::GetInstance();
+static MC3DSPluginFramework::Vec3<float> *safePlayerPositionGet() {
+    auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
     if (ply) {
-        return &ply->Position();
+        return &ply->getPos();
     }
     return nullptr;
 }
 
-static Vec3_Float *safePlayerVelocityGet() {
-    auto ply = MC3DSPluginFramework::Player::GetInstance();
+static MC3DSPluginFramework::Vec3<float> *safePlayerVelocityGet() {
+    auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
     if (ply) {
-        return &ply->Velocity();
+        return &ply->getVelocity();
     }
     return nullptr;
 }
@@ -66,7 +66,7 @@ static Vec3_Float *safePlayerVelocityGet() {
 */
 static int l_Player_Position_get(lua_State *L)
 {
-    Vec3_Float* pos = safePlayerPositionGet();
+    auto pos = safePlayerPositionGet();
     if (pos) {
         lua_pushnumber(L, pos->x);
         lua_pushnumber(L, pos->y);
@@ -91,7 +91,7 @@ static int l_Player_Position_set(lua_State *L)
     float x = luaL_checknumber(L, 1);
     float y = luaL_checknumber(L, 2);
     float z = luaL_checknumber(L, 3);
-    Vec3_Float* pos = safePlayerPositionGet();
+    auto pos = safePlayerPositionGet();
     if (pos) {
         pos->x = x;
         pos->y = y;
@@ -112,7 +112,7 @@ static int l_Player_Position_add(lua_State *L)
     float x2 = luaL_checknumber(L, 1);
     float y2 = luaL_checknumber(L, 2);
     float z2 = luaL_checknumber(L, 3);
-    Vec3_Float* pos = safePlayerPositionGet();
+    auto pos = safePlayerPositionGet();
     if (pos) {
         pos->x += x2;
         pos->y += y2;
@@ -142,10 +142,15 @@ static const luaL_Reg player_position_methods[] =
 */
 static int l_Player_Velocity_get(lua_State *L)
 {
-    Vec3_Float* pos = safePlayerPositionGet();  
-    float x = Minecraft::GetVelocityX();
-    float y = Minecraft::GetVelocityY();
-    float z = Minecraft::GetVelocityZ();
+    auto vel = safePlayerPositionGet();  
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
+    if (vel) {
+        x = vel->x;
+        y = vel->y;
+        z = vel->z;
+    }
     lua_pushnumber(L, x);
     lua_pushnumber(L, y);
     lua_pushnumber(L, z);
@@ -161,12 +166,15 @@ static int l_Player_Velocity_get(lua_State *L)
 */
 static int l_Player_Velocity_set(lua_State *L)
 {
+    auto vel = safePlayerPositionGet();  
     float x = luaL_checknumber(L, 1);
     float y = luaL_checknumber(L, 2);
     float z = luaL_checknumber(L, 3);
-    Minecraft::SetVelocityX(x);
-    Minecraft::SetVelocityY(y);
-    Minecraft::SetVelocityZ(z);
+    if (vel) {
+        vel->x = x;
+        vel->y = y;
+        vel->z = z;
+    }
     return 0;
 }
 
@@ -179,15 +187,15 @@ static int l_Player_Velocity_set(lua_State *L)
 */
 static int l_Player_Velocity_add(lua_State *L)
 {
-    float x2 = luaL_checknumber(L, 1);
-    float y2 = luaL_checknumber(L, 2);
-    float z2 = luaL_checknumber(L, 3);
-    float x1 = Minecraft::GetVelocityX();
-    float y1 = Minecraft::GetVelocityY();
-    float z1 = Minecraft::GetVelocityZ();
-    Minecraft::SetVelocityX(x1 + x2);
-    Minecraft::SetVelocityY(y1 + y2);
-    Minecraft::SetVelocityZ(z1 + z2);
+    auto vel = safePlayerPositionGet();  
+    float x = luaL_checknumber(L, 1);
+    float y = luaL_checknumber(L, 2);
+    float z = luaL_checknumber(L, 3);
+    if (vel) {
+        vel->x += x;
+        vel->y += y;
+        vel->z += z;
+    }
     return 0;
 }
 
@@ -459,10 +467,11 @@ static int l_LocalPlayer_newindex(lua_State *L)
 ### Game.LocalPlayer.getState
 */
 static int l_LocalPlayer_getState(lua_State* L) {
+    using EntitySharedFlag = MC3DSPluginFramework::SynchedEntityData::EntitySharedFlag;
     Core::EnumItem* stateId = Core::EnumItemUtils::LuaToEnumItemOrNull(L, 1, "EntityState", true);
     if (!stateId) return lua_error(L);
-    MC3DSPluginFramework::Entity* ply = MC3DSPluginFramework::Player::GetInstance();
-    if (ply) lua_pushboolean(L, ply->GetState(static_cast<MC3DSPluginFramework::EntityStateFlag>(1 << stateId->value)));
+    auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
+    if (ply) lua_pushboolean(L, ply->getSharedFlag(static_cast<EntitySharedFlag>(stateId->value)));
     else lua_pushboolean(L, false);
     return 1;
 }

@@ -13,7 +13,7 @@ TARGET		:= 	LunaCore$(TARGET_PREFIX)
 PLGINFO 	:= 	plgInfo.yaml
 
 BUILD		:= 	Build
-INCLUDES	:= 	includes externals/MC3DSPluginFramework/Includes
+INCLUDES	:= 	includes externals/MC3DSPluginFramework/Sources
 SOURCES 	:= 	src externals/MC3DSPluginFramework/Sources
 
 #---------------------------------------------------------------------------------

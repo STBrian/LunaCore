@@ -3,6 +3,7 @@
 #include <CTRPluginFramework.hpp>
 #include "MC3DSPluginFramework.hpp"
 
+#include "game/world/actor/player/Player.hpp"
 #include "game/Minecraft.hpp"
 #include "game/memory.hpp"
 #include "string_hash.hpp"
@@ -48,10 +49,10 @@ static int l_Camera_index(lua_State *L)
     uint32_t key = hash(lua_tostring(L, 2));
     bool valid_key = true;
 
-    auto ply = MC3DSPluginFramework::Player::GetInstance();
-    CameraAngles* camera = nullptr;
+    auto ply = Minecraft::Player::getPlayerInstance();
+    Minecraft::Player::cameraAngle* camera = nullptr;
     if (ply)
-        camera = &ply->Camera();
+        camera = &ply->camAngle;
 
     switch (key) {
         case hash("FOV"): {
@@ -88,10 +89,10 @@ static int l_Camera_newindex(lua_State *L)
     uint32_t key = hash(lua_tostring(L, 2));
     bool valid_key = true;
 
-    auto ply = MC3DSPluginFramework::Player::GetInstance();
-    CameraAngles* camera = nullptr;
+    auto ply = Minecraft::Player::getPlayerInstance();
+    Minecraft::Player::cameraAngle* camera = nullptr;
     if (ply)
-        camera = &ply->Camera();
+        camera = &ply->camAngle;
 
     switch (key) {
         case hash("FOV"): {

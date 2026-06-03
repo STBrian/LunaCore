@@ -244,8 +244,10 @@ void Core::PreloadScripts()
                 continue;
 
             std::string fullPath(PLUGIN_FOLDER"/scripts/" + file);
-            if (!Core::Filesystem::FileExists(file))
+            if (!Core::Filesystem::FileExists(fullPath)) {
+                LOGDEBUG("%s doesn't exists?", fullPath.c_str());
                 continue;
+            }
 
             Core::Debug::LogInfo("Loading script "+fullPath);
             if (LoadScript(fullPath, "scripts/" + file))

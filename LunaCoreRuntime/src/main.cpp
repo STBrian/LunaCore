@@ -173,6 +173,7 @@ namespace CTRPluginFramework
         Core::InitCore();
 
         #ifdef DEBUG
+        OSD::Notify("Developer version", Color::Yellow);
         gmenu = alloc<PluginMenu>("LunaCore Plugin Menu - Dev", Core::Version.major, Core::Version.minor, Core::Version.patch,
             plgSummary + "\n\n" + plgDescription + "\nCompiled: " __TIMESTAMP__ " (CST)\nDeveloper version", 2);
         #else

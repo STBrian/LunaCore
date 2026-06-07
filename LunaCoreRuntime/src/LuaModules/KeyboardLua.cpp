@@ -16,7 +16,7 @@ namespace CTRPF = CTRPluginFramework;
 // ----------------------------------------------------------------------------
 
 /*
-- Opens the keyboard and returns the user input as string
+- Opens the keyboard and returns the user input as string. Returns nil if the user cancels the operation
 ## message: string?
 ## return: string?
 ### Core.Keyboard.getString
@@ -41,7 +41,7 @@ static int l_Keyboard_getString(lua_State *L) {
 }
 
 /*
-- Opens the keyboard and returns the user input as number
+- Opens the keyboard and returns the user input as number. Returns nil if the user cancels the operation
 ## message: string?
 ## return: number?
 ### Core.Keyboard.getNumber
@@ -66,7 +66,7 @@ static int l_Keyboard_getNumber(lua_State *L) {
 }
 
 /*
-- Opens the keyboard and returns the user input as unsigned integer
+- Opens the keyboard and returns the user input as unsigned integer. Returns nil if the user cancels the operation
 ## message: string?
 ## return: integer?
 ### Core.Keyboard.getInteger
@@ -91,7 +91,7 @@ static int l_Keyboard_getInteger(lua_State *L) {
 }
 
 /*
-- Opens the keyboard and returns the user input as hexadecimal
+- Opens the keyboard and returns the user input as hexadecimal. Returns nil if the user cancels the operation
 ## message: string?
 ## return: integer?
 ### Core.Keyboard.getHex

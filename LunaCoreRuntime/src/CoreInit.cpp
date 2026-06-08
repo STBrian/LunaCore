@@ -385,6 +385,9 @@ void Core::LoadMods()
     Core::Filesystem::GetDirectoryEntries(PLUGIN_FOLDER "/mods", mods);
     
     for (auto& dir : mods) {
+        if (!Core::Filesystem::DirectoryExists(PLUGIN_FOLDER "/mods/" + dir))
+            continue;
+            
         std::string fileContent = Core::Utils::LoadFile(PLUGIN_FOLDER "/mods/" + dir + "/mod.json");
         if (fileContent.empty()) {
             Core::Debug::LogErrorf("Failed to load '%s'. Failed to load 'mod.json'", dir.c_str());

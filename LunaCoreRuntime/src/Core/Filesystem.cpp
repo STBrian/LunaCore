@@ -252,7 +252,7 @@ Result Core::FsInit() {
     currentInfo.delete_file = ctrpf_delete_file;
     currentInfo.rename_file = ctrpf_rename_file;
     currentInfo.create_directory = ctrpf_create_directory;
-    currentInfo.directory_exists = ctrpf_directory_exists;
+    currentInfo.directory_exists = fslib_directory_exists; // ctrpf doesn't work in some cases
     currentInfo.get_directory_elements = ctrpf_get_directory_elements;
 
     currentInfo.name = "sdmc";

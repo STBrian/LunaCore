@@ -643,22 +643,22 @@ Game.Items.OnRegisterCreativeItems = {}
 
 Core.Keyboard = {}
 
----Opens the keyboard and returns the user input as string
+---Opens the keyboard and returns the user input as string. Returns nil if the user cancels the operation
 ---@param message string?
 ---@return string?
 function Core.Keyboard.getString(message) end
 
----Opens the keyboard and returns the user input as number
+---Opens the keyboard and returns the user input as number. Returns nil if the user cancels the operation
 ---@param message string?
 ---@return number?
 function Core.Keyboard.getNumber(message) end
 
----Opens the keyboard and returns the user input as unsigned integer
+---Opens the keyboard and returns the user input as unsigned integer. Returns nil if the user cancels the operation
 ---@param message string?
 ---@return integer?
 function Core.Keyboard.getInteger(message) end
 
----Opens the keyboard and returns the user input as hexadecimal
+---Opens the keyboard and returns the user input as hexadecimal. Returns nil if the user cancels the operation
 ---@param message string?
 ---@return integer?
 function Core.Keyboard.getHex(message) end
@@ -896,7 +896,7 @@ Game.LocalPlayer.Camera.Pitch = 0.0
 
 Game.LocalPlayer.Inventory = {}
 
----@type table<"hand"|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36,InventorySlot>
+---@type table<"hand"|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36,InventorySlot>
 Game.LocalPlayer.Inventory.Slots = {}
 
 ---@type table<"helmet"|"chestplate"|"leggings"|"boots"|1|2|3|4,InventorySlot>

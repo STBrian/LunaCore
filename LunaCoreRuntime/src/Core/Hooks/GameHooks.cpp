@@ -19,6 +19,7 @@
 #include "game/world/item/Item.hpp"
 #include "game/entity/Entity.hpp"
 #include "game/gstd/gstd_string.hpp"
+#include "game/gstd/gstd_vector.hpp"
 
 #include "Helpers/LuaObject.hpp"
 
@@ -35,16 +36,10 @@ namespace CTRPF = CTRPluginFramework;
     (((pc_actual) + 8) + (((int32_t)((ins) << 8)) >> 6))
 #define DECODE_TARGET_INS_BL(ins, pc_actual) (DECODE_TARGET_INS_B(ins, pc_actual))
 
-#ifdef DEBUG
-static __attribute__((naked)) void GameDebugLogfHook(CoreHookContext* ctx);
-static void CoreGameMainThreadWorker(CoreHookContext* ctx);
-#endif
+#define VALID_ADDRESS(addr) (((addr) >= 0x100000 && (addr) < 0xB00000) || ((addr) >= 0x6000000 && (addr) < 0x8000000) \
+ || ((addr) >= 0x30000000 && (addr) < 0x40000000))
+
 extern "C" void lc_setCoreHookState(CoreHookContext* ctx) {
-    #ifdef DEBUG
-    if (ctx->callbackAddress != (u32)GameDebugLogfHook && ctx->callbackAddress != (u32)CoreGameMainThreadWorker) {
-        LOGDEBUG("Hook reached: 0x%08X", ctx);
-    }
-    #endif
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
 }
 
@@ -287,6 +282,31 @@ static __attribute__((naked)) void CorePrintfHook(CoreHookContext* ctx) {
         "b CorePrintfHandler\n"
     );
 }
+
+static Core::Mutex checkTestMutex;
+static void CheckTestSave(CoreHookContext* ctx) {
+    struct TestSave {
+        u32 index;
+        gstd::string unk;
+    };
+    checkTestMutex.lock();
+    gstd::vector<TestSave>* vec = reinterpret_cast<gstd::vector<TestSave>*>(ctx->r[8]);
+    gstd::string* str = reinterpret_cast<gstd::string*>(ctx->r[6]);
+    u32 vec_size = (reinterpret_cast<u32*>(ctx->r[8])[1] - reinterpret_cast<u32*>(ctx->r[8])[0]) >> 3;
+    if (!VALID_ADDRESS((u32)str->c_str())) {
+        Core::Debug::LogRawf("Invalid address detected str %08X\n", str->c_str());
+    } else {
+        for (u32 i = 0; i < vec_size; i++) {
+            TestSave* element = &(*reinterpret_cast<TestSave**>(ctx->r[8]))[i];
+            if (!VALID_ADDRESS((u32)element->unk.c_str())) {
+                Core::Debug::LogRawf("Invalid address detected for element %08X\n", element->unk.c_str());
+                break;
+            }
+            Core::Debug::LogRawf("TestSave: %04X -> %s, and %s\n", element->index, element->unk.c_str(), str->c_str());
+        }
+    }
+    checkTestMutex.unlock();
+}
 #endif
 
 Core::GameSyncTask Core::GameMainThreadScheduler::currentTask = (Core::GameSyncTask){0};
@@ -304,6 +324,13 @@ static void CoreGameMainThreadWorker(CoreHookContext* ctx) {
     }
 }
 
+using VOID_FUN = void(*)(void);
+VOID_FUN& gGamePanicCallback = *(VOID_FUN*)(0xa356dc);
+
+void gamePanicCallback() {
+    Core::CrashHandler::Abort(Core::ErrorCode::Game_Panic);
+}
+
 void hookSomeFunctions() {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOKING;
     hookFunction(0x0056c2ac, (u32)RegisterItemsHook);
@@ -313,10 +340,12 @@ void hookSomeFunctions() {
     hookFunction(0x00114f50, (u32)GameDebugLogfHook);
     //hookFunction(0x004df68c, (u32)EntitySpawnStartHook); disabled as there is a weird memory leak ? idk why
     //hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
+    hookFunction(0x00105f6c, (u32)CoreGameMainThreadWorker);
     #ifdef DEBUG
     hookFunction(0x0059d758, (u32)ModifyColdTaiga);
     hookFunction(0x003f7480, (u32)ModifyCreateWorldScreen);
     hookFunction((u32)printf, (u32)CorePrintfHook); 
-    hookFunction(0x00105f6c, (u32)CoreGameMainThreadWorker);
+    // hookFunction(0x8b65a4, (u32)CheckTestSave);
     #endif
+    gGamePanicCallback = gamePanicCallback;
 }

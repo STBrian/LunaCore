@@ -11,6 +11,7 @@
 namespace CTRPF = CTRPluginFramework;
 
 static Core::File logFile;
+Core::Mutex logFileMutex;
 
 void Core::Debug::ReportInternalError(const std::string& msg, const std::source_location& location) {
     Core::Debug::LogError("Internal core exception! \n\tAt function: " + 
@@ -39,10 +40,12 @@ bool Core::Debug::LogFileIsOpen() {
 void Core::Debug::LogRaw(const std::string& msg)
 {
     if (logFile.isOpen()) {
+        logFileMutex.lock();
         std::string newMsg(msg);
         Core::Utils::Replace(newMsg, "\t", "    ");
         logFile.write(newMsg.c_str(), newMsg.size());
         logFile.flush();
+        logFileMutex.unlock();
     }
 }
 
@@ -56,11 +59,13 @@ void Core::Debug::LogRawf(const char* fmt, ...)
 
     va_start(args, fmt);
 
-    char* buffer = (char*)malloc(size);
-    if (buffer) {
-        vsnprintf(buffer, size, fmt, args);
-        Core::Debug::LogRaw(buffer);
-        free(buffer);
+    char buffer[size];
+    vsnprintf(buffer, size, fmt, args);
+    if (logFile.isOpen()) {
+        logFileMutex.lock();
+        logFile.write(buffer, size - 1);
+        logFile.flush();
+        logFileMutex.unlock();
     }
 
     va_end(args);
@@ -86,12 +91,9 @@ void Core::Debug::LogInfof(const char* fmt, ...) {
 
     va_start(args, fmt);
 
-    char* buffer = (char*)malloc(size);
-    if (buffer) {
-        vsnprintf(buffer, size, fmt, args);
-        DebugWriteLog_impl(buffer);
-        free(buffer);
-    }
+    char buffer[size];
+    vsnprintf(buffer, size, fmt, args);
+    DebugWriteLog_impl(buffer);
 
     va_end(args);
 }
@@ -115,12 +117,9 @@ void Core::Debug::LogErrorf(const char* fmt, ...) {
 
     va_start(args, fmt);
 
-    char* buffer = (char*)malloc(size);
-    if (buffer) {
-        vsnprintf(buffer, size, fmt, args);
-        Core::Debug::LogError(buffer);
-        free(buffer);
-    }
+    char buffer[size];
+    vsnprintf(buffer, size, fmt, args);
+    Core::Debug::LogError(buffer);
 
     va_end(args);
 }
@@ -134,12 +133,9 @@ void Core::Debug::LogWarnf(const char* fmt, ...) {
 
     va_start(args, fmt);
 
-    char* buffer = (char*)malloc(size);
-    if (buffer) {
-        vsnprintf(buffer, size, fmt, args);
-        Core::Debug::LogWarn(buffer);
-        free(buffer);
-    }
+    char buffer[size];
+    vsnprintf(buffer, size, fmt, args);
+    Core::Debug::LogWarn(buffer);
 
     va_end(args);
 }

@@ -17,6 +17,8 @@ using json = nlohmann::ordered_json;
 #include "Core/Debug.hpp"
 #include "Core/Utils/Utils.hpp"
 
+#include "MC3DSPluginFramework.hpp"
+
 #include "game/gstdlib.h"
 
 namespace CTRPF = CTRPluginFramework;
@@ -65,6 +67,7 @@ typedef struct {
     int iconU = 0, iconV = 0, iconW = 0, iconH = 0;
     std::string text;
     bool bigIcon = false;
+    int id = -1;
 } MenuBtnData;
 
 typedef struct {
@@ -76,36 +79,66 @@ static std::vector<MenuBtnData> MenuLayoutBtns;
 static std::vector<MenuButtonID::MenuButtonID> MenuBtnsOrder;
 static MenuChrtData MenuLayoutChrt;
 
-static void CreateMenuButtons(int *ptr, std::vector<btn_ctx> &btn_ctxs) {
-    GameButton *(*InitMenuButton)(GameButton*ptr1, int* ptr2, MenuButtonID::MenuButtonID submenuID, int posX, int posY, int width, int height, const char *string, int buttonType) = (decltype(InitMenuButton))(0x5d6b58);
-    void (*AddButtonTexUVs)(GameButton* btnPtr, void*, int u, int v, int w, int h, int, uv_vals*, uv_vals*, int, int, int) = (decltype(AddButtonTexUVs))(0x5d6a50);
+class ScreenProxy : public MC3DSPluginFramework::Screen {
+    using GuiButton = MC3DSPluginFramework::GuiButton;
+    using GuiButtonBoxPtr = MC3DSPluginFramework::BoxedPtr::Shared<GuiButton>;
+    using vector_GuiButtonBoxPtr = MC3DSPluginFramework::gstd::vector<GuiButtonBoxPtr>;
 
-    // Button bg uvs
-    uv_vals uv1 = {0x38, 0x90, 8, 8};
-    uv_vals uv2 = {0x40, 0x90, 8, 8};
+    public:
+    void addButton(GuiButtonBoxPtr&& obj) {
+        this->mButtons.push_back(std::move(obj));
+    }
+
+    void setupTabs() {
+        this->mTabButtons = this->mButtons;
+    }
+};
+
+static void CreateMenuButtons(int *ptr, std::vector<btn_ctx> &btn_ctxs) {
+    using namespace MC3DSPluginFramework;
+    IntRectangle uv1(64, 144, 8, 8);
+    IntRectangle uv2(56, 144, 8, 8);
+
+    ResourceLocation &location = *(ResourceLocation *)0xABFD74;
+    constexpr int     x = 110, w = 200, h = 28, iconW = 16, iconH = 16;
+    int               y = 15;
 
     // --- Define all buttons ---
     for (auto &i : MenuBtnsOrder) {
-        GameButton *newButton = (GameButton*)gstd::malloc(sizeof(GameButton));
-        if (newButton) {
-            MenuBtnData& btnData = MenuLayoutBtns[i];
-            InitMenuButton(newButton, (int*)ptr[1], i, btnData.x, btnData.y, btnData.width, 
-                        btnData.height, btnData.text.c_str(), btnData.bigIcon);
-            // MaybeLinkButton
-            reinterpret_cast<void(*)(btn_ctx&, GameButton*)>(0x8b1bc0)(btn_ctxs[i], newButton);
+        MenuBtnData& btnData = MenuLayoutBtns[i];
+        BoxedPtr::Shared<IconButton> newButton(MC3DSPluginFramework::gstd::make_unique<IconButton>(
+            (MinecraftGame*)ptr[1], i, btnData.x, btnData.y, btnData.width, btnData.height, btnData.text.c_str(), btnData.bigIcon));
+        newButton->setTexture(location, btnData.iconU, btnData.iconV, btnData.iconW, btnData.iconH, 0, uv1, uv2, 2, 2, 0);
+        reinterpret_cast<ScreenProxy*>(ptr)->addButton(newButton);
+    }
 
-            AddButtonTexUVs(btn_ctxs[i].btnPtr, (void*)0xabfd74, btnData.iconU,
-                        btnData.iconV, btnData.iconW, btnData.iconH,
-                        0, &uv2, &uv1, 2, 2, 0);
-            struct ctx_info tex_ctx;
-            // MaybeLinkButtonTexs
-            reinterpret_cast<void(*)(void*, btn_ctx&)>(0x8b1c74)(&tex_ctx, btn_ctxs[i]);
-            // MaybeRegisterData
-            reinterpret_cast<void(*)(int*, void*)>(0x8f9788)(ptr + 7, &tex_ctx);
-            // MaybeAppendButton
-            reinterpret_cast<void(*)(void*)>(0x8b1074)(&tex_ctx);
-        }
-    }   
+    // BoxedPtr::Shared<IconButton> newButton(MC3DSPluginFramework::gstd::make_unique<IconButton>(
+    //     (MinecraftGame*)ptr[1], 12, 276, 220, 29, 28, " ",  false));
+    // newButton->setTexture(location, 224, 144, 16, 16, 0, uv1, uv2, 2, 2, 0);
+    // reinterpret_cast<ScreenProxy*>(ptr)->addButton(newButton);
+
+    // GameButton *(*InitMenuButton)(GameButton*ptr1, int* ptr2, MenuButtonID::MenuButtonID submenuID, int posX, int posY, int width, int height, const char *string, int buttonType) = (decltype(InitMenuButton))(0x5d6b58);
+    // void (*AddButtonTexUVs)(GameButton* btnPtr, void*, int u, int v, int w, int h, int, uv_vals*, uv_vals*, int, int, int) = (decltype(AddButtonTexUVs))(0x5d6a50);
+    // for (auto &i : MenuBtnsOrder) {
+        // newButton = gstd::malloc(...)
+        // if (newButton) {
+            // InitMenuButton(newButton, (int*)ptr[1], i, btnData.x, btnData.y, btnData.width, 
+            //             btnData.height, btnData.text.c_str(), btnData.bigIcon);
+            // MaybeLinkButton
+            // reinterpret_cast<void(*)(btn_ctx&, GameButton*)>(0x8b1bc0)(btn_ctxs[i], newButton);
+
+            // AddButtonTexUVs(btn_ctxs[i].btnPtr, (void*)0xabfd74, btnData.iconU,
+            //             btnData.iconV, btnData.iconW, btnData.iconH,
+            //             0, &uv2, &uv1, 2, 2, 0);
+            // struct ctx_info tex_ctx;
+            // // MaybeLinkButtonTexs
+            // reinterpret_cast<void(*)(void*, btn_ctx&)>(0x8b1c74)(&tex_ctx, btn_ctxs[i]);
+            // // MaybeRegisterData
+            // reinterpret_cast<void(*)(int*, void*)>(0x8f9788)(ptr + 7, &tex_ctx);
+            // // MaybeAppendButton
+            // reinterpret_cast<void(*)(void*)>(0x8b1074)(&tex_ctx);
+        // }
+    // }
 }
 
 static void CreateMainMenuCustomLayout(int *ptr) {
@@ -139,10 +172,10 @@ static void CreateMainMenuCustomLayout(int *ptr) {
         code2[0](ptr);
     }
     
-    for (auto i = MenuBtnsOrder.rbegin(); i != MenuBtnsOrder.rend(); i++) {
-        // MaybeUpdateData
-        reinterpret_cast<btn_ctx*(*)(btn_ctx&)>(0x8b1c18)(btn_ctxs[*i]);
-    }
+    // for (auto i = MenuBtnsOrder.rbegin(); i != MenuBtnsOrder.rend(); i++) {
+    //     // MaybeUpdateData
+    //     reinterpret_cast<btn_ctx*(*)(btn_ctx&)>(0x8b1c18)(btn_ctxs[*i]);
+    // }
     
     Core::CrashHandler::game_state = Core::CrashHandler::GAME_MENU;
     GameState.MainMenuLoaded.store(true);
@@ -160,6 +193,20 @@ static void MainMenuLayoutLoadCallback(int *ptr) {
     // MainMenuLoadOriginal
     reinterpret_cast<void(*)(int*)>(0x26eda4)(ptr);
 
+    using namespace MC3DSPluginFramework;
+    IntRectangle uv1(64, 144, 8, 8);
+    IntRectangle uv2(56, 144, 8, 8);
+
+    ResourceLocation &location = *(ResourceLocation *)0xABFD74;
+    BoxedPtr::Shared<IconButton> newButton(MC3DSPluginFramework::gstd::make_unique<IconButton>(
+        (MinecraftGame*)ptr[1], 8, 15, 206, 28, 28, 
+        CTRPF::Utils::Format(" LunaCore %d.%d.%d", Core::Version.major, Core::Version.minor, Core::Version.patch).c_str(), 
+        false));
+    newButton->setTexture(location, 224, 144, 16, 16, 0, uv1, uv2, 2, 2, 0);
+    ScreenProxy* screen = reinterpret_cast<ScreenProxy*>(ptr);
+    screen->addButton(newButton);
+    screen->setupTabs();
+
     Core::CrashHandler::game_state = Core::CrashHandler::GAME_MENU;
     GameState.MainMenuLoaded.store(true);
     return;
@@ -176,6 +223,7 @@ static void LoadButtonData(json &j, MenuBtnData &btnData) {
     btnData.height = j.value("height", 0);
     btnData.text = j.value("text", "");
     btnData.bigIcon = j.value("bigIcon", false);
+    btnData.id = j.value("id", -1);
     if (j.contains("icon") && j["icon"].is_array() && j["icon"].size() == 4) {
         json &icon = j["icon"];
         if (icon[0].is_number())

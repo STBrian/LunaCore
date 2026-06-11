@@ -20,6 +20,7 @@
 #include "game/entity/Entity.hpp"
 #include "game/gstd/gstd_string.hpp"
 #include "game/gstd/gstd_vector.hpp"
+#include "game/common/gui/BaseScreen.hpp"
 
 #include "Helpers/LuaObject.hpp"
 
@@ -331,6 +332,34 @@ void gamePanicCallback() {
     Core::CrashHandler::Abort(Core::ErrorCode::Game_Panic);
 }
 
+std::vector<std::string> registeredScreens;
+
+static void GameBaseScreenTouchHandler(CoreHookContext* ctx) {
+    Minecraft::BaseScreen* screen = reinterpret_cast<Minecraft::BaseScreen*>(ctx->r[0]);
+    // u32* vtable = *reinterpret_cast<u32**>(screen);
+    // using Method = gstd::string&(Minecraft::BaseScreen::*)();
+    // Method m = &Minecraft::BaseScreen::getScreenName;
+    // u32 value = *(u32*)&m;
+    // Core::Debug::LogInfof("Screen: %04X", value);
+    // if (value * 4 == 0xF4)
+    //     Core::Debug::LogInfof("true");
+    // else
+    //     Core::Debug::LogInfof("false: %04X", value * 4);
+
+    std::string screenName = screen->getScreenName().c_str();
+    if (std::find(registeredScreens.begin(), registeredScreens.end(), screenName) == registeredScreens.end()) {
+        registeredScreens.push_back(screenName);
+        Core::Debug::LogInfof("New screen registered: %s", screenName.c_str());
+    }
+}
+
+static void MenuButtonTest(CoreHookContext* ctx) {
+    u32 id = *(u32*)(ctx->r[5] + 0x78);
+    if (id == 12) {
+        CTRPF::PluginMenu::ForceOpen();
+    }
+}
+
 void hookSomeFunctions() {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOKING;
     hookFunction(0x0056c2ac, (u32)RegisterItemsHook);
@@ -341,6 +370,8 @@ void hookSomeFunctions() {
     //hookFunction(0x004df68c, (u32)EntitySpawnStartHook); disabled as there is a weird memory leak ? idk why
     //hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
     hookFunction(0x00105f6c, (u32)CoreGameMainThreadWorker);
+    // hookFunction(0x00620670, (u32)GameBaseScreenTouchHandler);
+    hookFunction(0x0026e878, (u32)MenuButtonTest);
     #ifdef DEBUG
     hookFunction(0x0059d758, (u32)ModifyColdTaiga);
     hookFunction(0x003f7480, (u32)ModifyCreateWorldScreen);

@@ -240,12 +240,11 @@ void Core::PreloadScripts()
     if (files.size() > 0) {
         Core::Debug::LogInfo("Loading scripts");
         for (auto &file : files) {
-            if (!Core::Utils::endsWith(file, ".lua"))
+            if (!file.ends_with(".lua"))
                 continue;
 
             std::string fullPath(PLUGIN_FOLDER"/scripts/" + file);
             if (!Core::Filesystem::FileExists(fullPath)) {
-                LOGDEBUG("%s doesn't exists?", fullPath.c_str());
                 continue;
             }
 

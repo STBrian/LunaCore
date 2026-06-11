@@ -1,11 +1,11 @@
 #pragma once
 
 #if __STDC_HOSTED__
-#include <string>
 #include <source_location>
-
 #include "Core/CrashHandler.hpp"
 #endif
+
+#include <string_view>
 
 #include "CoreGlobals.hpp"
 #include "lua_common.h"
@@ -59,18 +59,16 @@ namespace Core {
         /* Prints the message on screen and writes to log file */
         void Message(const char* msg);
 
-        #if __STDC_HOSTED__
-        void LogRaw(const std::string& msg);
+        void LogRaw(std::string_view msg);
 
         /* Logs to file */
-        void LogInfo(const std::string& msg);
+        void LogInfo(std::string_view msg);
 
-        void LogError(const std::string& msg);
+        void LogError(std::string_view msg);
 
-        void LogWarn(const std::string& msg);
+        void LogWarn(std::string_view msg);
 
         /* Prints the message on screen and writes to log file */
-        void Message(const std::string& msg);
-        #endif
+        void Message(std::string_view msg);
     }
 }

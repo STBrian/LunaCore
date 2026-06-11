@@ -108,6 +108,9 @@ namespace CTRPluginFramework
         Debug::LogInfof("LunaCore version: %d.%d.%d", Core::Version.major, Core::Version.minor, Core::Version.patch);
         Debug::LogInfof("Loading config file '%s'", Core::Filesystem::GetRealPath(CONFIG_FILE).c_str());
         G_config = LoadConfig(CONFIG_FILE);
+        if (!G_config.isLoaded()) {
+            Core::Debug::LogInfof("Failed to load config file. Using defaults");
+        }
 
         bool disableZLandZR = G_config.getBool("disable_zl_and_zr", false);
         bool disableDLandDR = G_config.getBool("disable_dleft_and_dright", false);

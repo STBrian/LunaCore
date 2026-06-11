@@ -24,15 +24,6 @@ namespace Core {
 
         std::string LoadFile(const std::string& filepath);
 
-        inline bool startsWith(const std::string& str, const std::string& prefix) {
-            return str.compare(0, prefix.size(), prefix) == 0;
-        }
-
-        inline bool endsWith(const std::string& str, const std::string& sufix) {
-            size_t pos = str.size() - sufix.size();
-            return pos >= 0 && str.compare(pos, sufix.size(), sufix) == 0;
-        }
-
         inline void Replace(std::string& str, const std::string& pattern, const std::string& repl) {
             size_t pos = 0;
             while ((pos = str.find(pattern, pos)) != std::string::npos) {

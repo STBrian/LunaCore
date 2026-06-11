@@ -44,7 +44,7 @@ static int l_Filesystem_open(lua_State *L) {
         filesize = lua_tonumber(L, 3);
     }
     std::string filemode(filemodec);
-    if (Core::Utils::startsWith(filepath, "lcfs:")) {
+    if (std::string(filepath).starts_with("lcfs:")) {
         lua_pushnil(L);
         lua_pushstring(L, "Device is invalid or not mounted");
         return 2;

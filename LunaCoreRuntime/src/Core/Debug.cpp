@@ -37,7 +37,7 @@ bool Core::Debug::LogFileIsOpen() {
     return logFile.isOpen();
 }
 
-void Core::Debug::LogRaw(const std::string& msg)
+void Core::Debug::LogRaw(std::string_view msg)
 {
     if (logFile.isOpen()) {
         logFileMutex.lock();
@@ -71,14 +71,14 @@ void Core::Debug::LogRawf(const char* fmt, ...)
     va_end(args);
 }
 
-static void DebugWriteLog_impl(const std::string& msg)
+static void DebugWriteLog_impl(std::string_view msg)
 {
     std::string out_msg = "[";
     out_msg += Core::Utils::formatTime(time(NULL)) + "] " + std::string(msg);
     Core::Debug::LogRaw(out_msg + "\n");
 }
 
-void Core::Debug::LogInfo(const std::string& msg) {
+void Core::Debug::LogInfo(std::string_view msg) {
     DebugWriteLog_impl(msg);
 }
 
@@ -98,14 +98,16 @@ void Core::Debug::LogInfof(const char* fmt, ...) {
     va_end(args);
 }
 
-void Core::Debug::LogError(const std::string& msg) {
-    CTRPF::OSD::Notify(msg, CTRPF::Color::Red, CTRPF::Color::Black);
-    DebugWriteLog_impl("[ERROR] " + msg);
+void Core::Debug::LogError(std::string_view msg) {
+    std::string nmsg(msg);
+    CTRPF::OSD::Notify(nmsg, CTRPF::Color::Red, CTRPF::Color::Black);
+    DebugWriteLog_impl("[ERROR] " + nmsg);
 }
 
-void Core::Debug::LogWarn(const std::string& msg) {
-    CTRPF::OSD::Notify(msg, CTRPF::Color::Yellow, CTRPF::Color::Black);
-    DebugWriteLog_impl("[WARN] " + msg);
+void Core::Debug::LogWarn(std::string_view msg) {
+    std::string nmsg(msg);
+    CTRPF::OSD::Notify(nmsg, CTRPF::Color::Yellow, CTRPF::Color::Black);
+    DebugWriteLog_impl("[WARN] " + nmsg);
 }
 
 void Core::Debug::LogErrorf(const char* fmt, ...) {
@@ -140,8 +142,8 @@ void Core::Debug::LogWarnf(const char* fmt, ...) {
     va_end(args);
 }
 
-void Core::Debug::Message(const std::string& msg) {
-    CTRPF::OSD::Notify(msg);
+void Core::Debug::Message(std::string_view msg) {
+    CTRPF::OSD::Notify(std::string(msg));
     DebugWriteLog_impl(msg);
 }
 

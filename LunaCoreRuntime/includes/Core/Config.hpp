@@ -9,19 +9,19 @@
 namespace CTRPF = CTRPluginFramework;
 
 namespace Core {
-    namespace Debug {
-        void LogWarn(const std::string& msg);
-    }
-
     namespace Utils {
         std::string strip(const std::string& str);
         std::string LoadFile(const std::string& filepath);
     }
+    
+    class Config;
+    Config LoadConfig(const std::string& filepath);
 
     class Config {
         private:
         std::unordered_map<std::string, std::string> values;
         std::string _path;
+        bool loaded = false;
 
         Config() {}
 
@@ -62,7 +62,6 @@ namespace Core {
         bool save() {
             Core::File configFile(_path, FS_OPEN_WRITE|FS_OPEN_CREATE);
             if (!configFile.isOpen()) {
-                Core::Debug::LogWarn("Failed to save configs");
                 return false;
             }
             for (auto key : this->values) {
@@ -71,12 +70,17 @@ namespace Core {
             }
             return true;
         }
+
+        bool isLoaded() const {
+            return this->loaded;
+        }
+
+        friend Config Core::LoadConfig(const std::string& fp);
     };
 
     inline Config LoadConfig(const std::string& filepath) {
         Config config(filepath);
         if (!Core::Filesystem::FileExists(filepath)) {
-            Core::Debug::LogWarn("Config file not found. Using defaults");
             return config;
         }
         std::string fileContent = Core::Utils::LoadFile(filepath);
@@ -102,6 +106,7 @@ namespace Core {
             newLinePos++;
             pos = newLinePos;
         }
+        config.loaded = true;
         return config;
     }
 }

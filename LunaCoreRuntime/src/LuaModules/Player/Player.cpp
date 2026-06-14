@@ -244,7 +244,7 @@ static int l_LocalPlayer_index(lua_State *L)
     uint32_t key = hash(lua_tostring(L, 2));
     bool valid_key = true;
 
-    Minecraft::Player* ply = Minecraft::Player::getPlayerInstance();
+    auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
 
     switch (key) {
         case hash("OnGround"):
@@ -327,7 +327,7 @@ static int l_LocalPlayer_index(lua_State *L)
             lua_pushnumber(L, Minecraft::GetSprintDelayTime());
             break;
         case hash("Dimension"):
-            lua_pushnumber(L, ply ? ply->dimId : 0);
+            lua_pushnumber(L, ply ? ply->getLastDimensionId() : 0);
             break;
         case hash("Loaded"):
             lua_pushboolean(L, ply != NULL);

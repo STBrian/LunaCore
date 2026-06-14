@@ -199,7 +199,7 @@ static void MainMenuLayoutLoadCallback(int *ptr) {
 
     ResourceLocation &location = *(ResourceLocation *)0xABFD74;
     BoxedPtr::Shared<IconButton> newButton(MC3DSPluginFramework::gstd::make_unique<IconButton>(
-        (MinecraftGame*)ptr[1], 8, 15, 206, 28, 28, 
+        (MinecraftGame*)ptr[1], 12, 10, 206, 28, 28, 
         CTRPF::Utils::Format(" LunaCore %d.%d.%d", Core::Version.major, Core::Version.minor, Core::Version.patch).c_str(), 
         false));
     newButton->setTexture(location, 224, 144, 16, 16, 0, uv1, uv2, 2, 2, 0);

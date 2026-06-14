@@ -15,6 +15,7 @@
 #include "Helpers/LuaCustomTable.hpp"
 
 #include "MC3DSPluginFramework.hpp"
+#include "Minecraft/Common/World/Level/Chunk/LevelChunk.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
@@ -273,6 +274,57 @@ static int l_World_getBlock(lua_State* L) {
     return 2;
 }
 
+/*
+- Gets the current biome ID
+## return: integer
+### Game.World.getCurrentBiome
+*/
+static int l_World_getCurrentBiome(lua_State* L) {
+    auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
+    using BlockPos = MC3DSPluginFramework::BlockPos;
+    using ChunkBlockPos = MC3DSPluginFramework::ChunkBlockPos;
+    if (ply) {
+        MC3DSPluginFramework::Vec3<float>& pos = ply->getPos();
+        auto data = ply->getRegion().getLevelChunk(BlockPos(pos.x, pos.y, pos.z));
+        if (data) {
+            void* biome = data->getBiome(ChunkBlockPos(BlockPos(pos.x, pos.y, pos.z)));
+            lua_pushnumber(L, *reinterpret_cast<u32*>((u32)biome + 0x90));
+        } else 
+            lua_pushnumber(L, -1);
+    } else
+        lua_pushnumber(L, -1);
+
+    return 1;
+}
+
+#include "Minecraft/Common/Client/Sound/SoundEngine.hpp"
+
+class SoundEngineProxy : public MC3DSPluginFramework::SoundEngine {
+    public:
+    virtual void playMusic(u32 soundId);
+};
+
+/*
+- Plays a sound globally
+## soundId: string
+## volume: number
+## pitch: number
+### Game.World.playGlobalSound
+*/
+static int l_World_playGlobalSound(lua_State* L) {
+    const char* soundId = luaL_checkstring(L, 1);
+    float volume = luaL_checknumber(L, 2);
+    float pitch = luaL_checknumber(L, 3);
+
+    auto* game = MC3DSPluginFramework::Facade::getMinecraftGame();
+    if (game) {
+        auto engine = reinterpret_cast<MC3DSPluginFramework::gstd::unique_ptr<SoundEngineProxy>*>((u32)game + 0xDC);
+        engine->get()->playMusic(hash(soundId));
+        // game->playSound(hash(soundId), volume, pitch);
+    }   
+    return 0;
+}
+
 // ----------------------------------------------------------------------------
 
 bool Core::Module::RegisterWorldModule(lua_State *L) {
@@ -295,6 +347,10 @@ bool Core::Module::RegisterWorldModule(lua_State *L) {
     lua_setfield(L, -2, "setBlock");
     lua_pushcfunction(L, l_World_getBlock);
     lua_setfield(L, -2, "getBlock");
+    lua_pushcfunction(L, l_World_getCurrentBiome);
+    lua_setfield(L, -2, "getCurrentBiome");
+    lua_pushcfunction(L, l_World_playGlobalSound);
+    lua_setfield(L, -2, "playGlobalSound");
 
     lua_pop(L, 1); // Pop index table
     lua_getglobal(L, "Game");

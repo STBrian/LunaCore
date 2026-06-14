@@ -1,8 +1,10 @@
-from glob import iglob
-from pathlib import Path
 import sys
 import re
 import logging
+
+from glob import iglob
+from pathlib import Path
+from typing import Type, TextIO
 
 logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
 
@@ -48,6 +50,182 @@ class UndefinedSymbolException(Exception):
             logging.error(f"UndefinedSymbolException: Undefined '{symbolName}': {ctx}")
             sys.exit(-1)
 
+class Command:
+    def __init__(self, line: str, stack: list) -> None:
+        self.stack = stack
+        self.args = line.split()
+        self.chainCommand = False
+        self.chainEndCommand = False
+        self.chainAllowed = []
+        self.requiresExplicitCall = False
+        self.empty = False
+
+    def construct(self):
+        return [""]
+    
+    def isEmpty(self):
+        return self.empty
+    
+    def isChain(self):
+        return self.chainCommand
+    
+    def isChainEnd(self):
+        return self.chainEndCommand
+    
+    def isExplicit(self):
+        return self.requiresExplicitCall
+    
+    def allowsNext(self, type):
+        return type in self.chainAllowed
+    
+class ChainCommand(Command):
+    def __init__(self, line: str, stack: list) -> None:
+        super().__init__(line, stack)
+        self.chainCommand = True
+    
+class ChainEndCommand(Command):
+    def __init__(self, line: str, stack: list) -> None:
+        super().__init__(line, stack)
+        self.chainEndCommand = True
+
+
+
+
+class EmptyCommand(Command):
+    def __init__(self, line: str, stack: list) -> None:
+        super().__init__(line, stack)
+        self.empty = True
+
+class CommentInsert(Command):
+    def __init__(self, line: str, stack: list) -> None:
+        super().__init__(line, stack)
+        self.line = line
+
+    def construct(self):
+        return [self.line]
+    
+    def allowsNext(self, type):
+        return True
+
+class FunctionDefinitionCommand(ChainEndCommand):
+    def __init__(self, line: str, stack: list) -> None:
+        super().__init__(line, stack)
+
+    def construct(self):
+        outLines = []
+        while len(self.stack) > 0:
+            element = self.stack.pop(0)
+            assert isinstance(element, Command)
+            outLines.extend(element.construct())
+
+class ParamReturnCommand(ChainCommand):
+    def __init__(self, line: str, stack: list) -> None:
+        super().__init__(line, stack)
+        self.chainAllowed = [FunctionDefinitionCommand]
+        self.requiresExplicitCall = True
+
+    def construct(self):
+        if len(self.args) < 1:
+            raise Exception("return: Return type was not specified")
+        if self.args[2] == "custom":
+            if len(self.args) < 2:
+                raise Exception("return: custom type was not specified")
+            return [f"---@return {self.args[1]}"]
+        return [f"---@return {self.args[0]}"]
+
+class ParamCommand(ChainCommand):
+    def __init__(self, line: str, stack: list) -> None:
+        super().__init__(line, stack)
+        self.chainAllowed = [ParamCommand, ParamReturnCommand, FunctionDefinitionCommand]
+        self.requiresExplicitCall = True
+
+    def construct(self):
+        if len(self.args) < 2:
+            raise Exception("param: At least 2 arguments are required")
+        if self.args[2] == "custom":
+            if len(self.args) < 3:
+                raise Exception("param: custom type was not specified")
+            return [f"---@param {self.args[0]} {self.args[2]}"]
+        return [f"---@param {self.args[0]} {self.args[1]}"]
+    
+class FunctionDescription(ChainCommand):
+    def __init__(self, line: str, stack: list) -> None:
+        super().__init__(line, stack)
+        self.chainAllowed = [ParamCommand, ParamReturnCommand, FunctionDefinitionCommand, FunctionDescription]
+        self.requiresExplicitCall = True
+        self.line = line
+
+    def construct(self):
+        return [self.line]
+
+
+
+
+class CodeSegment:
+    classSelector: dict[str, Type[Command]] = {
+        "default": EmptyCommand,
+        "param": ParamCommand,
+        "return": ParamReturnCommand,
+        "fun": FunctionDefinitionCommand,
+        "insert": CommentInsert,
+        "desc": FunctionDescription
+    }
+
+    class InvalidCommandException(Exception):
+        def __init__(self, ctx: CurrentContext, message: str) -> None:
+            super().__init__(f"{message}. {ctx}")
+
+    def __init__(self, lines: list[str], ctx: CurrentContext) -> None:
+        self.lines = lines
+        self.stack = []
+        self.ctx = ctx
+        self.parsedLines = []
+
+    def parseLine(self, line: str):
+        line = line.strip()
+        if line.startswith("---@"):
+            line = line[4:]
+            spacePos = line.find(" ")
+            if spacePos > 0:
+                cmd = line[:spacePos]
+                line = line[spacePos+1:]
+            else:
+                cmd = line
+            if cmd in CodeSegment.classSelector:
+                return CodeSegment.classSelector[cmd](line, self.stack)
+            else:
+                raise self.InvalidCommandException(self.ctx, f"Invalid command '{cmd}'")
+
+        return CodeSegment.classSelector["default"](line, self.stack)
+
+    def parse(self):
+        for line in self.lines:
+            self.ctx.lineContent = line.strip()
+
+            cmd = self.parseLine(line)
+            if len(self.stack) > 0:
+                if not self.stack[-1].allowsNext(cmd.__class__):
+                    raise Exception(f"Chain error: type '{self.stack[-1].__class__}' doesn't support '{cmd.__class__}'")
+
+            if cmd.isChain():
+                self.stack.append(cmd)
+            else:
+                if not isinstance(cmd, ChainEndCommand) and len(self.stack) > 0:
+                    while len(self.stack) > 0:
+                        element = self.stack.pop(0)
+                        assert isinstance(element, Command)
+                        if not element.isExplicit():
+                            self.parsedLines.extend(element.construct())
+                self.parsedLines.extend(cmd.construct())
+                self.parsedLines.append("")
+                self.stack.clear()
+
+            self.ctx.line += 1
+
+    def export(self, out: TextIO):
+        out.writelines(self.parsedLines)
+
+
 def verify_fmt(string: str, allow_dots: bool):
     if len(string) == 0 or not string[0].isalpha():
         return False
@@ -80,6 +258,7 @@ pendingData = []
 def process_data(path: str, lines: list):
     segment = []
     add_to_list = False
+    currentVersion = 1
     for i, line in enumerate(lines):
         assert isinstance(line, str)
         if line.find("*/") > -1:
@@ -88,7 +267,12 @@ def process_data(path: str, lines: list):
             if len(val) > 0:
                 segment.append(val)
             if len(segment) > 0:
-                process_lines(path, segment, i - len(segment) + 1)
+                if currentVersion == 2:
+                    parser = CodeSegment(segment, CurrentContext("", path, i - len(segment) + 1))
+                    parser.parse()
+                    parser.export(DOCS_FILE)
+                else:
+                    process_lines(path, segment, i - len(segment) + 1)
                 segment.clear()
         if line.find("//") > -1:
             logging.debug("Single line definition")
@@ -109,6 +293,21 @@ def process_data(path: str, lines: list):
                     raise ImportFailedException(f"Failed to open file on line: {line} on {path} at line {i}")
                 process_file(str(filename))
         if line.find("/*") > -1:
+            fmt_version = line.find("&docfmt_version")
+            if fmt_version > -1:
+                if "=" not in line:
+                    raise Exception(f"Syntax error. Missing '=': {line} on {path} at line {i}")
+                version = line[line.find("=")+1:]
+                try:
+                    version = int(version)
+                except:
+                    raise Exception(f"Invalid format version: {line} on {path} at line {i}")
+                if version in (1, 2):
+                    currentVersion = version
+                else:
+                    raise Exception(f"Invalid format version value: {line} on {path} at line {i}")
+            else:
+                currentVersion = 1
             add_to_list = True
             val = line[line.find("/*"):].strip()
             if len(val) > 0:

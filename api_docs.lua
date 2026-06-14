@@ -1030,6 +1030,10 @@ function Game.World.setBlock(x, y, z, blockId, blockData) end
 ---@return integer
 function Game.World.getBlock(x, y, z) end
 
+---Gets the current biome ID
+---@return integer
+function Game.World.getCurrentBiome() end
+
 ---@class OnWorldJoin: EventClass
 Game.World.OnWorldJoin = {}
 

@@ -22,6 +22,9 @@ static int l_Debug_message(lua_State *L)
     return 0;
 }
 
+/*&docfmt_version=2
+
+*/
 /*
 - Appends the message to log file. Optionally shows the message on screen
 ## msg: string

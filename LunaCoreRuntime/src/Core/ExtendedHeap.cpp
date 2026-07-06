@@ -58,6 +58,14 @@ static s32 ctr_enable_all_svc_kernel(void)
    return 0;
 }
 
+static void invalidate_mmu_cache() {
+    asm volatile (
+        "mov r0, #0\n"
+        "mcr p15, 0, r0, c8, c7, 0\n"
+        "mcr p15, 0, r0, c7, c5, 0\n"
+    );
+}
+
 namespace CTRPluginFramework::ProcessImpl {
     extern u32 exceptionCount;
 
@@ -88,7 +96,7 @@ static const char* CrashHandlerExtendedHeapCallback(ERRF_ExceptionInfo* excep, C
                 AtomicPostDecrement(&CTRPF::ProcessImpl::exceptionCount);
                 CTRPluginFrameworkImpl::Services::GSP::PauseInterruptReceiver(); 
                 CTRPF::ProcessImpl::UnlockGameThreads();
-                LOGDEBUG("Resuming to PC: %08X", regs->pc);
+                // LOGDEBUG("Resuming to PC: %08X", regs->pc);
                 //svcSleepThread(1000000LL);
                 CTRPF::ProcessImpl::ReturnFromException(regs);
             }
@@ -102,12 +110,11 @@ Result ExtendedHeapInit(size_t heapsize) {
     const u16 maxLoadedPages = heapsize < MAX_LOADED_PAGES ? heapsize : MAX_LOADED_PAGES;
 
     LOGDEBUG("Init extended heap");
-    //svcBackdoor(&ctr_enable_all_svc_kernel);
     if (!Core::Filesystem::DirectoryExists("lcfs:/LunaCore")) {
         if (!Core::Filesystem::CreateDirectory("lcfs:/LunaCore")) 
             return -1;
     }
-    HeapCtx.swapfile.open("lcfs:/LunaCore/swapfile.bin", FS_OPEN_CREATE|FS_OPEN_READ|FS_OPEN_WRITE);
+    HeapCtx.swapfile.open("lcfs:/LunaCore/swapfile.bin", FS_OPEN_CREATE|FS_OPEN_READ|FS_OPEN_WRITE, heapsize_b);
     if (!HeapCtx.swapfile.isOpen()) return -1;
 
     HeapCtx.heapStart = START_EXTHEAP_ADDR;
@@ -138,18 +145,12 @@ Result ExtendedHeapInit(size_t heapsize) {
     for (size_t i = 0; i < maxLoadedPages; i++) {
         LOGDEBUG("Mirroring %d", i);
         Result res = svcControlProcessMemory(curHandle, mappedPages[i].dstAddr, mappedPages[i].srcAddr, PAGE_SIZE, MEMOP_MAP, MEMPERM_READWRITE);
-        MemInfo info;
-        PageInfo out;
         //Result res = svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, mappedPages[i].dstAddr, CUR_PROCESS_HANDLE, mappedPages[i].srcAddr, PAGE_SIZE, MAPEXFLAGS_PRIVATE);
         if (R_FAILED(res)) {
             LOGDEBUG("Failed to mirror %08X to %08X", mappedPages[i].srcAddr, mappedPages[i].dstAddr);
             goto error;
         } else 
             mappedPages[i].mapped = true;
-        svcQueryProcessMemory(&info, &out, curHandle, mappedPages[i].dstAddr);
-        if (!(info.perm & MEMPERM_READ)) {
-            Core::Abort("Unexpected behavior");
-        }
     }
 
     LOGDEBUG("Creating allocator");
@@ -169,6 +170,7 @@ Result ExtendedHeapInit(size_t heapsize) {
     return 0;
 
     error:
+    svcCustomBackdoor((void*)invalidate_mmu_cache);
     HeapCtx.swapfile.close();
     if (pageMissCount) free(pageMissCount);
     if (mappedPages) {
@@ -180,6 +182,7 @@ Result ExtendedHeapInit(size_t heapsize) {
         free(mappedPages);
     }
     if (curHandle != 0) svcCloseHandle(curHandle);
+    svcCustomBackdoor((void*)invalidate_mmu_cache);
     return -1;
 }
 
@@ -205,11 +208,11 @@ static void writePageContent(u32 addr) {
 
 static void loadPageContent(u32 addr) {
     const size_t fileOffset = addr - START_EXTHEAP_ADDR;
-    HeapCtx.swapfile.seek(fileOffset, SEEK_SET);
+    int noff = HeapCtx.swapfile.seek(fileOffset, SEEK_SET);
     u32 bytesRead = 0;
     while (bytesRead < PAGE_SIZE) {
         int status = HeapCtx.swapfile.read((void*)(addr + bytesRead), 0x800);
-        if (status != 0x800) Core::Abort("Failed to read page from swapfile");
+        if (status != 0x800) Core::Abort(CTRPF::Utils::Format("Failed to read swap page! %08X", status).c_str());
         bytesRead += 0x800;
     }
 }
@@ -241,7 +244,7 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
     HeapCtx_mutex.lock();
     const u16 minMappedIdx = getMinHitMissLoadedPage();
 
-    LOGDEBUG("Swap call #%d", counter++);
+    // LOGDEBUG("Swap call #%d", counter++);
     // Increase miss counters
     HeapCtx.pageMissCount[pageIdx]++;
     if (pageIdx > 0) HeapCtx.pageMissCount[pageIdx-1]++;
@@ -253,16 +256,6 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
     svcInvalidateEntireInstructionCache();
     svcFlushEntireDataCache();
     writePageContent(pageInfo.dstAddr);
-    /*LOGDEBUG("Query process memory");
-    status = svcQueryProcessMemory(&info, &out, CUR_PROCESS_HANDLE, pageInfo.dstAddr);
-    if (R_FAILED(status)) return -3;
-    if (info.state != MemState::MEMSTATE_PRIVATE) {
-        LOGDEBUG("Attempt to unmap memory at %08X but it isn't mapped");
-        HeapCtx_mutex.unlock();
-        return -4;
-    }*/
-    //status = svcUnmapProcessMemoryEx(CUR_PROCESS_HANDLE, pageInfo.dstAddr, PAGE_SIZE);
-    //LOGDEBUG("Control process memory");
     status = svcControlProcessMemory(curHandle, pageInfo.dstAddr, pageInfo.srcAddr, PAGE_SIZE, MEMOP_UNMAP, MEMPERM_READWRITE);
     if (status != 0) {
         LOGDEBUG("Failed to unmap memory page");
@@ -270,21 +263,7 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
         HeapCtx_mutex.unlock();
         return -1;
     }
-    //svcControlMemory(&addr_out, pageInfo.dstAddr, , (MemPerm)0)
-    //svcCustomBackdoor((void*)tryInvalidateTLB);
-    //__dsb();
-    //__isb();
-    //__dmb();
-    /*LOGDEBUG("Query process memory 2");
-    status = svcQueryProcessMemory(&info, &out, CUR_PROCESS_HANDLE, pageInfo.dstAddr);
-    if (R_FAILED(status)) return -3;
-    if (info.state != MemState::MEMSTATE_FREE) {
-        LOGDEBUG("Failed to unmap memory at %08X. Expected to be free, instead: %d", pageInfo.dstAddr, info.state);
-        LOGDEBUG("Info: %d, %08X, %d", info.size, info.base_addr, info.perm);
-        HeapCtx_mutex.unlock();
-        return -4;
-    }*/
-    //swapfileFlush();
+    // svcCustomBackdoor((void*)invalidate_mmu_cache);
     pageInfo.dstAddr = pageStart;
     pageInfo.idx = pageIdx;
     status = svcQueryProcessMemory(&info, &out, CUR_PROCESS_HANDLE, pageInfo.dstAddr);
@@ -299,6 +278,7 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
         HeapCtx_mutex.unlock();
         return -2;
     }
+    svcCustomBackdoor((void*)invalidate_mmu_cache);
     LOGDEBUG("Loading memory page %08X", pageInfo.dstAddr);
     CTRPluginFramework::ProcessImpl::UpdateMemRegions(true);
     loadPageContent(pageInfo.dstAddr);

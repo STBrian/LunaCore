@@ -187,13 +187,17 @@ namespace Core {
         
         u32 threadId;
         svcGetThreadId(&threadId, CUR_THREAD_HANDLE);
-        if (reservedMemory && threadId == pluginThreadId) {
-            free(reservedMemory); // free can cause a double crash in some cases. Need more testing. Meanwhile I added a thread id check
+        if (reservedMemory) {
+            free(reservedMemory); // free can cause a double crash in some cases. Need more testing. Probably heap or stack corruption
             reservedMemory = nullptr;
         }
         
-        if (!luaRuntimeFault) Lua_Global_Mut.unlock();
+        Lua_Global_Mut.unlock();
+        int lmemusgkb = 0;
+        int lmemusgb = 0;
         if (Lua_global != NULL && threadId == pluginThreadId) {
+            lmemusgkb = lua_gc(Lua_global, LUA_GCCOUNT, 0);
+            lmemusgb = lua_gc(Lua_global, LUA_GCCOUNTB, 0);
             lua_close(Lua_global);
             Lua_global = nullptr;
         }
@@ -240,6 +244,7 @@ namespace Core {
             Core::Debug::LogRawf("\t\tPlugin state: %s\n", pluginStateStr[plg_state]);
             Core::Debug::LogRawf("\t\tLast Core state: %s\n", coreStateStr[core_state]);
             Core::Debug::LogRawf("\t\tGame state: %s\n", gameStateStr[game_state]);
+            Core::Debug::LogRawf("\t\tLua memory usage: %d b", lmemusgkb * 1024 + lmemusgb);
             if (!manuallyCalled) {
                 Core::Debug::LogRawf("\n\tException type: %s\n", exceptionStr[excep->type]);
                 Core::Debug::LogRawf("\tException at address: %08X\n", regs->pc);

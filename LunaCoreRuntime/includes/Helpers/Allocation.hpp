@@ -10,13 +10,25 @@
 #include "Helpers/Errors.hpp"
 #include "Core/CrashHandler.hpp"
 
+#include "game/gmalloc.h"
+
 namespace Core {
+
+#define HEAP_PLUGIN 0
+#define HEAP_GAME_APP 1
+#define HEAP_GAME_LINEAR 2
 
 template <typename T, typename... Args>
 inline T* alloc(Args&&... args) {
-    void* ptr = std::malloc(sizeof(T));
-    if (ptr == nullptr) CrashHandler::Abort("Allocation error normal");
-    return new (ptr) T(std::forward<Args>(args)...);
+    void* ptr = std::malloc(sizeof(T) + 8);
+    if (ptr == nullptr) {
+        ptr = gstd_malloc(sizeof(T) + 8); // try to get help from game's heap
+        if (ptr == nullptr) CrashHandler::Abort(ErrorCode::Allocation_Error);
+        *(u32*)ptr = HEAP_GAME_APP;
+    } else
+        *(u32*)ptr = HEAP_PLUGIN;
+    void* p = (u32*)ptr + 2;
+    return new (p) T(std::forward<Args>(args)...);
 }
 
 template <typename T>
@@ -35,9 +47,11 @@ inline T* alloc_array(size_t count) {
 
 template <typename T, typename... Args>
 T* alloc_raw(Args&&... args) {
-    void* ptr = std::malloc(sizeof(T));
-    if (ptr == nullptr) return nullptr;
-    return new (ptr) T(std::forward<Args>(args)...);
+    void* ptr = std::malloc(sizeof(T) + 8);
+    if (ptr == nullptr) return nullptr; // don't try with game's allocator as it causes an abort when fails to reserve
+    else *(u32*)ptr = HEAP_PLUGIN;
+    void* p = (u32*)ptr + 2;
+    return new (p) T(std::forward<Args>(args)...);
 }
 
 template <typename T>
@@ -61,7 +75,11 @@ void dealloc(T* ptr) {
     if constexpr (!std::is_trivially_destructible_v<T>) {
         ptr->~T();
     }
-    std::free(ptr);
+    u32* heapType = (u32*)ptr - 2;
+    if (*heapType == HEAP_PLUGIN)
+        std::free(heapType);
+    else
+        gstd_free(heapType);
 }
 
 template <typename T>

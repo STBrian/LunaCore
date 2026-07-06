@@ -53,9 +53,12 @@ inline void* custom_gstd_realloc(void* p, size_t newsize) {
             memcpy(newp, p, newsize < oldsize ? newsize : oldsize);
             gstd_free(p);
             return newp;
-        }
+        } else
+            return NULL;
+    } else {
+        return gstd_malloc(newsize);
     }
-    return NULL;
+    // return NULL;
 }
 
 inline void* custom_glinearRealloc(void* p, size_t newsize) {
@@ -71,8 +74,29 @@ inline void* custom_glinearRealloc(void* p, size_t newsize) {
             glinearFree(p);
             return newp;
         }
+        return NULL;
+    } else {
+        return glinearAlloc(newsize);
     }
-    return NULL;
+}
+
+inline void* custom_glinearReallocAligned(void* p, size_t newsize, int align) {
+    if (p) {
+        size_t oldsize = glinearGetSize(p);
+
+        if (oldsize == newsize)
+            return p;
+
+        void* newp = glinearMemAlign(newsize, align);
+        if (newp) {
+            memcpy(newp, p, newsize < oldsize ? newsize : oldsize);
+            glinearFree(p);
+            return newp;
+        }
+        return NULL;
+    } else {
+        return glinearMemAlign(newsize, align);
+    }
 }
 
 #ifdef NOSTDLIB_BUILD

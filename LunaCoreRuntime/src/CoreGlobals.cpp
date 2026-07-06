@@ -10,6 +10,7 @@ lua_State *Lua_global = NULL;
 Core::Mutex Lua_Global_Mut;
 
 bool patchEnabled = false;
+bool disableAsyncTimeout = false;
 int loadedScripts;
 int loadedMods;
 std::string currentLoadingMod = "";

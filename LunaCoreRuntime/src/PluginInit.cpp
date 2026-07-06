@@ -184,6 +184,16 @@ void InitMenu(PluginMenu &menu)
             MessageBox("Restart the game to apply the changes")();
         }
     }));
+    optionsFolder->Append(Core::alloc<MenuEntry>("Toggle Async timeout", nullptr, [](MenuEntry *entry)
+    {
+        bool current = disableAsyncTimeout;
+        const char* msg = "Do you want to %s Async timeout? (not permanent)";
+        const char* action = current ? "ENABLE" : "DISABLE";
+        if (MessageBox(Utils::Format(msg, action), DialogType::DialogYesNo)()) {
+            current = !current;
+            disableAsyncTimeout = current;
+        }
+    }));
     optionsFolder->Append(Core::alloc<MenuEntry>("Show Lua memory usage", nullptr, [](MenuEntry *entry) {
         if (!monitorsEnabled) OSD::Run(DrawMonitors);
         else OSD::Stop(DrawMonitors);

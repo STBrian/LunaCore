@@ -20,7 +20,7 @@ void Core::AsyncRestartClock() {
 }
 
 void Core::_TimeoutAsyncHook(lua_State *L, lua_Debug *ar) {
-    if (timeoutAsyncTimer.Expired()) {
+    if (timeoutAsyncTimer.Expired() && !disableAsyncTimeout) {
         luaL_error(L, "Async coroutine exceeded execution time (5000 ms)");
     }
 }

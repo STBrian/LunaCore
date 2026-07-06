@@ -25,6 +25,7 @@ extern lua_State *Lua_global;
 extern Core::Mutex Lua_Global_Mut;
 
 extern bool patchEnabled;
+extern bool disableAsyncTimeout;
 extern int loadedScripts;
 extern int loadedMods;
 

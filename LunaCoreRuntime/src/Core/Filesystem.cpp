@@ -45,6 +45,30 @@ typedef struct {
 
 static std::vector<MountPointInfo> gl_Devices;
 
+/*
+ * Tag type for accessing A::x. Each private member requires a unique tag because, if multiple members share the same type, the compiler cannot differentiate between them. For instance, comparing "int A::*" to another "int A::*" would be ambiguous.
+ *
+ * Each tag defines a nested "::type" representing the corresponding pointer-to-member type.
+ * Additionally, each tag declares a unique overload of the "get" method that provides access to its corresponding private member.
+ */
+struct tag_handle {
+  using type = Handle CTRPF::File::*;
+  
+  // Calling get() is only valid if the "Access" class has been instantiated for this tag.
+  friend type get(tag_handle);
+};
+
+// This class defines a friend function that can be called via ADL using the tag type.
+template<typename Tag, typename Tag::type mem_ptr>
+struct Access {
+  friend typename Tag::type get(Tag) {
+    return mem_ptr;
+  }
+};
+
+// Explicit instantiation; this is the only place where it is allowed to pass the address of a private member.
+template struct Access<tag_handle, &CTRPF::File::_handle>;
+
 class CTRPF_File : public Core::File_impl {
     public:
     CTRPF::File mFile;
@@ -56,7 +80,7 @@ class CTRPF_File : public Core::File_impl {
         int res = mFile.Read(buffer, length);
         if (res == CTRPF::File::OPResult::SUCCESS)
             return length;
-        return 0;
+        return res;
     }
 
     int write(const void* data, unsigned int length) override {
@@ -111,6 +135,10 @@ static Core::File_impl* ctrpf_fopen(const char* fp, unsigned int mode, unsigned 
         delete filePtr;
         return nullptr;
     }
+
+    if (fileSize > 0) {
+        FSFILE_SetSize(filePtr->mFile.*get(tag_handle()), fileSize);
+    }
     
     return filePtr;
 }
@@ -160,14 +188,14 @@ class FsLib_File : public Core::File_impl {
         int res = mFile.read(buffer, length);
         if (res < 0)
             return 0;
-        return length;
+        return res;
     }
 
     int write(const void* data, unsigned int length) override {
         int res = mFile.write(data, length);
         if (res < 0)
             return 0;
-        return length;
+        return res;
     }
 
     int seek(unsigned int offset, unsigned int origin) override {

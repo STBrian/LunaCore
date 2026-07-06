@@ -16,14 +16,15 @@ static int l_custom_loadfile(lua_State *L)
         lua_pushfstring(L, "cannot open %s", filename);
         goto __error;
     }
-    Core::Utils::Replace(strippedFilename, PLUGIN_FOLDER "/", ""); // To remove the prefix if in an known directory
-    if (luaL_loadbuffer(L, scriptContent.c_str(), scriptContent.size(), strippedFilename.c_str()) != 0)
+    Core::Utils::Replace(strippedFilename, PLUGIN_FOLDER "/", ""); // To remove the prefix if is a known directory
+    if (luaL_loadbuffer(L, scriptContent.c_str(), scriptContent.size(), strippedFilename.c_str()) != 0) {
         goto __error;
+    }
     return 1;
     }
 
     __error:
-    return lua_error(L);
+    return 1;
 }
 
 static int l_custom_dofile(lua_State *L) 

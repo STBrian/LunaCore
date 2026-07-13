@@ -1,7 +1,7 @@
 #pragma once
 
 #include "lua_common.h"
-#include <FsLib/fslib.hpp>
+#include <fslib.hpp>
 
 namespace Core {
     class File;

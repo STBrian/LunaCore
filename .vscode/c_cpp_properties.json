@@ -13,7 +13,9 @@
                 "${workspaceFolder}/LunaCoreRuntime/includes/",
                 "c:/devkitPro/libctrpf/include/",
                 "${workspaceFolder}/LunaCoreRuntime/externals/MC3DSPluginFramework/Sources",
-                "${workspaceFolder}/LunaCoreRuntime/externals/platform/include"
+                "${workspaceFolder}/LunaCoreRuntime/externals/platform/include",
+                "${workspaceFolder}/LunaCoreRuntime/externals/FsLib/3DS/FsLib/include",
+                "${workspaceFolder}/LunaCoreRuntime/externals/ffi/include"
             ],
             "defines": [
                 "DEBUG",

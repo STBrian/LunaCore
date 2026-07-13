@@ -1,9 +1,8 @@
 /Build
 *.3gx
 *.elf
-/src/game/fsuser.c
-/includes/game/fsuser.h
-/includes/game/imports.h
 
 *.d
 *.o
+
+/externals/ffi

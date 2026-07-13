@@ -13,7 +13,7 @@ TARGET		:= 	LunaCore$(TARGET_PREFIX)
 PLGINFO 	:= 	plgInfo.yaml
 
 BUILD		:= 	Build
-INCLUDES	:= 	includes externals/platform/include externals/MC3DSPluginFramework/Sources 
+INCLUDES	:= 	includes externals/platform/include externals/MC3DSPluginFramework/Sources
 SOURCES 	:= 	src
 
 #---------------------------------------------------------------------------------
@@ -32,19 +32,21 @@ ifeq ($(DEBUG), 1)
 	CFLAGS		+=	-DDEBUG
 endif
 
-CXXFLAGS	:= $(CFLAGS) -g -fno-rtti -fno-exceptions -std=gnu++20
+CXXFLAGS	:= 	$(CFLAGS) -g -fno-rtti -fno-exceptions -std=gnu++20
 
 ASFLAGS		:=	$(ARCH)
-LDFLAGS		:= -T $(TOPDIR)/3gx.ld $(ARCH) -L $(PORTLIBS)/lib -Os -Wl,--gc-sections,--strip-discarded,--strip-debug,-Map=lunacore.map \
+LDFLAGS		:= 	-T $(TOPDIR)/3gx.ld $(ARCH) -L $(PORTLIBS)/lib -Os \
+				-Wl,--gc-sections,--strip-discarded,--strip-debug,-Map=lunacore.map \
 				-T $(TOPDIR)/linker_symbols.ld -Wl,--wrap=abort
 
-LIBS		:= -lFsLib -lctrpf -lctru -lmc3dspf -lffi
+LIBS		:= -lctrpf -lctru -lmc3dspf -lFsLib -lffi
 ifeq ($(BUILD_JIT), 1)
 	LIBS	+=	-lluajit-5.1
 else
 	LIBS	+= -llua5.1
 endif
-LIBDIRS		:= 	$(CTRPFLIB) $(CTRULIB) $(PORTLIBS) $(CURDIR)/externals/MC3DSPluginFramework
+LIBDIRS		:= 	$(CTRPFLIB) $(CTRULIB) $(PORTLIBS) $(CURDIR)/externals/MC3DSPluginFramework \
+				$(CURDIR)/externals/FsLib/3DS/FsLib $(CURDIR)/externals/ffi
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
@@ -75,10 +77,16 @@ export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L $(dir)/lib)
 .PHONY: $(BUILD) compile_mc3dspf clean all
 
 #---------------------------------------------------------------------------------
-all: compile_mc3dspf $(BUILD)
+all: compile_libffi compile_mc3dspf compile_fslib $(BUILD)
 
 compile_mc3dspf:
-	@$(MAKE) -C externals/MC3DSPluginFramework -f $(CURDIR)/externals/make_mc3dspf.mk
+	@$(MAKE) --no-print-directory -C externals/MC3DSPluginFramework
+
+compile_fslib:
+	@$(MAKE) --no-print-directory -C externals/FsLib/3DS/FsLib
+
+compile_libffi:
+	@$(MAKE) --no-print-directory -C externals/libffi -f $(CURDIR)/externals/make_libffi.mk
 
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
@@ -90,7 +98,9 @@ clean:
 	@rm -fr $(BUILD) $(shell find $(SOURCES) -name "*.o") $(shell find $(SOURCES) -name "*.d") $(OUTPUT).3gx $(OUTPUT).elf
 
 clean_all: clean
-	@$(MAKE) -C externals/MC3DSPluginFramework -f $(CURDIR)/externals/make_mc3dspf.mk clean
+	@$(MAKE) -C externals/MC3DSPluginFramework clean
+	@$(MAKE) -C externals/FsLib/3DS/FsLib clean
+	@$(MAKE) -C externals/libffi -f $(CURDIR)/externals/make_libffi.mk clean
 
 re: clean all
 

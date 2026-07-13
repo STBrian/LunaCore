@@ -1,5 +1,4 @@
 #include "ExtendedHeap.hpp"
-#include <FsLib/fslib.hpp>
 #include "Core/Filesystem.hpp"
 #include <CTRPluginFramework.hpp>
 #include "Core/Debug.hpp"

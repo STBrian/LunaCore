@@ -1,7 +1,6 @@
 #include "Core/Utils/ExtensionLoader.hpp"
 
 #include <CTRPluginFramework.hpp>
-#include <FsLib/fslib.hpp>
 #include <unordered_map>
 
 #include "CoreGlobals.hpp"

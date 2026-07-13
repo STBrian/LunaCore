@@ -1,3 +1,9 @@
 [submodule "LunaCoreRuntime/externals/MC3DSPluginFramework"]
 	path = LunaCoreRuntime/externals/MC3DSPluginFramework
 	url = https://github.com/rairai6895/MC3DSPluginFramework.git
+[submodule "LunaCoreRuntime/externals/FsLib"]
+	path = LunaCoreRuntime/externals/FsLib
+	url = https://github.com/J-D-K/FsLib.git
+[submodule "LunaCoreRuntime/externals/libffi"]
+	path = LunaCoreRuntime/externals/libffi
+	url = https://github.com/libffi/libffi.git

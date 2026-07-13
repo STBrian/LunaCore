@@ -1,7 +1,7 @@
 #include "Core/Filesystem.hpp"
 
 #include <CTRPluginFramework.hpp>
-#include <FsLib/fslib.hpp>
+#include <fslib.hpp>
 
 #include "CoreConstants.hpp"
 #include "Core/Debug.hpp"

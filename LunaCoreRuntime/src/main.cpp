@@ -1,7 +1,6 @@
 #include <3ds.h>
 #include "csvc.h"
 #include <CTRPluginFramework.hpp>
-#include <FsLib/fslib.hpp>
 #include "MC3DSPluginFramework.hpp"
 
 #include <string>

@@ -13,8 +13,8 @@ TARGET		:= 	LunaCore$(TARGET_PREFIX)
 PLGINFO 	:= 	plgInfo.yaml
 
 BUILD		:= 	Build
-INCLUDES	:= 	includes externals/MC3DSPluginFramework/Sources
-SOURCES 	:= 	src externals/MC3DSPluginFramework/Sources
+INCLUDES	:= 	includes externals/platform/include externals/MC3DSPluginFramework/Sources 
+SOURCES 	:= 	src
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -38,13 +38,13 @@ ASFLAGS		:=	$(ARCH)
 LDFLAGS		:= -T $(TOPDIR)/3gx.ld $(ARCH) -L $(PORTLIBS)/lib -Os -Wl,--gc-sections,--strip-discarded,--strip-debug,-Map=lunacore.map \
 				-T $(TOPDIR)/linker_symbols.ld -Wl,--wrap=abort
 
-LIBS		:= -lFsLib -lctrpf -lctru -lffi
+LIBS		:= -lFsLib -lctrpf -lctru -lmc3dspf -lffi
 ifeq ($(BUILD_JIT), 1)
 	LIBS	+=	-lluajit-5.1
 else
 	LIBS	+= -llua5.1
 endif
-LIBDIRS		:= 	$(CTRPFLIB) $(CTRULIB) $(PORTLIBS)
+LIBDIRS		:= 	$(CTRPFLIB) $(CTRULIB) $(PORTLIBS) $(CURDIR)/externals/MC3DSPluginFramework
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
@@ -72,10 +72,13 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I $(CURDIR)/$(dir) ) \
 
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L $(dir)/lib)
 
-.PHONY: $(BUILD) clean all
+.PHONY: $(BUILD) compile_mc3dspf clean all
 
 #---------------------------------------------------------------------------------
-all: $(BUILD)
+all: compile_mc3dspf $(BUILD)
+
+compile_mc3dspf:
+	@$(MAKE) -C externals/MC3DSPluginFramework -f $(CURDIR)/externals/make_mc3dspf.mk
 
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
@@ -85,7 +88,9 @@ $(BUILD):
 clean:
 	@echo clean ... 
 	@rm -fr $(BUILD) $(shell find $(SOURCES) -name "*.o") $(shell find $(SOURCES) -name "*.d") $(OUTPUT).3gx $(OUTPUT).elf
-	@find . -type f \( -name "*.o" -o -name "*.d" \) -delete
+
+clean_all: clean
+	@$(MAKE) -C externals/MC3DSPluginFramework -f $(CURDIR)/externals/make_mc3dspf.mk clean
 
 re: clean all
 

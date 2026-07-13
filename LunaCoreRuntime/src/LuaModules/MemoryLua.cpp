@@ -243,12 +243,6 @@ static int l_Memory_write(lua_State *L) {
 ## return: boolean
 ### Core.Memory.writeU16
 */
-static int l_Memory_writeU16(lua_State *L) {
-    u32 offset = (u32)luaL_checknumber(L, 1);
-    s16 value = (s16)luaL_checknumber(L, 2);
-    lua_pushboolean(L, CTRPF::Process::Write16(offset, (u16)value));
-    return 1;
-}
 
 /*
 - Writes a signed integer of 8 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
@@ -264,12 +258,6 @@ static int l_Memory_writeU16(lua_State *L) {
 ## return: boolean
 ### Core.Memory.writeU8
 */
-static int l_Memory_writeU8(lua_State *L) {
-    u32 offset = (u32)luaL_checknumber(L, 1);
-    s8 value = (s8)luaL_checknumber(L, 2);
-    lua_pushboolean(L, CTRPF::Process::Write8(offset, (u8)value));
-    return 1;
-}
 
 /*
 - Writes a float to memory offset
@@ -278,12 +266,6 @@ static int l_Memory_writeU8(lua_State *L) {
 ## return: boolean
 ### Core.Memory.writeFloat
 */
-static int l_Memory_writeFloat(lua_State *L) {
-    u32 offset = (u32)luaL_checknumber(L, 1);
-    float value = (float)luaL_checknumber(L, 2);
-    lua_pushboolean(L, CTRPF::Process::WriteFloat(offset, value));
-    return 1;
-}
 
 /*
 - Writes a double to memory offset
@@ -292,12 +274,6 @@ static int l_Memory_writeFloat(lua_State *L) {
 ## return: boolean
 ### Core.Memory.writeDouble
 */
-static int l_Memory_writeDouble(lua_State *L) {
-    u32 offset = (u32)luaL_checknumber(L, 1);
-    double value = (double)luaL_checknumber(L, 2);
-    lua_pushboolean(L, CTRPF::Process::WriteDouble(offset, value));
-    return 1;
-}
 
 /*
 - Writes a string to memory offset

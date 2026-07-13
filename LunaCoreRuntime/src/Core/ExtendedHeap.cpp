@@ -96,7 +96,7 @@ static const char* CrashHandlerExtendedHeapCallback(ERRF_ExceptionInfo* excep, C
                 AtomicPostDecrement(&CTRPF::ProcessImpl::exceptionCount);
                 CTRPluginFrameworkImpl::Services::GSP::PauseInterruptReceiver(); 
                 CTRPF::ProcessImpl::UnlockGameThreads();
-                // LOGDEBUG("Resuming to PC: %08X", regs->pc);
+                LOGDEBUG("Resuming to PC: %08X", regs->pc);
                 //svcSleepThread(1000000LL);
                 CTRPF::ProcessImpl::ReturnFromException(regs);
             }

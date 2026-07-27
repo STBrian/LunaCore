@@ -11,7 +11,6 @@ namespace Core {
         TCPServer::TCPServer(int port) {
             server_fd = socket(AF_INET, SOCK_STREAM, 0);
             if (server_fd == -1) {
-                success = false;
                 return;
             }
             
@@ -21,7 +20,6 @@ namespace Core {
             addr.sin_port = htons(port);
 
             if (bind(server_fd, (sockaddr*)&addr, sizeof(addr)) < 0) {
-                success = false;
                 return;
             }
 
@@ -29,8 +27,8 @@ namespace Core {
         }
 
         TCPServer::~TCPServer() {
-            if (client_fd > 0) close(client_fd);
-            if (server_fd > 0) close(server_fd);
+            if (client_fd >= 0) close(client_fd);
+            if (server_fd >= 0) close(server_fd);
             client_fd = -1;
             server_fd = -1;
         }
@@ -94,15 +92,87 @@ namespace Core {
             return true;
         }
 
-        bool TCPServer::recv(void *buffer, size_t size) {
+        bool TCPServer::recv_all(void *buffer, size_t size) {
             size_t bytesRead = 0;
             while (bytesRead < size) {
-                size_t len = read(client_fd, (char*)buffer + bytesRead, size - bytesRead);
-                if (len <= 0)
+                ssize_t len = read(client_fd, (char*)buffer + bytesRead, size - bytesRead);
+                if (len == 0)
                     return false;
+                if (len == -1) {
+                    if (errno == EINTR)
+                        continue;
+                    return false;
+                }
                 bytesRead += len;
             }
             return bytesRead == size;
+        }
+
+        TCPClient::TCPClient() {
+            if ((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+                return;
+            }
+
+            serv_addr.sin_family = AF_INET;
+            success = true;
+        }
+        
+        bool TCPClient::Connect(const char* server_ip, u16 port) {
+            serv_addr.sin_port = htons(port);
+
+            if (inet_pton(AF_INET, server_ip, &serv_addr.sin_addr) <= 0) {
+                return false;
+            }
+
+            if (connect(sock_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+                return false;
+            }
+
+            return true;
+        }
+
+        bool TCPClient::SendAll(const void* data, size_t size) {
+            const char* ptr = reinterpret_cast<const char*>(data);
+            size_t total_sent = 0;
+            while (total_sent < size) {
+                ssize_t sent = send(sock_fd, ptr + total_sent, size - total_sent, 0);
+                
+                if (sent == 0)
+                    return false;
+
+                if (sent < 0) {
+                    if (errno == EINTR)
+                        continue;
+
+                    return false;
+                }
+
+                total_sent += sent;
+            }
+            return true;
+        }
+
+        bool TCPClient::RecvAll(void *buffer, size_t size) {
+            size_t bytesRead = 0;
+            while (bytesRead < size) {
+                ssize_t len = recv(sock_fd, (char*)buffer + bytesRead, size - bytesRead, 0);
+
+                if (len == 0)
+                    return false;
+
+                if (len == -1) {
+                    if (errno == EINTR)
+                        continue;
+
+                    return false;
+                }
+                bytesRead += len;
+            }
+            return bytesRead == size;
+        }
+
+        TCPClient::~TCPClient() {
+            if (sock_fd >= 0) close(sock_fd);
         }
     }
 }

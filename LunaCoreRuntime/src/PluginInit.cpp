@@ -1,5 +1,7 @@
 #include "PluginInit.hpp"
 
+#include "MC3DSPluginFramework.hpp"
+
 #include <sys/socket.h>
 #include <cstring>
 #include <unordered_map>
@@ -13,10 +15,15 @@
 #include "Core/Debug.hpp"
 #include "Core/Filesystem.hpp"
 
+#include "CrossServer.hpp"
+
 #include "Helpers/TCPConnection.hpp"
 #include "Helpers/Allocation.hpp"
+#include "Helpers/Threads.hpp"
 
 using namespace CTRPluginFramework;
+namespace MC3DSPF = MC3DSPluginFramework;
+using MC3DSApi = MC3DSPluginFramework::Facade;
 
 u32 *socBuffer = NULL;
 
@@ -62,46 +69,45 @@ bool DrawMonitors(const Screen &screen) {
 }
 
 #ifdef DEBUG
-#include "Helpers/Threads.hpp"
 
 void PCConnectionThreadFunction(Core::Network::TCPServer* tcp) {
     u32 cmdId = 0;
     while (cmdId != 0x5AB1E) {
-        tcp->recv(&cmdId, 4);
+        tcp->recv_all(&cmdId, 4);
         switch (cmdId) {
             case 0: // ping
                 tcp->send_all(&cmdId, 4);
                 break;
             case 1: { // write32 to offset
                 u32 offset, value;
-                tcp->recv(&offset, 4);
-                tcp->recv(&value, 4);
+                tcp->recv_all(&offset, 4);
+                tcp->recv_all(&value, 4);
                 Process::Write32(offset, value);
                 break;
             }
             case 2: { // read32 from offset
                 u32 offset, value;
-                tcp->recv(&offset, 4);
+                tcp->recv_all(&offset, 4);
                 Process::Read32(offset, value);
                 tcp->send_all(&value, 4);
                 break;
             }
             case 3: { // storfile
                 u32 dstPathLen, fileSize;
-                tcp->recv(&dstPathLen, 4);
+                tcp->recv_all(&dstPathLen, 4);
                 char* pathData = Core::alloc_array<char>(dstPathLen);
-                tcp->recv(pathData, dstPathLen);
+                tcp->recv_all(pathData, dstPathLen);
                 pathData[dstPathLen-1] = '\0';
                 std::string pathName(pathData);
-                Core::dealloc_array(pathData);
+                Core::dealloc(pathData);
                 
-                tcp->recv(&fileSize, 4);
+                tcp->recv_all(&fileSize, 4);
                 Core::File dstFile(pathName, FS_OPEN_WRITE|FS_OPEN_CREATE);
                 char buffer[0x100];
                 u32 currentRecv = 0;
                 while (currentRecv < fileSize) {
                     u32 toRecv = fileSize - currentRecv > 0x100 ? 0x100 : fileSize - currentRecv;
-                    tcp->recv(buffer, toRecv);
+                    tcp->recv_all(buffer, toRecv);
                     dstFile.write(buffer, toRecv);
                     currentRecv += toRecv;
                 }
@@ -119,6 +125,15 @@ struct _pair {
     u32 a, b;
 };
 #endif
+
+struct CrossNetPacket {
+    u32 length;
+    u8 id; // to avoid padding
+};
+
+struct PlayerPosPacket {
+
+};
 
 static bool monitorsEnabled = false;
 
@@ -237,7 +252,7 @@ void InitMenu(PluginMenu &menu)
 
         // Get the filename
         size_t fnameSize = 0;
-        if (!tcp.recv(&fnameSize, sizeof(size_t))) {
+        if (!tcp.recv_all(&fnameSize, sizeof(size_t))) {
             MessageBox("Failed to get filename size")();
             return;
         }
@@ -246,14 +261,14 @@ void InitMenu(PluginMenu &menu)
             MessageBox("Memory error")();
             return;
         }
-        if (!tcp.recv(namebuf.get(), fnameSize)) {
+        if (!tcp.recv_all(namebuf.get(), fnameSize)) {
             MessageBox("Failed to get filename")();
             return;
         }
 
         // Get script file
         size_t size = 0;
-        if (!tcp.recv(&size, sizeof(size_t))) {
+        if (!tcp.recv_all(&size, sizeof(size_t))) {
             MessageBox("Failed to get file size")();
             return;
         }
@@ -262,7 +277,7 @@ void InitMenu(PluginMenu &menu)
             MessageBox("Memory error")();
             return;
         }
-        if (!tcp.recv(buffer.get(), size)) {
+        if (!tcp.recv_all(buffer.get(), size)) {
             MessageBox("Failed to get file")();
             return;
         }
@@ -287,6 +302,36 @@ void InitMenu(PluginMenu &menu)
                 MessageBox("Error executing the script")();
             Lua_Global_Mut.unlock();
         }
+    }));
+    devFolder->Append(Core::alloc<MenuEntry>("Connect to server", nullptr, [](MenuEntry* entry) {
+        if (socBuffer == nullptr) {
+            MessageBox("Error: Network not initializated")();
+            return;
+        }
+
+        if (!MC3DSApi::isInLevel()) {
+            MessageBox("Error: You need to enter a world first")();
+            return;
+        }
+        
+        Keyboard input;
+        std::string serv_addr;
+        if (input.Open(serv_addr) < 0) {
+            return;
+        }
+        
+        Core::unique_ptr<Core::Network::TCPClient> client(Core::alloc<Core::Network::TCPClient>());
+        if (!client->isReady()) {
+            MessageBox("Error: Failed to initialize client")();
+            return;
+        }
+
+        if (!client->Connect(serv_addr.c_str(), 36883)) {
+            MessageBox("Error: Failed to connect to server")();
+            return;
+        }
+
+        Core::Thread connThread(CrossServerThreadFunction, std::move(client), 0x400);
     }));
 
     #ifdef DEBUG

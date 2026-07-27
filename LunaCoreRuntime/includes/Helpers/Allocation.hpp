@@ -18,27 +18,41 @@ namespace Core {
 #define HEAP_GAME_APP 1
 #define HEAP_GAME_LINEAR 2
 
+#define BLOCK_HEADER_SIZE 0x8 
+
 template <typename T, typename... Args>
 inline T* alloc(Args&&... args) {
-    void* ptr = std::malloc(sizeof(T) + 8);
+    const u32 blockSize = sizeof(T) + BLOCK_HEADER_SIZE;
+    u32 heapType = HEAP_PLUGIN;
+
+    void* ptr = std::malloc(blockSize);
     if (ptr == nullptr) {
-        ptr = gstd_malloc(sizeof(T) + 8); // try to get help from game's heap
+        ptr = gstd_malloc(blockSize); // try to get help from game's heap
         if (ptr == nullptr) CrashHandler::Abort(ErrorCode::Allocation_Error);
-        *(u32*)ptr = HEAP_GAME_APP;
-    } else
-        *(u32*)ptr = HEAP_PLUGIN;
-    void* p = (u32*)ptr + 2;
+        heapType = HEAP_GAME_APP;
+    }
+
+    u32* blockHeader = reinterpret_cast<u32*>(ptr);
+    blockHeader[0] = heapType;
+    blockHeader[1] = 1; // count
+
+    void* p = reinterpret_cast<void*>(reinterpret_cast<u32>(ptr) + BLOCK_HEADER_SIZE);
     return new (p) T(std::forward<Args>(args)...);
 }
 
 template <typename T>
 inline T* alloc_array(size_t count) {
-    void* memory = std::malloc(sizeof(T) * count + 0x8);
+    const u32 blockSize = sizeof(T) * count + BLOCK_HEADER_SIZE;
+    u32 heapType = HEAP_PLUGIN;
+
+    void* memory = std::malloc(blockSize);
     if (memory == nullptr) CrashHandler::Abort("Allocation error array");
 
-    *reinterpret_cast<u32*>(memory) = count;
-    T* ptr = reinterpret_cast<T*>(reinterpret_cast<u32>(memory) + 0x8);
+    u32* blockHeader = reinterpret_cast<u32*>(memory);
+    blockHeader[0] = heapType;
+    blockHeader[1] = count;
 
+    T* ptr = reinterpret_cast<T*>(reinterpret_cast<u32>(memory) + BLOCK_HEADER_SIZE);
     for (size_t i = 0; i < count; i++) {
         new (&ptr[i]) T();
     }
@@ -47,21 +61,33 @@ inline T* alloc_array(size_t count) {
 
 template <typename T, typename... Args>
 T* alloc_raw(Args&&... args) {
-    void* ptr = std::malloc(sizeof(T) + 8);
-    if (ptr == nullptr) return nullptr; // don't try with game's allocator as it causes an abort when fails to reserve
-    else *(u32*)ptr = HEAP_PLUGIN;
-    void* p = (u32*)ptr + 2;
+    const u32 blockSize = sizeof(T) + BLOCK_HEADER_SIZE;
+    u32 heapType = HEAP_PLUGIN;
+
+    void* ptr = std::malloc(blockSize);
+    if (ptr == nullptr) return nullptr;
+
+    u32* blockHeader = reinterpret_cast<u32*>(ptr);
+    blockHeader[0] = heapType;
+    blockHeader[1] = 1;
+
+    void* p = reinterpret_cast<void*>(reinterpret_cast<u32>(ptr) + BLOCK_HEADER_SIZE);
     return new (p) T(std::forward<Args>(args)...);
 }
 
 template <typename T>
 T* alloc_array_raw(size_t count) {
-    void* memory = std::malloc(sizeof(T) * count + 0x8);
-    if (memory == nullptr) return nullptr;
+    const u32 blockSize = sizeof(T) * count + BLOCK_HEADER_SIZE;
+    u32 heapType = HEAP_PLUGIN;
 
-    *reinterpret_cast<u32*>(memory) = count;
-    T* ptr = reinterpret_cast<T*>(reinterpret_cast<u32>(memory) + 0x8);
+    void* memory = std::malloc(blockSize);
+    if (memory == nullptr) return nullptr;;
 
+    u32* blockHeader = reinterpret_cast<u32*>(memory);
+    blockHeader[0] = heapType;
+    blockHeader[1] = count;
+
+    T* ptr = reinterpret_cast<T*>(reinterpret_cast<u32>(memory) + BLOCK_HEADER_SIZE);
     for (size_t i = 0; i < count; i++) {
         new (&ptr[i]) T();
     }
@@ -72,26 +98,18 @@ T* alloc_array_raw(size_t count) {
 template <typename T>
 void dealloc(T* ptr) {
     if (ptr == nullptr) return;
+    u32* blockHeader = (u32*)ptr - 2;
+    const u32 heapType = blockHeader[0];
+    const u32 count = blockHeader[1];
     if constexpr (!std::is_trivially_destructible_v<T>) {
-        ptr->~T();
-    }
-    u32* heapType = (u32*)ptr - 2;
-    if (*heapType == HEAP_PLUGIN)
-        std::free(heapType);
-    else
-        gstd_free(heapType);
-}
-
-template <typename T>
-void dealloc_array(T* ptr) {
-    if (ptr == nullptr) return;
-    if constexpr (!std::is_trivially_destructible_v<T>) {
-        u32 count = *(reinterpret_cast<u32*>(ptr) - 0x2);
         for (size_t i = 0; i < count; i++) {
             ptr[i].~T();
         }
     }
-    std::free(reinterpret_cast<u32*>(ptr) - 0x2);
+    if (heapType == HEAP_PLUGIN)
+        std::free(blockHeader);
+    else
+        gstd_free(blockHeader);
 }
 
 namespace UniqueAlloc {
@@ -102,21 +120,14 @@ namespace UniqueAlloc {
         }
     };
 
-    struct CustomDestructorArray {
-        template <typename T>
-        void operator()(T* ptr) const {
-            dealloc_array<T>(ptr);
-        }
-    };
-
     template <typename T, typename... Args>
     std::unique_ptr<T, CustomDestructor> alloc(Args&&... args) {
         return std::unique_ptr<T, CustomDestructor>(Core::alloc<T>(std::forward<Args>(args)...));
     }
 
     template <typename T, typename... Args>
-    std::unique_ptr<T, CustomDestructorArray> alloc_array(Args&&... args) {
-        return std::unique_ptr<T, CustomDestructorArray>(Core::alloc_array<T>(std::forward<Args>(args)...));
+    std::unique_ptr<T, CustomDestructor> alloc_array(Args&&... args) {
+        return std::unique_ptr<T, CustomDestructor>(Core::alloc_array<T>(std::forward<Args>(args)...));
     }
 
     template <typename T, typename... Args>
@@ -125,8 +136,12 @@ namespace UniqueAlloc {
     }
 
     template <typename T, typename... Args>
-    std::unique_ptr<T, CustomDestructorArray> alloc_array_raw(Args&&... args) {
-        return std::unique_ptr<T, CustomDestructorArray>(Core::alloc_array_raw<T>(std::forward<Args>(args)...));
+    std::unique_ptr<T, CustomDestructor> alloc_array_raw(Args&&... args) {
+        return std::unique_ptr<T, CustomDestructor>(Core::alloc_array_raw<T>(std::forward<Args>(args)...));
     }
 }
+
+template <typename T>
+using unique_ptr = std::unique_ptr<T, UniqueAlloc::CustomDestructor>;
+
 }

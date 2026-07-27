@@ -48,10 +48,10 @@ struct ctx_info {
     void *ptr2;
 };
 
-typedef struct btn_ctx_struct {
+struct btn_ctx {
     GameButton* btnPtr = NULL;
     void *ptr2 = NULL;
-} btn_ctx;
+};
 
 typedef struct uv_vals_struct {
     int u;
@@ -62,18 +62,18 @@ typedef struct uv_vals_struct {
 
 typedef void (*code2Func)(int *);
 
-typedef struct {
+struct MenuBtnData {
     int x = 0, y = 0, width = 0, height = 0;
     int iconU = 0, iconV = 0, iconW = 0, iconH = 0;
     std::string text;
     bool bigIcon = false;
     int id = -1;
-} MenuBtnData;
+};
 
-typedef struct {
+struct MenuChrtData {
     float x = 0.0f, y = 0.0f;
     int width = 0, height = 0;
-} MenuChrtData;
+};
 
 static std::vector<MenuBtnData> MenuLayoutBtns;
 static std::vector<MenuButtonID::MenuButtonID> MenuBtnsOrder;

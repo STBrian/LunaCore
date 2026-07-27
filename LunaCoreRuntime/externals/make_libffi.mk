@@ -14,5 +14,5 @@ configure:
 
 clean:
 	@echo clean...
-	@$(MAKE) distclean
+	@rm -rf arm-none-eabi
 	@rm -f $(OUTPUT)

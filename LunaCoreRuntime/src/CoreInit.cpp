@@ -141,8 +141,8 @@ void Core::InitCore() {
     #ifdef EXPERIMENTAL
     Lua_global = lua_newstate(extended_lua_allocator_extended, NULL);
     #else
-    Lua_global = lua_newstate(custom_lua_allocator, NULL);
-    // Lua_global = luaL_newstate();
+    // Lua_global = lua_newstate(custom_lua_allocator, NULL);
+    Lua_global = luaL_newstate();
     #endif
     Core::LoadLuaEnv();
 

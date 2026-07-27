@@ -19,16 +19,16 @@ namespace Minecraft {
         char id;
     };
 
-    typedef struct {
+    struct RecipeComponentDef {
         char id;
         Item* item = nullptr;
         Block* block = nullptr;
-    } RecipeComponentDef;
+    };
 
-    typedef struct {
+    struct RecipeComponentDefIns {
         char id;
         ItemInstance* item = nullptr;
-    } RecipeComponentDefIns;
+    };
 
     // Item
     void definition(gstd::vector<InternalRecipeElementDefinition>& vec, char itemchr, Item* item) {

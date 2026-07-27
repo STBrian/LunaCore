@@ -34,7 +34,7 @@ extern std::string currentLoadingMod;
 extern Core::Config G_config;
 extern std::unordered_map<std::string, std::string> modPaths;
 
-typedef struct {
+typedef struct coregamestate_struct {
     std::atomic<bool> MainMenuLoaded = false;
     std::atomic<bool> WorldLoaded = false;
     std::atomic<bool> LoadingItems = false;

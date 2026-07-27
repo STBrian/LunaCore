@@ -12,7 +12,7 @@
 
 #endif
 
-typedef struct alignas(4) {
+struct alignas(4) CoreHookContext {
     u32 r[13];
     u32 sp, lr;
     u32 reserved;
@@ -40,7 +40,7 @@ typedef struct alignas(4) {
         return reinterpret_cast<double*>(&s[i*2]);
     }
     #endif
-} CoreHookContext;
+};
 
 _ASSERT(sizeof(CoreHookContext), "hi");
 _ASSERT(offsetof(CoreHookContext, s) % 8 == 0, "s is not aligned");

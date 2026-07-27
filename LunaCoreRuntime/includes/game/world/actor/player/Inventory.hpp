@@ -9,7 +9,7 @@ namespace Minecraft {
         using Item = Minecraft::Item;
         
         public:
-        typedef struct {
+        struct InventorySlot {
             u8 itemCount;
             u8 unk1 = 0;
             u16 dataValue = 0;
@@ -19,6 +19,6 @@ namespace Minecraft {
             Item* itemData = nullptr;
             void* renderID = nullptr;
             u8 unk3[28] = {};
-        } InventorySlot;
+        };
     };
 }

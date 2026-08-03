@@ -353,10 +353,18 @@ static void GameBaseScreenTouchHandler(CoreHookContext* ctx) {
     }
 }
 
+#include "GameAPI.hpp"
+#include <Minecraft/Common/Client/Gui/Screens/ScreenChooser.hpp>
+
 static void MenuButtonTest(CoreHookContext* ctx) {
     u32 id = *(u32*)(ctx->r[5] + 0x78);
     if (id == 12) {
-        CTRPF::PluginMenu::ForceOpen();
+        MC3DSPluginFramework::ScreenChooser& screenChosser_ins = MC3DSPluginFramework::Facade::getMinecraftGame()->getScreenChooser();
+        Minecraft::MC3DSPF::MinecraftGame* mg = MC3DSPluginFramework::Facade::getMinecraftGame();
+        Minecraft::MC3DSPF::ClientInstance* ci = MC3DSPluginFramework::Facade::getClient();
+        MC3DSPluginFramework::BoxedPtr::Shared<Minecraft::CustomScreen> screen_ins(MC3DSPluginFramework::gstd::make_unique<Minecraft::CustomScreen>(mg, ci));
+        screenChosser_ins._pushScreen(screen_ins);
+        // CTRPF::PluginMenu::ForceOpen();
     }
 }
 

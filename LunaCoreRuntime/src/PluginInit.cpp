@@ -137,6 +137,40 @@ struct PlayerPosPacket {
 
 static bool monitorsEnabled = false;
 
+/*
+ * Tag type for accessing A::x. Each private member requires a unique tag because, if multiple members share the same type, the compiler cannot differentiate between them. For instance, comparing "int A::*" to another "int A::*" would be ambiguous.
+ *
+ * Each tag defines a nested "::type" representing the corresponding pointer-to-member type.
+ * Additionally, each tag declares a unique overload of the "get" method that provides access to its corresponding private member.
+ */
+struct tag__item {
+  using type = std::unique_ptr<MenuFolderImpl> MenuFolder::*;
+  
+  // Calling get() is only valid if the "Access" class has been instantiated for this tag.
+  friend type get(tag__item);
+};
+
+// This class defines a friend function that can be called via ADL using the tag type.
+template<typename Tag, typename Tag::type mem_ptr>
+struct Access {
+  friend typename Tag::type get(Tag) {
+    return mem_ptr;
+  }
+};
+
+// Explicit instantiation; this is the only place where it is allowed to pass the address of a private member.
+template struct Access<tag__item, &MenuFolder::_item>;
+
+void initDirtyPatchMenuFolderImpl() {
+    MenuFolder tmp("Temp");
+    std::unique_ptr<MenuFolderImpl>* uptr = &(tmp.*get(tag__item()));
+    MenuFolderImpl* ptr = uptr->get();
+    void* vtable = *(void**)ptr;
+    u32* opdelfun = *((u32**)vtable + 1);
+    // remove operator.delete call
+    *(opdelfun + 5) = 0xe320f000; // NOP
+}
+
 void InitMenu(PluginMenu &menu)
 {
     // Create your entries here, or elsewhere
@@ -463,6 +497,8 @@ void InitMenu(PluginMenu &menu)
     menu.Append(MenuModsFolder);
     menu.Append(optionsFolder);
     menu.Append(devFolder);
+
+    initDirtyPatchMenuFolderImpl();
 
     monitorsEnabled = G_config.getBool("show_monitors", false);
     if (monitorsEnabled) OSD::Run(DrawMonitors);

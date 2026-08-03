@@ -28,7 +28,6 @@
 #include "CoreGlobals.hpp"
 
 #include "Helpers/Allocation.hpp"
-#include "ExtendedHeap.hpp"
 
 #include "game/Minecraft.hpp"
 
@@ -102,9 +101,8 @@ namespace CTRPluginFramework
             OSD::Notify(Utils::Format("Failed to open log file"));
 
         Core::GetCoreInfo(plgTitle, plgAuthor, plgSummary, plgDescription);
-        Core::ParseVersion(settings.Header->version);
         
-        Debug::LogInfof("LunaCore version: %d.%d.%d", Core::Version.major, Core::Version.minor, Core::Version.patch);
+        Debug::LogInfof("LunaCore version: %d.%d.%d", LUNACORE_VER_MAJOR, LUNACORE_VER_MINOR, LUNACORE_VER_PATCH);
         Debug::LogInfof("Loading config file '%s'", Core::Filesystem::GetRealPath(CONFIG_FILE).c_str());
         G_config = LoadConfig(CONFIG_FILE);
         if (!G_config.isLoaded()) {
@@ -168,18 +166,15 @@ namespace CTRPluginFramework
         }
 
         MC3DSPluginFramework::Hooks::pushPluginThreadId(std::this_thread::get_id());
-        #ifdef EXPERIMENTAL
-        if (R_FAILED(ExtendedHeapInit(0x800))) Core::Abort("Failed to initialize heap");
-        #endif
         CrashHandler::core_state = CrashHandler::CORE_LOADING_RUNTIME;
         Core::InitCore();
 
         #ifdef DEBUG
         OSD::Notify("Developer version", Color::Yellow);
-        gmenu = alloc<PluginMenu>("LunaCore Plugin Menu - Dev", Core::Version.major, Core::Version.minor, Core::Version.patch,
-            plgSummary + "\n\n" + plgDescription + "\nCompiled: " __TIMESTAMP__ " (CST)\nDeveloper version", 2);
+        gmenu = alloc<PluginMenu>("LunaCore Plugin Menu - Dev", LUNACORE_VER_MAJOR, LUNACORE_VER_MINOR, LUNACORE_VER_PATCH,
+            plgSummary + "\n\n" + plgDescription + "\nCompiled: " __TIMESTAMP__ " (CST)\nDeveloper version: " COMMIT_HASH, 2);
         #else
-        gmenu = alloc<PluginMenu>("LunaCore Plugin Menu", Core::Version.major, Core::Version.minor, Core::Version.patch,
+        gmenu = alloc<PluginMenu>("LunaCore Plugin Menu", LUNACORE_VER_MAJOR, LUNACORE_VER_MINOR, LUNACORE_VER_PATCH,
             plgSummary + "\n\n" + plgDescription + "\nCompiled: " __TIMESTAMP__ " (CST)", 2);
         #endif
 

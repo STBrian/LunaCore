@@ -29,6 +29,7 @@ extern "C" {
 #endif
 
 #ifdef __cplusplus
+#ifndef GSTD_EXCLUDE_NAMESPACE
 namespace gstd {
     inline size_t strlen(const char* s) {
         return gstd_strlen(s);
@@ -38,4 +39,5 @@ namespace gstd {
         GameMemcpy(dst, src, size);
     }*/
 }
+#endif
 #endif

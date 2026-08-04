@@ -11,7 +11,6 @@
 
 #include "Core/Utils/Utils.hpp"
 #include "Core/Utils/FileLoader.hpp"
-#include "Core/Utils/ExtensionLoader.hpp"
 
 namespace Core {
     //Use global Game as entry point related to all game functions

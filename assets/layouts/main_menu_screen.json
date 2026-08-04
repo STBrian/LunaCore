@@ -6,7 +6,7 @@
             "width": 137,
             "height": 66,
             "text": "      Play",
-            "icon": [224, 128, 16, 16],
+            "icon": "play",
             "bigIcon": true
         },
         "multiplayer": {
@@ -14,7 +14,7 @@
             "y": 75,
             "width": 29,
             "height": 28,
-            "icon": [224, 128, 16, 16],
+            "icon": "multiplayer",
             "bigIcon": false
         },
         "options": {
@@ -22,24 +22,24 @@
             "y": 113,
             "width": 29,
             "height": 28,
-            "icon": [224, 144, 16, 16],
+            "icon": "options",
             "bigIcon": false
         },
         "skins": {
-            "x": 15,
+            "x": 49,
             "y": 206,
             "width": 29,
             "height": 28,
-            "icon": [224, 176, 16, 16],
+            "icon": "skins",
             "bigIcon": false
         },
         "achievements": {
-            "x": 53,
+            "x": 87,
             "y": 206,
             "width": 29,
             "height": 28,
             "text": "  LunaCore %d.%d.%d",
-            "icon": [224, 160, 16, 16],
+            "icon": "achievements",
             "bigIcon": false
         },
         "manual": {
@@ -47,7 +47,7 @@
             "y": 206,
             "width": 29,
             "height": 28,
-            "icon": [240, 128, 16, 16],
+            "icon": "manual",
             "bigIcon": false
         },
         "store": {
@@ -55,7 +55,7 @@
             "y": 206,
             "width": 29,
             "height": 28,
-            "icon": [240, 144, 16, 16],
+            "icon": "store",
             "bigIcon": false
         }
     },

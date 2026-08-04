@@ -157,12 +157,17 @@ namespace CTRPluginFramework
 
         bool loadMenuLayout = G_config.getBool("custom_game_menu_layout", true);
         if (loadMenuLayout && patchEnabled) {
-            if ((fslib::file_exists(path_from_string(PLUGIN_FOLDER"/layouts/menu_layout.json")) 
-                && LoadGameMenuLayout(PLUGIN_FOLDER"/layouts/menu_layout.json")) || 
-                (fslib::file_exists(path_from_string(PLUGIN_FOLDER"/LunaCore/layouts/menu_layout.json")) 
-                && LoadGameMenuLayout(PLUGIN_FOLDER"/LunaCore/layouts/menu_layout.json"))
-            )
-                PatchGameMenuLayoutFunction();
+            std::vector<std::string> paths = {
+                PLUGIN_FOLDER"/layouts/menu_layout.json",
+                PLUGIN_FOLDER"/LunaCore/layouts/menu_layout.json",
+                PLUGIN_FOLDER"/layouts/main_menu_screen.json"
+            };
+            for (const auto& path : paths) {
+                if (fslib::file_exists(path_from_string(path))) {
+                    if (LoadGameMenuLayout(path))
+                        break;
+                }
+            }
         }
 
         MC3DSPluginFramework::Hooks::pushPluginThreadId(std::this_thread::get_id());

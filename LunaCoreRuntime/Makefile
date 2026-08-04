@@ -51,7 +51,7 @@ else
 	LIBS	+= -llua5.1
 endif
 LIBDIRS		:= 	$(CTRPFLIB) $(CTRULIB) $(PORTLIBS) $(CURDIR)/externals/MC3DSPluginFramework \
-				$(CURDIR)/externals/FsLib/3DS/FsLib $(CURDIR)/externals/ffi
+				$(CURDIR)/externals/FsLib/3DS/FsLib $(CURDIR)/externals/ffi $(CURDIR)
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional

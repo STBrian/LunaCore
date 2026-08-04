@@ -16,11 +16,15 @@ using json = nlohmann::ordered_json;
 #include "CoreGlobals.hpp"
 #include "Core/Debug.hpp"
 #include "Core/Utils/Utils.hpp"
+#include "Core/Hooks/GameHooks.hpp"
 
 #include "MC3DSPluginFramework.hpp"
 
 #define GSTD_EXCLUDE_NAMESPACE
 #include "game/gmalloc.h"
+
+#include "GameAPI.hpp"
+#include <Minecraft/Common/Client/Gui/Screens/ScreenChooser.hpp>
 
 namespace CTRPF = CTRPluginFramework;
 
@@ -33,10 +37,13 @@ namespace MenuButtonID {
         Manual, 
         Multiplayer,
         Store,
+
+        LunaCore_Custom1 = 12,
     } MenuButtonID;
 }
 
 struct MenuBtnData {
+    int id = 0;
     int x = 0, y = 0, width = 0, height = 0;
     struct subtext {
         unsigned int u = 0, v = 0, w = 0, h = 0;
@@ -52,7 +59,6 @@ struct MenuBtnData {
     } iconSubtex;
     std::string text;
     bool bigIcon = false;
-    int id = -1;
 };
 
 struct MenuChrtData {
@@ -132,7 +138,6 @@ static inline const MC3DSPluginFramework::IntRectangle& GetMenuSprite(ButtonSpri
 
 static bool MainMenuLayoutLoaded = false;
 static std::vector<MenuBtnData> MenuLayoutBtns;
-static std::vector<MenuButtonID::MenuButtonID> MenuBtnsOrder;
 static MenuChrtData MenuLayoutChrt;
 
 /* ------------------------------------------------------------------------------------- */
@@ -144,13 +149,14 @@ static void CreateMenuButtons(int *ptr) {
     const ResourceLocation &location = *(ResourceLocation *)0xABFD74;
 
     // --- Define all buttons ---
-    for (auto &i : MenuBtnsOrder) {
-        MenuBtnData& btnData = MenuLayoutBtns[i];
+    for (auto &btnData : MenuLayoutBtns) {
         BoxedPtr::Shared<IconButton2> newButton(gstd::make_unique<IconButton2>(
-            (MinecraftGame*)ptr[1], i, btnData.x, btnData.y, btnData.width, btnData.height, btnData.text.c_str(), btnData.bigIcon));
+            (MinecraftGame*)ptr[1], btnData.id, btnData.x, btnData.y, btnData.width, btnData.height, btnData.text.c_str(), btnData.bigIcon));
         newButton->setTextures(location, btnData.iconSubtex, GetMenuSprite(ButtonSprite::BG), GetMenuSprite(ButtonSprite::BG_HOVERED));
         reinterpret_cast<ScreenProxy*>(ptr)->addButton(newButton);
     }
+
+    reinterpret_cast<ScreenProxy*>(ptr)->setupTabs();
 }
 
 static void CreateMainMenuCustomLayout(int *ptr) {
@@ -175,7 +181,6 @@ static void CreateMainMenuCustomLayout(int *ptr) {
     ptr[0x24] = (int)dataPtr;
     CreateUpdatePopUp(ptr, ptr[1], 0xf0, 0x90); // Pop-up message
 
-    reinterpret_cast<ScreenProxy*>(ptr)->setupTabs();
     return;
 }
 
@@ -183,28 +188,55 @@ static void MainMenuLayoutLoadCallback(int *ptr) {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
     Core::CrashHandler::game_state = Core::CrashHandler::GAME_MENU;
 
+    bool custom1Loaded = false;
     if (G_config.getBool("custom_game_menu_layout", true) && MainMenuLayoutLoaded) {
         CreateMainMenuCustomLayout(ptr);
+
+        for (auto &btn : MenuLayoutBtns) {
+            if (btn.id == MenuButtonID::LunaCore_Custom1) {
+                custom1Loaded = true;
+                break;
+            }
+        }
     } else {
         // MainMenuScreen::setupComponents(ptr);
         reinterpret_cast<void(*)(int*)>(0x26eda4)(ptr);
     }
 
-    using namespace MC3DSPluginFramework;
-    ScreenProxy* screen = reinterpret_cast<ScreenProxy*>(ptr);
-    const ResourceLocation &location = *(ResourceLocation *)0xABFD74;
-    BoxedPtr::Shared<IconButton2> newButton(gstd::make_unique<IconButton2>(
-        (MinecraftGame*)ptr[1], 12, 10, 206, 28, 28, " ", false));
+    if (!custom1Loaded) {
+        using namespace MC3DSPluginFramework;
+        ScreenProxy* screen = reinterpret_cast<ScreenProxy*>(ptr);
+        const ResourceLocation &location = *(ResourceLocation *)0xABFD74;
 
-    newButton->setTextures(location, GetMenuSprite(ButtonSprite::OPTIONS), GetMenuSprite(ButtonSprite::BG), GetMenuSprite(ButtonSprite::BG_HOVERED));
-    screen->addButton(newButton);
-    screen->setupTabs();
+        // Add custom1 button
+        BoxedPtr::Shared<IconButton2> newButton(gstd::make_unique<IconButton2>(
+            (MinecraftGame*)ptr[1], MenuButtonID::LunaCore_Custom1, 10, 206, 28, 28, "", false));
+
+        newButton->setTextures(location, GetMenuSprite(ButtonSprite::OPTIONS), GetMenuSprite(ButtonSprite::BG), GetMenuSprite(ButtonSprite::BG_HOVERED));
+        screen->addButton(newButton);
+        screen->setupTabs();
+    }
 
     GameState.MainMenuLoaded.store(true);
     return;
 }
 
-void SetMainMenuLayoutLoadCallback() {
+static void MainMenuCustomButtonsHook(CoreHookContext* ctx) {
+    using namespace MC3DSPluginFramework;
+
+    u32 id = *(u32*)(ctx->r[5] + 0x78);
+    if (id == 12) {
+        ScreenChooser& screenChosser_ins = Facade::getMinecraftGame()->getScreenChooser();
+        MinecraftGame* mg = Facade::getMinecraftGame();
+        ClientInstance* ci = Facade::getClient();
+        BoxedPtr::Shared<Minecraft::CustomScreen> screen_ins(gstd::make_unique<Minecraft::CustomScreen>(mg, ci));
+        screenChosser_ins._pushScreen(screen_ins);
+        // CTRPF::PluginMenu::ForceOpen();
+    }
+}
+
+void Core::Hooks::InstallMainMenuHooks() {
+    hookFunction(0x0026e878, (u32)MainMenuCustomButtonsHook); // Hook MainMenuScreen::buttonPressed
     CTRPF::Process::Write32(0x9ab4a4, (u32)MainMenuLayoutLoadCallback); // Patch vtable reference of MainMenuScreen::setupComponents
 }
 
@@ -215,7 +247,6 @@ static void LoadButtonData(json &j, MenuBtnData &btnData) {
     btnData.height = j.value("height", 0);
     btnData.text = j.value("text", "");
     btnData.bigIcon = j.value("bigIcon", false);
-    btnData.id = j.value("id", -1);
 
     bool hasIcon = false;
     if (j.contains("icon")) {
@@ -279,49 +310,45 @@ bool LoadGameMenuLayout(const std::string& filepath) {
         json j = json::parse(std::string(fileCont), nullptr, false);
         if (!j.is_discarded()) {
             if (j.contains("buttons") && j["buttons"].is_object()) {
-                MenuBtnsOrder.clear();
-                MenuLayoutBtns.resize(7);
+                MenuLayoutBtns.clear();
                 json& btnsData = j["buttons"];
                 for (auto& [key, value] : btnsData.items()) {
                     if (value.is_object()) {
                         u32 key_hash = hash(key.c_str());
                         bool valid = true;
-                        MenuBtnData* btnData = &MenuLayoutBtns[MenuButtonID::Play];
+                        MenuBtnData btnData{};
                         switch (key_hash) 
                         {
                         case hash("play"): 
-                            MenuBtnsOrder.push_back(MenuButtonID::Play);
-                            btnData = &MenuLayoutBtns[MenuButtonID::Play];
+                            btnData.id = MenuButtonID::Play;
                             break;
 
                         case hash("multiplayer"):
-                            MenuBtnsOrder.push_back(MenuButtonID::Multiplayer);
-                            btnData = &MenuLayoutBtns[MenuButtonID::Multiplayer];
+                            btnData.id = MenuButtonID::Multiplayer;
                             break;
 
                         case hash("options"):
-                            MenuBtnsOrder.push_back(MenuButtonID::Options);
-                            btnData = &MenuLayoutBtns[MenuButtonID::Options];
+                            btnData.id = MenuButtonID::Options;
                             break;
 
                         case hash("skins"):
-                            MenuBtnsOrder.push_back(MenuButtonID::Skins);
-                            btnData = &MenuLayoutBtns[MenuButtonID::Skins];
+                            btnData.id = MenuButtonID::Skins;
                             break;
 
                         case hash("achievements"):
-                            MenuBtnsOrder.push_back(MenuButtonID::Achievements);
-                            btnData = &MenuLayoutBtns[MenuButtonID::Achievements];
+                            btnData.id = MenuButtonID::Achievements;
                             break;
 
                         case hash("manual"):
-                            MenuBtnsOrder.push_back(MenuButtonID::Manual);
-                            btnData = &MenuLayoutBtns[MenuButtonID::Manual];
+                            btnData.id = MenuButtonID::Manual;
                             break;
 
                         case hash("store"):
-                            MenuBtnsOrder.push_back(MenuButtonID::Store);
-                            btnData = &MenuLayoutBtns[MenuButtonID::Store];
+                            btnData.id = MenuButtonID::Store;
+                            break;
+
+                        case hash("custom1"):
+                            btnData.id = MenuButtonID::LunaCore_Custom1;
                             break;
 
                         default:
@@ -329,7 +356,8 @@ bool LoadGameMenuLayout(const std::string& filepath) {
                             break;
                         }
                         if (valid) {
-                            LoadButtonData(value, *btnData);
+                            LoadButtonData(value, btnData);
+                            MenuLayoutBtns.push_back(btnData);
                         }
                     }
                 }

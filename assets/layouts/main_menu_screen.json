@@ -25,8 +25,16 @@
             "icon": "options",
             "bigIcon": false
         },
+        "custom1": {
+            "x": 10,
+            "y": 206,
+            "width": 28,
+            "height": 28,
+            "icon": "options",
+            "bigIcon": false
+        },
         "skins": {
-            "x": 49,
+            "x": 48,
             "y": 206,
             "width": 29,
             "height": 28,
@@ -34,7 +42,7 @@
             "bigIcon": false
         },
         "achievements": {
-            "x": 87,
+            "x": 86,
             "y": 206,
             "width": 29,
             "height": 28,

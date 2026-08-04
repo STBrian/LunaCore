@@ -114,7 +114,7 @@ namespace CTRPluginFramework
 
         if (Core::Utils::checkCompatibility() || System::IsCitra()) {
             //Minecraft::PatchProcess();
-            SetMainMenuLayoutLoadCallback();
+            Core::Hooks::InstallMainMenuHooks();
             SetLoadingWorldScreenMessageCallback();
             SetLeaveLevelPromptCallback();
             if (disableZLandZR) {

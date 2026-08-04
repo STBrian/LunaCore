@@ -8,8 +8,6 @@
 #define JSON_NOEXCEPTION
 #include "json.hpp"
 
-using json = nlohmann::ordered_json;
-
 #include "string_hash.hpp"
 
 #include "Core/CrashHandler.hpp"
@@ -17,15 +15,15 @@ using json = nlohmann::ordered_json;
 #include "Core/Debug.hpp"
 #include "Core/Utils/Utils.hpp"
 #include "Core/Hooks/GameHooks.hpp"
+#include "Core/Screens/SettingsScreen.hpp"
 
-#include "MC3DSPluginFramework.hpp"
+#include <MC3DSPluginFramework.hpp>
+#include <Minecraft/Common/Client/Gui/Screens/ScreenChooser.hpp>
 
 #define GSTD_EXCLUDE_NAMESPACE
 #include "game/gmalloc.h"
 
-#include "GameAPI.hpp"
-#include <Minecraft/Common/Client/Gui/Screens/ScreenChooser.hpp>
-
+using json = nlohmann::ordered_json;
 namespace CTRPF = CTRPluginFramework;
 
 namespace MenuButtonID {
@@ -225,11 +223,11 @@ static void MainMenuCustomButtonsHook(CoreHookContext* ctx) {
     using namespace MC3DSPluginFramework;
 
     u32 id = *(u32*)(ctx->r[5] + 0x78);
-    if (id == 12) {
+    if (id == MenuButtonID::LunaCore_Custom1) {
         ScreenChooser& screenChosser_ins = Facade::getMinecraftGame()->getScreenChooser();
         MinecraftGame* mg = Facade::getMinecraftGame();
         ClientInstance* ci = Facade::getClient();
-        BoxedPtr::Shared<Minecraft::CustomScreen> screen_ins(gstd::make_unique<Minecraft::CustomScreen>(mg, ci));
+        BoxedPtr::Shared<Core::LunaCoreSettingsScreen> screen_ins(gstd::make_unique<Core::LunaCoreSettingsScreen>(mg, ci));
         screenChosser_ins._pushScreen(screen_ins);
         // CTRPF::PluginMenu::ForceOpen();
     }

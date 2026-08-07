@@ -20,6 +20,8 @@
 #include <MC3DSPluginFramework.hpp>
 #include <Minecraft/Common/Client/Gui/Screens/ScreenChooser.hpp>
 
+#include "GameAPI.hpp"
+
 #define GSTD_EXCLUDE_NAMESPACE
 #include "game/gmalloc.h"
 
@@ -43,18 +45,7 @@ namespace MenuButtonID {
 struct MenuBtnData {
     int id = 0;
     int x = 0, y = 0, width = 0, height = 0;
-    struct subtext {
-        unsigned int u = 0, v = 0, w = 0, h = 0;
-
-        subtext() {}
-
-        subtext(const MC3DSPluginFramework::IntRectangle& rect) :
-        u(rect.mX), v(rect.mY), w(rect.mWidth), h(rect.mHeight) {}
-
-        operator MC3DSPluginFramework::IntRectangle() {
-            return MC3DSPluginFramework::IntRectangle(u, v, w, h);
-        }
-    } iconSubtex;
+    MinecraftAPI::Resource<MinecraftAPI::GuiAtlas> icon;
     std::string text;
     bool bigIcon = false;
 };
@@ -81,57 +72,6 @@ class ScreenProxy : public MC3DSPluginFramework::Screen {
     }
 };
 
-class IconButton2 : public MC3DSPluginFramework::IconButton {
-    using IntRectangle = MC3DSPluginFramework::IntRectangle;
-    using ResourceLocation = MC3DSPluginFramework::ResourceLocation;
-
-    using MinecraftGame = MC3DSPluginFramework::MinecraftGame;
-
-    public:
-    IconButton2(MinecraftGame *minecraftGame, int id, int x, int y, int w, int h, const char *localizeKey, bool bigIcon) :
-        MC3DSPluginFramework::IconButton(minecraftGame, id, x, y, w, h, localizeKey, bigIcon) {}
-
-    void setTextures(const ResourceLocation& location, const IntRectangle& iconTex, const IntRectangle& bgSubtexUV, const IntRectangle& hoveredSubtexUV) {
-        this->setTexture(location, iconTex.mX, iconTex.mY, iconTex.mWidth, iconTex.mHeight, 0, bgSubtexUV, hoveredSubtexUV, 2, 2, 0);
-    }
-};
-
-/* ------------------------------------------------------------------------------------- */
-
-enum class ButtonSprite {
-    PLAY,
-    MULTIPLAYER,
-    OPTIONS,
-    SKINS,
-    ACHIEVEMENTS,
-    MANUAL,
-    STORE,
-
-    BG,
-    BG_HOVERED,
-
-    EMPTY
-};
-
-static const MC3DSPluginFramework::IntRectangle MenuSprites[] = {
-    {224, 128, 16, 16},
-    {224, 128, 16, 16},
-    {224, 144, 16, 16},
-    {224, 176, 16, 16},
-    {224, 160, 16, 16},
-    {240, 128, 16, 16},
-    {240, 144, 16, 16},
-
-    {64, 144, 8, 8},
-    {56, 144, 8, 8},
-
-    {0, 0, 8, 8}
-};
-
-static inline const MC3DSPluginFramework::IntRectangle& GetMenuSprite(ButtonSprite v) {
-    return MenuSprites[(int)v];
-}
-
 /* ------------------------------------------------------------------------------------- */
 
 static bool MainMenuLayoutLoaded = false;
@@ -141,16 +81,15 @@ static MenuChrtData MenuLayoutChrt;
 /* ------------------------------------------------------------------------------------- */
 
 static void CreateMenuButtons(int *ptr) {
-    using namespace MC3DSPluginFramework;
-    namespace MC3DSPF = MC3DSPluginFramework;
+    using namespace MinecraftAPI;
 
     const ResourceLocation &location = *(ResourceLocation *)0xABFD74;
 
     // --- Define all buttons ---
     for (auto &btnData : MenuLayoutBtns) {
-        BoxedPtr::Shared<IconButton2> newButton(gstd::make_unique<IconButton2>(
+        BoxedPtr::Shared<IconButton> newButton(gstd::make_unique<IconButton>(
             (MinecraftGame*)ptr[1], btnData.id, btnData.x, btnData.y, btnData.width, btnData.height, btnData.text.c_str(), btnData.bigIcon));
-        newButton->setTextures(location, btnData.iconSubtex, GetMenuSprite(ButtonSprite::BG), GetMenuSprite(ButtonSprite::BG_HOVERED));
+        newButton->setTextures(btnData.icon, GuiAtlas::BUTTON_BG, GuiAtlas::BUTTON_BG_HOVERED, 2, 2);
         reinterpret_cast<ScreenProxy*>(ptr)->addButton(newButton);
     }
 
@@ -202,15 +141,15 @@ static void MainMenuLayoutLoadCallback(int *ptr) {
     }
 
     if (!custom1Loaded) {
-        using namespace MC3DSPluginFramework;
+        using namespace MinecraftAPI;
         ScreenProxy* screen = reinterpret_cast<ScreenProxy*>(ptr);
         const ResourceLocation &location = *(ResourceLocation *)0xABFD74;
 
         // Add custom1 button
-        BoxedPtr::Shared<IconButton2> newButton(gstd::make_unique<IconButton2>(
+        BoxedPtr::Shared<IconButton> newButton(gstd::make_unique<IconButton>(
             (MinecraftGame*)ptr[1], MenuButtonID::LunaCore_Custom1, 10, 206, 28, 28, "", false));
 
-        newButton->setTextures(location, GetMenuSprite(ButtonSprite::OPTIONS), GetMenuSprite(ButtonSprite::BG), GetMenuSprite(ButtonSprite::BG_HOVERED));
+        newButton->setTextures(GuiAtlas::OPTIONS_ICON, GuiAtlas::BUTTON_BG, GuiAtlas::BUTTON_BG_HOVERED, 2, 2);
         screen->addButton(newButton);
         screen->setupTabs();
     }
@@ -251,13 +190,13 @@ static void LoadButtonData(json &j, MenuBtnData &btnData) {
         if (j["icon"].is_array() && j["icon"].size() == 4) {
             json &icon = j["icon"];
             if (icon[0].is_number())
-                btnData.iconSubtex.u = icon[0];
+                btnData.icon.region.mX = icon[0];
             if (icon[1].is_number())
-                btnData.iconSubtex.v = icon[1];
+                btnData.icon.region.mY = icon[1];
             if (icon[2].is_number())
-                btnData.iconSubtex.w = icon[2];
+                btnData.icon.region.mWidth = icon[2];
             if (icon[3].is_number())
-                btnData.iconSubtex.h = icon[3];
+                btnData.icon.region.mHeight = icon[3];
             hasIcon = true;
         } else if (j["icon"].is_string()) {
             hasIcon = true;
@@ -265,27 +204,27 @@ static void LoadButtonData(json &j, MenuBtnData &btnData) {
             switch (textureId)
             {
             case hash("play"): case hash("multiplayer"):
-                btnData.iconSubtex = GetMenuSprite(ButtonSprite::PLAY);
+                btnData.icon = MinecraftAPI::GuiAtlas::PLAY_ICON;
                 break;
 
             case hash("options"):
-                btnData.iconSubtex = GetMenuSprite(ButtonSprite::OPTIONS);
+                btnData.icon = MinecraftAPI::GuiAtlas::OPTIONS_ICON;
                 break;
 
             case hash("skins"):
-                btnData.iconSubtex = GetMenuSprite(ButtonSprite::SKINS);
+                btnData.icon = MinecraftAPI::GuiAtlas::SKINS_ICON;
                 break;
 
             case hash("achievements"):
-                btnData.iconSubtex = GetMenuSprite(ButtonSprite::ACHIEVEMENTS);
+                btnData.icon = MinecraftAPI::GuiAtlas::ACHIEVEMENTS_ICON;
                 break;
 
             case hash("manual"):
-                btnData.iconSubtex = GetMenuSprite(ButtonSprite::MANUAL);
+                btnData.icon = MinecraftAPI::GuiAtlas::MANUAL_ICON;
                 break;
 
             case hash("store"):
-                btnData.iconSubtex = GetMenuSprite(ButtonSprite::STORE);
+                btnData.icon = MinecraftAPI::GuiAtlas::STORE_ICON;
                 break;
             
             default:
@@ -296,7 +235,7 @@ static void LoadButtonData(json &j, MenuBtnData &btnData) {
     }
 
     if (!hasIcon)
-        btnData.iconSubtex = GetMenuSprite(ButtonSprite::EMPTY);
+        btnData.icon = MinecraftAPI::GuiAtlas::EMPTY;
     if (btnData.text.find("%d.%d.%d") != std::string::npos) 
         btnData.text = CTRPF::Utils::Format(btnData.text.c_str(), LUNACORE_VER_MAJOR, LUNACORE_VER_MINOR, LUNACORE_VER_PATCH);
 }

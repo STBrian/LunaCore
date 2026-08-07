@@ -11,8 +11,12 @@
 #include "Minecraft/Common/Platform/AppPlatform.hpp"
 #include <CTRPluginFramework.hpp>
 
-#define STRINGIFY(x) STRINGIFY_HELPER(x)
-#define STRINGIFY_HELPER(x) #x   
+#include "GameAPI.hpp"
+
+#ifndef STRINGIFY_MACRO
+#define STRINGIFY_MACRO(x) STRINGIFY_MACRO_HELPER(x)
+#define STRINGIFY_MACRO_HELPER(x) #x   
+#endif
 
 namespace Core {
     namespace CTRPF = CTRPluginFramework;
@@ -51,22 +55,16 @@ namespace Core {
             MC3DSPF::ResourceLocation &loc = *(MC3DSPF::ResourceLocation *)0xABFD74;
             mSprite1              = MC3DSPF::gstd::make_unique<MC3DSPF::Sprite>(mMinecraftGame, 7, 7, 16, 16, loc, 200, 25, 8, 8);
 
-            MC3DSPF::IntRectangle CLOSE_BG(24, 128, 16, 16);
-            MC3DSPF::IntRectangle CLOSE_BG_HOVERED(40, 128, 16, 16);
-            constexpr int iconW = 8, iconH = 8;
+            using namespace MinecraftAPI;
 
-            MC3DSPF::BoxedPtr::Shared<MC3DSPF::IconButton> exitButton(MC3DSPF::gstd::make_unique<MC3DSPF::IconButton>(
-                mMinecraftGame, ButtonId::BUTTON_EXIT, MC3DSPF::AppPlatform::BOTTOM_SCREEN_WIDTH - 7 - 16, 7, 16, 16, " ", false));
-            exitButton->setTexture(loc, 0, 0, iconW, iconH, 0, CLOSE_BG, CLOSE_BG_HOVERED, 0, 0, 0);
+            BoxedPtr::Shared<IconButton> exitButton(gstd::make_unique<IconButton>(
+                mMinecraftGame, ButtonId::BUTTON_EXIT, MC3DSPF::AppPlatform::BOTTOM_SCREEN_WIDTH - 7 - 16, 7, 16, 16, "", false));
+            exitButton->setTextures(GuiAtlas::EMPTY, GuiAtlas::BUTTON_CLOSE_BG, GuiAtlas::BUTTON_CLOSE_BG_HOVERED, 0, 0);
             mButtons.push_back(std::move(exitButton));
 
-            MC3DSPF::IntRectangle OPTIONS_ICON{224, 144, 16, 16};
-            MC3DSPF::IntRectangle BUTTON_BG{64, 144, 8, 8};
-            MC3DSPF::IntRectangle BUTTON_BG_HOVERED{56, 144, 8, 8};
-
-            MC3DSPF::BoxedPtr::Shared<MC3DSPF::IconButton> optionsButton(MC3DSPF::gstd::make_unique<MC3DSPF::IconButton>(
-                mMinecraftGame, ButtonId::BUTTON_OPTIONS, 16, 40, 24, 24, "Plugin Menu", false));
-            optionsButton->setTexture(loc, OPTIONS_ICON.mX, OPTIONS_ICON.mY, OPTIONS_ICON.mWidth, OPTIONS_ICON.mHeight, 0, BUTTON_BG, BUTTON_BG_HOVERED, 0, 0, 0);
+            BoxedPtr::Shared<IconButton> optionsButton(gstd::make_unique<IconButton>(
+                mMinecraftGame, ButtonId::BUTTON_OPTIONS, 16, 40, 28, 28, "Plugin Menu", false));
+            optionsButton->setTextures(GuiAtlas::OPTIONS_ICON, GuiAtlas::BUTTON_BG, GuiAtlas::BUTTON_BG_HOVERED, 2, 2);
             mButtons.push_back(std::move(optionsButton));
         }
 
@@ -223,11 +221,11 @@ namespace Core {
         {
             if (useScreen & MC3DSPF::UseScreen::Top)
             {
-                MC3DSPF::gstd::string str("LunaCore v" STRINGIFY(LUNACORE_VER_MAJOR) "." STRINGIFY(LUNACORE_VER_MINOR) "." STRINGIFY(LUNACORE_VER_PATCH));
+                MC3DSPF::gstd::string str("LunaCore v" STRINGIFY_MACRO(LUNACORE_VER_MAJOR) "." STRINGIFY_MACRO(LUNACORE_VER_MINOR) "." STRINGIFY_MACRO(LUNACORE_VER_PATCH));
                 // int          w = mFont->getTextWidth(str, 0, 1);
                 int          h = mFont->getTextHeight(str, 0, 1);
                 // GuiComponent::drawRect(0, 0, w + 10, h + 10, MC3DSPF::Color(0, 0, 0, 0.5f));
-                mFont->drawWithShadow(10, MC3DSPF::AppPlatform::TOP_SCREEN_HEIGHT - 10 - h, 5, str, MC3DSPF::Color(1, 1, 1), 0, -1);
+                mFont->drawWithShadow(10, MC3DSPF::AppPlatform::TOP_SCREEN_HEIGHT - h, 5, str, MC3DSPF::Color(1, 1, 1), 0, -1);
             }
 
             if (useScreen & MC3DSPF::UseScreen::Bottom)

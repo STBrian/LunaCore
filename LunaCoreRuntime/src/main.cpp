@@ -37,6 +37,12 @@ using namespace Core;
 
 std::string plgAuthor, plgSummary, plgDescription, plgTitle;
 
+Result HBLDR_SetTarget(Handle hbldrHandle, const char* path);
+Result HBLDR_SetArgv(Handle hbldrHandle, const void* buffer, u32 size);
+namespace CTRPluginFramework::ProcessImpl {
+    void UnlockGameThreads(void);
+}
+
 namespace CTRPluginFramework
 {
     // This patch the NFC disabling the touchscreen when scanning an amiibo, which prevents ctrpf to be used
@@ -165,6 +171,31 @@ namespace CTRPluginFramework
                 && LoadGameMenuLayout(PLUGIN_FOLDER"/LunaCore/layouts/menu_layout.json"))
             )
                 PatchGameMenuLayoutFunction();
+        }
+
+        Handle hbldrHandle;
+        const char launcherPath[] = "sdmc:/3ds/LunaCoreLauncher.3dsx";
+        svcConnectToPort(&hbldrHandle, "hb:ldr");
+        if (R_FAILED(HBLDR_SetTarget(hbldrHandle, launcherPath+5))) {
+            MessageBox("Failed to set target")();
+            svcCloseHandle(hbldrHandle);
+        } else {
+            char argvBuf[sizeof(u32)+sizeof(launcherPath)];
+            *(u32*)argvBuf = 1;
+            memcpy(argvBuf+sizeof(u32), launcherPath, sizeof(launcherPath));
+            
+            HBLDR_SetArgv(hbldrHandle, argvBuf, sizeof(argvBuf));
+
+            svcCloseHandle(hbldrHandle);
+            u64 titleId;
+            FS_MediaType mtype = FS_MediaType::MEDIATYPE_SD;
+            svcGetSystemInfo((s64*)&titleId, 0x10000, 0x100);
+
+            APT_PrepareToDoApplicationJump(0, titleId, mtype);
+            APT_DoApplicationJump("", 0, nullptr);
+            ProcessImpl::UnlockGameThreads();
+            svcExitProcess();
+            for (;;);
         }
 
         MC3DSPluginFramework::Hooks::pushPluginThreadId(std::this_thread::get_id());

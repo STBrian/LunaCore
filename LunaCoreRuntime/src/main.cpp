@@ -32,6 +32,8 @@
 
 #include "game/Minecraft.hpp"
 
+#include "OnionFS.hpp"
+
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
 
@@ -95,6 +97,10 @@ namespace CTRPluginFramework
         CrashHandler::Init();
         settings.UseGameHidMemory = true;
         //ToggleTouchscreenForceOn();
+
+        // Init OnionFS
+        *(u32*)0x1226fc = 0xe92d41f0; // Remove Luma3DS layeredfs if present
+        OnionFS::InitFS();
 
         Core::FsInit();
 
@@ -192,6 +198,7 @@ namespace CTRPluginFramework
 
         // Init our menu entries & folders
         InitMenu(*gmenu);
+        OnionFS::InitMenu(gmenu);
 
         // Launch menu and mainloop
         Debug::LogInfo("Starting plugin mainloop");

@@ -57,7 +57,7 @@ bool CancelOperationCallback() {
 bool DrawMonitors(const Screen &screen) {
     static int luaMemoryUsage = 0;
     if (screen.IsTop) {
-        if (Lua_Global_Mut.try_lock()) {
+        if (Lua_global != nullptr && Lua_Global_Mut.try_lock()) {
             int memusgkb = lua_gc(Lua_global, LUA_GCCOUNT, 0);
             int memusgb = lua_gc(Lua_global, LUA_GCCOUNTB, 0);
             luaMemoryUsage = memusgkb * 1024 + memusgb;
@@ -169,12 +169,6 @@ void initDirtyPatchMenuFolderImpl() {
     u32* opdelfun = *((u32**)vtable + 1);
     // remove operator.delete call
     *(opdelfun + 5) = 0xe320f000; // NOP
-}
-
-Result HBLDR_SetTarget(Handle hbldrHandle, const char* path);
-Result HBLDR_SetArgv(Handle hbldrHandle, const void* buffer, u32 size);
-namespace CTRPluginFramework::ProcessImpl {
-    void UnlockGameThreads(void);
 }
 
 void InitMenu(PluginMenu &menu)
@@ -503,41 +497,6 @@ void InitMenu(PluginMenu &menu)
     menu.Append(MenuModsFolder);
     menu.Append(optionsFolder);
     menu.Append(devFolder);
-    menu.Append(new MenuEntry("Return to loader", nullptr, [](MenuEntry *entry) {
-        Handle hbldrHandle;
-        const char launcherPath[] = "sdmc:/3ds/LunaCoreLauncher.3dsx";
-        if (Core::Filesystem::FileExists(launcherPath)) {
-            if (MessageBox("Do you want to return to the loader?", DialogType::DialogYesNo)()) {
-                svcConnectToPort(&hbldrHandle, "hb:ldr");
-                if (R_FAILED(HBLDR_SetTarget(hbldrHandle, launcherPath+5))) {
-                    MessageBox("Failed to set target")();
-                    svcCloseHandle(hbldrHandle);
-                    return;
-                }
-                
-                char argvBuf[sizeof(u32)+sizeof(launcherPath)];
-                *(u32*)argvBuf = 1;
-                memcpy(argvBuf+sizeof(u32), launcherPath, sizeof(launcherPath));
-                
-                HBLDR_SetArgv(hbldrHandle, argvBuf, sizeof(argvBuf));
-
-                svcCloseHandle(hbldrHandle);
-                u64 titleId;
-                FS_MediaType mtype = FS_MediaType::MEDIATYPE_SD;
-                svcGetSystemInfo((s64*)&titleId, 0x10000, 0x100);
-
-                APT_PrepareToDoApplicationJump(0, titleId, mtype);
-                APT_DoApplicationJump("", 0, nullptr);
-                ProcessImpl::UnlockGameThreads();
-                svcExitProcess();
-                for (;;);
-            } else
-                return;
-        } else {
-            MessageBox("LunaCoreLauncher.3dsx not found in sdmc:/3ds/")();
-            return;
-        }
-    }));
 
     initDirtyPatchMenuFolderImpl();
 
@@ -545,29 +504,3 @@ void InitMenu(PluginMenu &menu)
     if (monitorsEnabled) OSD::Run(DrawMonitors);
 }
 
-Result HBLDR_SetTarget(Handle hbldrHandle, const char* path)
-{
-	u32 pathLen = strlen(path) + 1;
-	u32* cmdbuf = getThreadCommandBuffer();
-
-	cmdbuf[0] = IPC_MakeHeader(2, 0, 2); //0x20002
-	cmdbuf[1] = IPC_Desc_StaticBuffer(pathLen, 0);
-	cmdbuf[2] = (u32)path;
-
-	Result rc = svcSendSyncRequest(hbldrHandle);
-	if (R_SUCCEEDED(rc)) rc = cmdbuf[1];
-	return rc;
-}
-
-Result HBLDR_SetArgv(Handle hbldrHandle, const void* buffer, u32 size)
-{
-	u32* cmdbuf = getThreadCommandBuffer();
-
-	cmdbuf[0] = IPC_MakeHeader(3, 0, 2); //0x30002
-	cmdbuf[1] = IPC_Desc_StaticBuffer(size, 1);
-	cmdbuf[2] = (u32)buffer;
-
-	Result rc = svcSendSyncRequest(hbldrHandle);
-	if (R_SUCCEEDED(rc)) rc = cmdbuf[1];
-	return rc;
-}

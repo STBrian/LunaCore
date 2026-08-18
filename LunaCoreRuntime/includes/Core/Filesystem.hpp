@@ -44,7 +44,7 @@ namespace Core {
         virtual ~File_impl() = default;
         virtual int read(void* buffer, unsigned int length) = 0;
         virtual int write(const void* data, unsigned int length) = 0;
-        virtual int seek(unsigned int offset, unsigned int origin) = 0;
+        virtual int seek(int offset, unsigned int origin) = 0;
         virtual int tell() = 0;
         virtual bool flush() = 0;
         virtual void close() = 0;

@@ -123,6 +123,11 @@ void* hookFunction(u32 targetAddr, u32 callbackAddr) {
 
 static void RegisterItemsHook(CoreHookContext* ctx) {
     LOGDEBUG("Hook RegisterItems start");
+    if (Lua_global == nullptr) {
+        while (Lua_global == nullptr) {
+            svcSleepThread(100000);
+        }
+    }
     std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
     GameState.LoadingItems.store(true);
     Core::Event::TriggerEvent(Lua_global, "Game.Items.OnRegisterItems");

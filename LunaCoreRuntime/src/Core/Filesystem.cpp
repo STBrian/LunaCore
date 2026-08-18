@@ -1,5 +1,7 @@
 #include "Core/Filesystem.hpp"
 
+#include <cstdio>
+
 #include <CTRPluginFramework.hpp>
 #include <fslib.hpp>
 
@@ -90,7 +92,7 @@ class CTRPF_File : public Core::File_impl {
         return 0;
     }
 
-    int seek(unsigned int offset, unsigned int origin) override {
+    int seek(int offset, unsigned int origin) override {
         if (origin >= 0 && origin <= 2) {
             // It uses values different from the standard library
             CTRPF::File::SeekPos originAdapted = CTRPF::File::SeekPos::SET;
@@ -198,7 +200,7 @@ class FsLib_File : public Core::File_impl {
         return res;
     }
 
-    int seek(unsigned int offset, unsigned int origin) override {
+    int seek(int offset, unsigned int origin) override {
         if (origin >= 0 && origin <= 2) // It uses the same values as the standard library
             mFile.seek(offset, (fslib::File::Origin)origin);
         return mFile.tell();
@@ -268,6 +270,133 @@ static unsigned int fslib_get_directory_elements(const char* fp, std::vector<std
     return elementsCount;
 }
 
+class STDIO_File : public Core::File_impl {
+    private:
+    bool mWasClosed;
+    FILE* mFile;
+    
+    public:
+    STDIO_File(FILE* handle) : mFile(handle), mWasClosed(false) {}
+
+    int read(void* buffer, unsigned int length) override {
+        int res = fread(buffer, 1, length, this->mFile);
+        return res;
+    }
+
+    int write(const void* data, unsigned int length) override {
+        int res = fwrite(data, length, 1, this->mFile);
+        return res;
+    }
+
+    int seek(int offset, unsigned int origin) override {
+        fseek(this->mFile, offset, origin);
+        return ftell(this->mFile);
+    }
+
+    int tell() override {
+        return ftell(this->mFile);
+    }
+
+    bool flush() override {
+        return fflush(this->mFile);
+    }
+
+    void close() override {
+        if (!this->mWasClosed) {
+            fclose(this->mFile);
+            this->mWasClosed = true;
+        }
+    }
+
+    bool isOpen() override {
+        return !this->mWasClosed;
+    }
+
+    ~STDIO_File() {
+        if (!mWasClosed)
+            fclose(mFile);
+    }
+};
+
+static Core::File_impl* STDIO_fopen(const char* fp, unsigned int mode, unsigned int fileSize) {
+    char modeStr[5] = {0};
+    char* dstPos = modeStr;
+    // This only supports basic modes. Fix it?
+    if (mode == (FS_OPEN_READ|FS_OPEN_WRITE)) {
+        modeStr[0] = 'r';
+        modeStr[1] = '+';
+    } else if (mode == (FS_OPEN_READ|FS_OPEN_WRITE|FS_OPEN_CREATE)) {
+        modeStr[0] = 'w';
+        modeStr[1] = '+';
+    } else {
+        if (mode & FS_OPEN_READ) {
+            *dstPos = 'r';
+            dstPos++;
+        }
+        if (mode & FS_OPEN_WRITE) {
+            *dstPos = 'w';
+            dstPos++;
+        }
+        if (mode & FS_OPEN_APPEND) {
+            *dstPos = 'a';
+            dstPos++;
+        }
+    }
+    FILE* stdfilePtr = fopen(fp, modeStr);
+    if (stdfilePtr == nullptr)
+        return nullptr;
+    STDIO_File* filePtr = new(std::nothrow) STDIO_File(stdfilePtr);
+    if (filePtr == nullptr) {
+        fclose(stdfilePtr);
+        return nullptr;
+    }
+    return filePtr;
+}
+
+static bool STDIO_file_exists(const char* fp) {
+    FILE* filePtr = fopen(fp, "r");
+    bool doExist = filePtr != nullptr;
+    return filePtr;
+}
+
+static bool STDIO_delete_file(const char* fp) {
+    return remove(fp) == 0;
+}
+
+static bool STDIO_rename_file(const char* fp1, const char* fp2) {
+    return rename(fp1, fp2) == 0;
+}
+
+static bool STDIO_create_directory(const char* fp) {
+    return false; // stubbed
+}
+
+static bool STDIO_directory_exists(const char* fp) {
+    return false; // stubbed
+}
+
+static unsigned int STDIO_get_directory_elements(const char* fp, std::vector<std::string>* out) {
+    out->clear();
+    return 0; // stubbed
+}
+
+Result romfsMountFromCurrentProcessExt(const char *name, bool isPatch)
+{
+    // Set up FS_Path structures
+    u32 zeros[3] = {0};
+    if (isPatch) zeros[0] = 5;
+    FS_Path archPath = { PATH_EMPTY, 1, "" };
+    FS_Path filePath = { PATH_BINARY, sizeof(zeros), zeros };
+
+    // Open the RomFS file and mount it
+    Handle fd = 0;
+    Result rc = FSUSER_OpenFileDirectly(&fd, ARCHIVE_ROMFS, archPath, filePath, FS_OPEN_READ, 0);
+    if (R_SUCCEEDED(rc))
+        rc = romfsMountFromFile(fd, 0, name);
+
+    return rc;
+}
+
 Result Core::FsInit() {
     MountPointInfo currentInfo;
     Result res = fslib::initialize() ? 0 : -1;
@@ -321,6 +450,28 @@ Result Core::FsInit() {
         gl_Devices.push_back(currentInfo);
     } else 
         Core::Debug::LogError("Failed to open extdata");
+
+    res = romfsMountFromCurrentProcessExt("romfs", false);
+    res = romfsMountFromCurrentProcessExt("patch", true);
+
+    /* STDIO based devices */
+    currentInfo.fopen = STDIO_fopen;
+    currentInfo.file_exists = STDIO_file_exists;
+    currentInfo.delete_file = STDIO_delete_file;
+    currentInfo.rename_file = STDIO_rename_file;
+    currentInfo.create_directory = STDIO_create_directory;
+    currentInfo.directory_exists = STDIO_directory_exists;
+    currentInfo.get_directory_elements = STDIO_get_directory_elements;
+
+    currentInfo.name = "romfs";
+    currentInfo.mountPoint = "romfs:";
+    currentInfo.perms = DEVICEACCESS_READ; 
+    gl_Devices.push_back(currentInfo);
+
+    currentInfo.name = "patch";
+    currentInfo.mountPoint = "patch:";
+    currentInfo.perms = DEVICEACCESS_READ; 
+    gl_Devices.push_back(currentInfo);
 
     /* Ensure mount points exist */
     if (!CTRPF::Directory::IsExists("sdmc:/luma/titles")) 

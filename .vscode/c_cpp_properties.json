@@ -20,7 +20,8 @@
             "defines": [
                 "DEBUG",
                 "UNICODE",
-                "_UNICODE"
+                "_UNICODE",
+                "__LCRuntime__"
             ],
             "cStandard": "c11",
             "cppStandard": "gnu++20"
@@ -44,7 +45,8 @@
             "defines": [
                 "DEBUG",
                 "UNICODE",
-                "_UNICODE"
+                "_UNICODE",
+                "__LCRuntime__"
             ],
             "cStandard": "c11",
             "cppStandard": "gnu++20"

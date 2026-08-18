@@ -26,6 +26,7 @@
 #include "PluginInit.hpp"
 #include "CoreConstants.hpp"
 #include "CoreGlobals.hpp"
+#include "CoreTools.hpp"
 
 #include "Helpers/Allocation.hpp"
 #include "ExtendedHeap.hpp"
@@ -153,6 +154,39 @@ namespace CTRPluginFramework
         fslib::close_device(u"extdata");
     }
 
+    bool copyFile(const std::string& fp1, const std::string& fp2) {
+        using namespace Core;
+        Core::File originalFile(fp1, FS_OPEN_READ);
+        Core::File newFile(fp2, FS_OPEN_WRITE|FS_OPEN_CREATE);
+        if (!originalFile.isOpen()) {
+            // Core::Debug::LogWarnf("Failed to open source file: %d", originalFile.getStatus());
+            Core::Debug::LogWarnf("Error: %s", strerror(errno));
+        }
+        if (!newFile.isOpen()) {
+            Core::Debug::LogWarnf("Failed to open destination file: %d", newFile.getStatus());
+            // Core::Debug::LogWarnf("Error: %s", strerror(errno));
+        }
+        if (originalFile.isOpen() && newFile.isOpen()) {
+            const size_t COPY_BUFFER_SIZE = 0x16000;
+            char* buffer = new(std::nothrow) char[COPY_BUFFER_SIZE];
+            if (!buffer) return false;
+
+            size_t filesize1 = originalFile.seek(0, SEEK_END);
+            originalFile.seek(0, SEEK_SET);
+
+            size_t curOffset = 0;
+            while (curOffset < filesize1) {
+                int bytesRead = originalFile.read(buffer, filesize1 - curOffset > COPY_BUFFER_SIZE ? COPY_BUFFER_SIZE : filesize1 - curOffset);
+                if (bytesRead < 1) break;
+                newFile.write(buffer, bytesRead);
+                curOffset += bytesRead;
+            }
+            delete[] buffer;
+            return curOffset == filesize1;
+        }
+        return false;
+    }
+
     int main()
     {
         CrashHandler::plg_state = CrashHandler::PLUGIN_MAIN;
@@ -173,29 +207,16 @@ namespace CTRPluginFramework
                 PatchGameMenuLayoutFunction();
         }
 
-        Handle hbldrHandle;
-        const char launcherPath[] = "sdmc:/3ds/LunaCoreLauncher.3dsx";
-        svcConnectToPort(&hbldrHandle, "hb:ldr");
-        if (R_FAILED(HBLDR_SetTarget(hbldrHandle, launcherPath+5))) {
-            MessageBox("Failed to set target")();
-            svcCloseHandle(hbldrHandle);
-        } else {
-            char argvBuf[sizeof(u32)+sizeof(launcherPath)];
-            *(u32*)argvBuf = 1;
-            memcpy(argvBuf+sizeof(u32), launcherPath, sizeof(launcherPath));
-            
-            HBLDR_SetArgv(hbldrHandle, argvBuf, sizeof(argvBuf));
+        {
+            using namespace Core;
+            if (!Filesystem::DirectoryExists("data:/assets")) Filesystem::CreateDirectory("data:/assets");
+            if (!Filesystem::DirectoryExists("data:/assets/atlas")) Filesystem::CreateDirectory("data:/assets/atlas");
 
-            svcCloseHandle(hbldrHandle);
-            u64 titleId;
-            FS_MediaType mtype = FS_MediaType::MEDIATYPE_SD;
-            svcGetSystemInfo((s64*)&titleId, 0x10000, 0x100);
-
-            APT_PrepareToDoApplicationJump(0, titleId, mtype);
-            APT_DoApplicationJump("", 0, nullptr);
-            ProcessImpl::UnlockGameThreads();
-            svcExitProcess();
-            for (;;);
+            if (!Filesystem::FileExists("data:/assets/atlas/atlas.items.vanilla.3dst"))
+                copyFile("patch:/atlas/atlas.items.meta_79954554_0.3dst", "data:/assets/atlas/atlas.items.vanilla.3dst");
+            if (!Filesystem::FileExists("data:/assets/atlas/atlas.items.vanilla.uvs"))
+                copyFile("patch:/atlas/atlas.items.meta_79954554.uvs", "data:/assets/atlas/atlas.items.vanilla.uvs");
+            LunaCore::LaunchTool("ResourceBuilder");
         }
 
         MC3DSPluginFramework::Hooks::pushPluginThreadId(std::this_thread::get_id());

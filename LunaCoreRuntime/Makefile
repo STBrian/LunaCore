@@ -25,6 +25,8 @@ CFLAGS		:=	$(ARCH) $(INCLUDE) -D__3DS__ -Os -s -mword-relocations \
 				-fdata-sections -fomit-frame-pointer -ffunction-sections -fno-strict-aliasing -fvisibility=hidden \
 				$(CFLAGS_EXTRA)
 
+CFLAGS		+=	-D__LCRuntime__
+
 ifeq ($(EXPERIMENTAL), 1)
 	CFLAGS		+=	-DEXPERIMENTAL
 endif

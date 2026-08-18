@@ -9,7 +9,7 @@ include $(DEVKITARM)/3ds_rules
 
 CTRPFLIB	?=	$(DEVKITPRO)/libctrpf
 
-TARGET		:= 	LunaCore$(TARGET_PREFIX)
+TARGET		:= 	LunaCore
 PLGINFO 	:= 	plgInfo.yaml
 
 BUILD		:= 	Build
@@ -24,6 +24,11 @@ ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -marm
 CFLAGS		:=	$(ARCH) $(INCLUDE) -D__3DS__ -Os -s -mword-relocations \
 				-fdata-sections -fomit-frame-pointer -ffunction-sections -fno-strict-aliasing -fvisibility=hidden \
 				$(CFLAGS_EXTRA)
+
+CFLAGS		+=	-DCOMMIT_HASH="\"$(shell git rev-parse --short HEAD)\"" \
+				-DLUNACORE_VER_MAJOR=$(shell grep -oP 'Major:\s+\K\d+' $(TOPDIR)/$(PLGINFO)) \
+				-DLUNACORE_VER_MINOR=$(shell grep -oP 'Minor:\s+\K\d+' $(TOPDIR)/$(PLGINFO)) \
+				-DLUNACORE_VER_PATCH=$(shell grep -oP 'Revision:\s+\K\d+' $(TOPDIR)/$(PLGINFO))
 
 ifeq ($(EXPERIMENTAL), 1)
 	CFLAGS		+=	-DEXPERIMENTAL
@@ -46,7 +51,7 @@ else
 	LIBS	+= -llua5.1
 endif
 LIBDIRS		:= 	$(CTRPFLIB) $(CTRULIB) $(PORTLIBS) $(CURDIR)/externals/MC3DSPluginFramework \
-				$(CURDIR)/externals/FsLib/3DS/FsLib $(CURDIR)/externals/ffi
+				$(CURDIR)/externals/FsLib/3DS/FsLib $(CURDIR)/externals/ffi $(CURDIR)
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional

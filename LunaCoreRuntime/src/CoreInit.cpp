@@ -122,12 +122,6 @@ void Core::GetCoreInfo(std::string& plgTitle, std::string& plgAuthor, std::strin
     pluginFile.close();
 }
 
-void Core::ParseVersion(u32 ver) {
-    Core::Version.major = (ver >> 24);
-    Core::Version.minor = (ver >> 16) & 0xFF;
-    Core::Version.patch = (ver >> 8) & 0xFF;
-}
-
 void Core::InitCore() {
     u64 titleID = CTRPF::Process::GetTitleID();
     std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
@@ -358,13 +352,13 @@ bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& 
             Core::Debug::LogErrorf("Failed to load '%s'. The mod config file has an invalid 'min_core_version'", modName.c_str());
             goto errorDiscard;
         }
-        if (Core::Version.major < min_core_ver.major) {
+        if (LUNACORE_VER_MAJOR < min_core_ver.major) {
             compatible = false;
-        } else if (Core::Version.major == min_core_ver.major) {
-            if (Core::Version.minor < min_core_ver.minor) {
+        } else if (LUNACORE_VER_MAJOR == min_core_ver.major) {
+            if (LUNACORE_VER_MINOR < min_core_ver.minor) {
                 compatible = false;
-            } else if (Core::Version.minor == min_core_ver.minor) {
-                if (Core::Version.patch < min_core_ver.patch) {
+            } else if (LUNACORE_VER_MINOR == min_core_ver.minor) {
+                if (LUNACORE_VER_PATCH < min_core_ver.patch) {
                     compatible = false;
                 }
             }

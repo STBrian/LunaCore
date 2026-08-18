@@ -353,21 +353,6 @@ static void GameBaseScreenTouchHandler(CoreHookContext* ctx) {
     }
 }
 
-#include "GameAPI.hpp"
-#include <Minecraft/Common/Client/Gui/Screens/ScreenChooser.hpp>
-
-static void MenuButtonTest(CoreHookContext* ctx) {
-    u32 id = *(u32*)(ctx->r[5] + 0x78);
-    if (id == 12) {
-        MC3DSPluginFramework::ScreenChooser& screenChosser_ins = MC3DSPluginFramework::Facade::getMinecraftGame()->getScreenChooser();
-        Minecraft::MC3DSPF::MinecraftGame* mg = MC3DSPluginFramework::Facade::getMinecraftGame();
-        Minecraft::MC3DSPF::ClientInstance* ci = MC3DSPluginFramework::Facade::getClient();
-        MC3DSPluginFramework::BoxedPtr::Shared<Minecraft::CustomScreen> screen_ins(MC3DSPluginFramework::gstd::make_unique<Minecraft::CustomScreen>(mg, ci));
-        screenChosser_ins._pushScreen(screen_ins);
-        // CTRPF::PluginMenu::ForceOpen();
-    }
-}
-
 void hookSomeFunctions() {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOKING;
     hookFunction(0x0056c2ac, (u32)RegisterItemsHook);
@@ -379,7 +364,6 @@ void hookSomeFunctions() {
     //hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
     hookFunction(0x00105f6c, (u32)CoreGameMainThreadWorker);
     // hookFunction(0x00620670, (u32)GameBaseScreenTouchHandler);
-    hookFunction(0x0026e878, (u32)MenuButtonTest);
     #ifdef DEBUG
     hookFunction(0x0059d758, (u32)ModifyColdTaiga);
     hookFunction(0x003f7480, (u32)ModifyCreateWorldScreen);

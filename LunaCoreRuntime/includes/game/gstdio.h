@@ -49,6 +49,7 @@ extern "C" {
 #endif
 
 #ifdef __cplusplus
+#ifndef GSTD_EXCLUDE_NAMESPACE
 namespace gstd {
     NAKED inline int snprintf(char* str, unsigned int size, const char* fmt, ...) {
         asm volatile (
@@ -62,5 +63,5 @@ namespace gstd {
         return gstd_vsnprintf(buffer, size, fmt, vals);
     }
 }
-
+#endif
 #endif

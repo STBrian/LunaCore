@@ -21,7 +21,11 @@
                 "DEBUG",
                 "UNICODE",
                 "_UNICODE",
-                "__LCRuntime__"
+                "__LCRuntime__",
+                "COMMIT_LUNACORE=\"DUMMY_COMMIT\"",
+                "LUNACORE_VER_MAJOR=1",
+                "LUNACORE_VER_MINOR=0",
+                "LUNACORE_VER_PATCH=0"
             ],
             "cStandard": "c11",
             "cppStandard": "gnu++20"
@@ -46,7 +50,11 @@
                 "DEBUG",
                 "UNICODE",
                 "_UNICODE",
-                "__LCRuntime__"
+                "__LCRuntime__",
+                "COMMIT_HASH=\"DUMMY_COMMIT\"",
+                "LUNACORE_VER_MAJOR=1",
+                "LUNACORE_VER_MINOR=0",
+                "LUNACORE_VER_PATCH=0"
             ],
             "cStandard": "c11",
             "cppStandard": "gnu++20"

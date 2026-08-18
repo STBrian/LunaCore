@@ -68,73 +68,6 @@ bool DrawMonitors(const Screen &screen) {
     return false;
 }
 
-#ifdef DEBUG
-
-void PCConnectionThreadFunction(Core::Network::TCPServer* tcp) {
-    u32 cmdId = 0;
-    while (cmdId != 0x5AB1E) {
-        tcp->recv_all(&cmdId, 4);
-        switch (cmdId) {
-            case 0: // ping
-                tcp->send_all(&cmdId, 4);
-                break;
-            case 1: { // write32 to offset
-                u32 offset, value;
-                tcp->recv_all(&offset, 4);
-                tcp->recv_all(&value, 4);
-                Process::Write32(offset, value);
-                break;
-            }
-            case 2: { // read32 from offset
-                u32 offset, value;
-                tcp->recv_all(&offset, 4);
-                Process::Read32(offset, value);
-                tcp->send_all(&value, 4);
-                break;
-            }
-            case 3: { // storfile
-                u32 dstPathLen, fileSize;
-                tcp->recv_all(&dstPathLen, 4);
-                char* pathData = Core::alloc_array<char>(dstPathLen);
-                tcp->recv_all(pathData, dstPathLen);
-                pathData[dstPathLen-1] = '\0';
-                std::string pathName(pathData);
-                Core::dealloc(pathData);
-                
-                tcp->recv_all(&fileSize, 4);
-                Core::File dstFile(pathName, FS_OPEN_WRITE|FS_OPEN_CREATE);
-                char buffer[0x100];
-                u32 currentRecv = 0;
-                while (currentRecv < fileSize) {
-                    u32 toRecv = fileSize - currentRecv > 0x100 ? 0x100 : fileSize - currentRecv;
-                    tcp->recv_all(buffer, toRecv);
-                    dstFile.write(buffer, toRecv);
-                    currentRecv += toRecv;
-                }
-                dstFile.flush();
-                dstFile.close();
-                break;
-            }
-        }
-    }
-
-    Core::dealloc(tcp);
-}
-
-struct _pair {
-    u32 a, b;
-};
-#endif
-
-struct CrossNetPacket {
-    u32 length;
-    u8 id; // to avoid padding
-};
-
-struct PlayerPosPacket {
-
-};
-
 static bool monitorsEnabled = false;
 
 /*
@@ -186,7 +119,6 @@ void InitMenu(PluginMenu &menu)
         MessageBox("UA", body)();
     });*/
     auto optionsFolder = Core::alloc<MenuFolder>("Options");
-    auto devFolder = Core::alloc<MenuFolder>("Developer");
 
     optionsFolder->Append(Core::alloc<MenuEntry>("Toggle Script Loader", nullptr, [](MenuEntry *entry)
     {
@@ -235,8 +167,8 @@ void InitMenu(PluginMenu &menu)
     optionsFolder->Append(Core::alloc<MenuEntry>("Toggle Async timeout", nullptr, [](MenuEntry *entry)
     {
         bool current = disableAsyncTimeout;
-        const char* msg = "Do you want to %s Async timeout? (not permanent)";
-        const char* action = current ? "ENABLE" : "DISABLE";
+        const char* msg = "Do you want to %s Async timeout?";
+        const char* action = current ? "ENABLE" : "DISABLE (this time)";
         if (MessageBox(Utils::Format(msg, action), DialogType::DialogYesNo)()) {
             current = !current;
             disableAsyncTimeout = current;
@@ -248,6 +180,9 @@ void InitMenu(PluginMenu &menu)
         monitorsEnabled = !monitorsEnabled;
         G_config.set("show_monitors", monitorsEnabled);
     }));
+
+    auto devFolder = Core::alloc<MenuFolder>("Developer");
+
     devFolder->Append(Core::alloc<MenuEntry>("Init network", nullptr, [](MenuEntry *entry) {
         if (socBuffer == NULL) {
             initSockets();
@@ -337,36 +272,6 @@ void InitMenu(PluginMenu &menu)
             Lua_Global_Mut.unlock();
         }
     }));
-    devFolder->Append(Core::alloc<MenuEntry>("Connect to server", nullptr, [](MenuEntry* entry) {
-        if (socBuffer == nullptr) {
-            MessageBox("Error: Network not initializated")();
-            return;
-        }
-
-        if (!MC3DSApi::isInLevel()) {
-            MessageBox("Error: You need to enter a world first")();
-            return;
-        }
-        
-        Keyboard input;
-        std::string serv_addr;
-        if (input.Open(serv_addr) < 0) {
-            return;
-        }
-        
-        Core::unique_ptr<Core::Network::TCPClient> client(Core::alloc<Core::Network::TCPClient>());
-        if (!client->isReady()) {
-            MessageBox("Error: Failed to initialize client")();
-            return;
-        }
-
-        if (!client->Connect(serv_addr.c_str(), 36883)) {
-            MessageBox("Error: Failed to connect to server")();
-            return;
-        }
-
-        Core::Thread connThread(CrossServerThreadFunction, std::move(client), 0x400);
-    }));
 
     #ifdef DEBUG
     devFolder->Append(Core::alloc<MenuEntry>("Dump memory to network", nullptr, [](MenuEntry *entry) {
@@ -386,6 +291,11 @@ void InitMenu(PluginMenu &menu)
         topScreen.DrawRect(30, 20, 360, 200, Color::Black);
         topScreen.DrawSysfont("Connect to host: "+host+":5432", 40, 185, Color::White);
         topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
+
+        struct _pair {
+            u32 a;
+            u32 b;
+        };
 
         std::vector<struct _pair> regions = {
             {0x100000, 0x919000},
@@ -431,34 +341,6 @@ void InitMenu(PluginMenu &menu)
             }
         }
     }));
-    devFolder->Append(Core::alloc<MenuEntry>("Connect to PC", nullptr, [](MenuEntry *entry) {
-        if (socBuffer == NULL) {
-            MessageBox("Network is not started")();
-            return;
-        }
-        auto tcp = Core::UniqueAlloc::alloc<Core::Network::TCPServer>(5431);
-        std::string host = tcp->getHostName();
-
-        // Draw message
-        const Screen& topScreen = OSD::GetTopScreen();
-        topScreen.DrawRect(30, 20, 340, 200, Color::Black);
-        topScreen.DrawSysfont("Connect to host: "+host+":5431", 40, 185, Color::White);
-        topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
-        OSD::SwapBuffers();
-        topScreen.DrawRect(30, 20, 340, 200, Color::Black);
-        topScreen.DrawSysfont("Connect to host: "+host+":5431", 40, 185, Color::White);
-        topScreen.DrawSysfont("Waiting connection... Press B to cancel", 40, 200, Color::White);
-
-        // Wait until a connection
-        if (!tcp->waitConnection(CancelOperationCallback)) {
-            if (!tcp->aborted) MessageBox("Connection error")();
-            return;
-        }
-
-        Core::Thread connThread(PCConnectionThreadFunction, tcp.get());
-        if (!connThread.isStarted()) MessageBox("Failed to start thread")();
-        else tcp.release();
-    }));
     #endif
     
     devFolder->Append(Core::alloc<MenuEntry>("Clean Lua environment", nullptr, [](MenuEntry *entry) {
@@ -490,7 +372,7 @@ void InitMenu(PluginMenu &menu)
         Lua_Global_Mut.unlock();
     }));
     #ifdef DEBUG
-    devFolder->Append(Core::alloc<MenuEntry>("Force Exit to Home Menu", nullptr, [](MenuEntry* entry) {
+    devFolder->Append(Core::alloc<MenuEntry>("Exit to Home Menu", nullptr, [](MenuEntry* entry) {
         Process::ReturnToHomeMenu();
     }));
     #endif

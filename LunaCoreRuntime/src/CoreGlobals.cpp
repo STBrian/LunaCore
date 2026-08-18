@@ -2,10 +2,6 @@
 
 #include "CoreConstants.hpp"
 
-namespace Core {
-struct __core_ver Version;
-}
-
 lua_State *Lua_global = NULL;
 Core::Mutex Lua_Global_Mut;
 

@@ -88,6 +88,67 @@ namespace CTRPluginFramework
         svcCloseHandle(processHandle);
     }
 
+    Result  PatchRead(Core::File& file, u8 *dst, u32 size)
+	{
+		Result          res;
+		std::vector<u8> buf;
+
+		buf.resize(size);
+		if ((res = file.read(buf.data(), size)) != size)
+			return res;
+
+		std::copy(buf.begin(), buf.end(), dst);
+		return 0;
+	}
+
+    void ApplyIPSPatch() {
+        u64 titleId = Process::GetTitleID();
+        Core::File ipsFile(Utils::Format("sdmc:/luma/titles/%08X%08X/code.ips", (u32)(titleId >> 32), (u32)titleId), FS_OPEN_READ);
+		if (!ipsFile.isOpen()) {
+            Core::Debug::LogWarnf("IPS Patch not found: sdmc:/luma/titles/%08X%08X/code.ips", (u32)(titleId >> 32), (u32)titleId);
+			return;
+		}
+
+		u8 buffer[5];
+		u64 ips_size = ipsFile.seek(0, SEEK_END);
+        ipsFile.rewind();
+		u8* code = (u8*)0x00100000;
+
+		if (ipsFile.read(buffer, sizeof(buffer)) != sizeof(buffer) || memcmp(buffer, "PATCH", sizeof(buffer))) {
+			return;
+		};
+
+		while (ipsFile.read(buffer, 3) == 3)
+		{
+			if (memcmp(buffer, "EOF", 3) == 0) break;
+
+			u32 offset = (buffer[0] << 16) | (buffer[1] << 8) | buffer[2];
+
+			if (ipsFile.read(buffer, 2) != 2) { return; } // corrupted
+
+			u32 patchSize = (buffer[0] << 8) | buffer[1];
+
+			if (!patchSize)
+			{
+				if (ipsFile.read(buffer, 2) != 2) { return; }; // corrupted
+
+				u32 rleSize = (buffer[0] << 8) | buffer[1];
+
+				if (ipsFile.read(buffer, 1) != 1) { return; }; // corrupted
+
+				if (!Process::CheckRegion((u32)code + offset, rleSize)) { return; }; // corrupted
+				memset(code + offset, buffer[0], rleSize);
+
+				continue;
+			}
+
+			if (PatchRead(ipsFile, (u8*)((u32)code + offset), patchSize)) { return; }; // corrupted/error
+		}
+        if (memcmp(buffer, "EOF", 3) == 0) {
+            Core::Debug::Message("IPS Patch applied");
+        }
+    }
+
     // This function is called before main and before the game starts
     // Useful to do code edits safely
     void    PatchProcess(FwkSettings &settings)
@@ -121,6 +182,7 @@ namespace CTRPluginFramework
         bool disableDLandDR = G_config.getBool("disable_dleft_and_dright", false);
 
         if (Core::Utils::checkCompatibility() || System::IsCitra()) {
+            ApplyIPSPatch();
             //Minecraft::PatchProcess();
             SetMainMenuLayoutLoadCallback();
             SetLoadingWorldScreenMessageCallback();

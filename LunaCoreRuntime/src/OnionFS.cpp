@@ -289,7 +289,7 @@ namespace OnionSave {
 		settings.header.numEntries = 0;
 		settings.header.lastLoadedPack = 0;
 		OnionSave::saveSettings();
-		return addModEntry(g_ProcessTID + 8, ARCH_ROMFS);
+		return addModEntry("default", ARCH_ROMFS);
 	}
 
     int strcmpu8u16(char* ptr1, u16* ptr2) {

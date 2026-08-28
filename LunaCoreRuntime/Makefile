@@ -28,7 +28,8 @@ CFLAGS		:=	$(ARCH) $(INCLUDE) -D__3DS__ -Os -s -mword-relocations \
 CFLAGS		+=	-DCOMMIT_HASH="\"$(shell git rev-parse --short HEAD)\"" \
 				-DLUNACORE_VER_MAJOR=$(shell grep -oP 'Major:\s+\K\d+' $(TOPDIR)/$(PLGINFO)) \
 				-DLUNACORE_VER_MINOR=$(shell grep -oP 'Minor:\s+\K\d+' $(TOPDIR)/$(PLGINFO)) \
-				-DLUNACORE_VER_PATCH=$(shell grep -oP 'Revision:\s+\K\d+' $(TOPDIR)/$(PLGINFO))
+				-DLUNACORE_VER_PATCH=$(shell grep -oP 'Revision:\s+\K\d+' $(TOPDIR)/$(PLGINFO)) \
+				-D__LCRUNTIME__
 
 ifeq ($(EXPERIMENTAL), 1)
 	CFLAGS		+=	-DEXPERIMENTAL

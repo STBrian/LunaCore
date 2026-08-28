@@ -26,6 +26,7 @@
 #include "PluginInit.hpp"
 #include "CoreConstants.hpp"
 #include "CoreGlobals.hpp"
+#include "CoreTools.hpp"
 
 #include "Helpers/Allocation.hpp"
 
@@ -85,6 +86,34 @@ namespace CTRPluginFramework
         svcCloseHandle(processHandle);
     }
 
+    bool copyFile(const std::string& fp1, const std::string& fp2) {
+        using namespace Core;
+        Core::File originalFile(fp1, FS_OPEN_READ);
+        if (!originalFile.isOpen()) return false;
+
+        Core::File newFile(fp2, FS_OPEN_WRITE|FS_OPEN_CREATE);
+        if (!newFile.isOpen()) return false;
+
+        if (originalFile.isOpen() && newFile.isOpen()) {
+            const size_t COPY_BUFFER_SIZE = 0x16000;
+            char* buffer = new(std::nothrow) char[COPY_BUFFER_SIZE];
+            if (!buffer) return false;
+
+            size_t filesize1 = originalFile.getSize();
+
+            size_t curOffset = 0;
+            while (curOffset < filesize1) {
+                int bytesRead = originalFile.read(buffer, filesize1 - curOffset > COPY_BUFFER_SIZE ? COPY_BUFFER_SIZE : filesize1 - curOffset);
+                if (bytesRead < 1) break;
+                newFile.write(buffer, bytesRead);
+                curOffset += bytesRead;
+            }
+            delete[] buffer;
+            return curOffset == filesize1;
+        }
+        return false;
+    }
+
     // This function is called before main and before the game starts
     // Useful to do code edits safely
     void    PatchProcess(FwkSettings &settings)
@@ -137,7 +166,8 @@ namespace CTRPluginFramework
     {
         //ToggleTouchscreenForceOn();
         Core::CrashHandler::plg_state = Core::CrashHandler::PLUGIN_EXIT;
-        lua_close(Lua_global);
+        if (Lua_global != nullptr)
+            lua_close(Lua_global);
 
         // Cleanup
         Core::Debug::LogInfo("Exiting LunaCore");
@@ -152,8 +182,20 @@ namespace CTRPluginFramework
         if (!Core::Utils::checkTitle())
             return 0;
 
-        if (!fslib::directory_exists(path_from_string(PLUGIN_FOLDER"/layouts")))
-            fslib::create_directory(path_from_string(PLUGIN_FOLDER"/layouts"));
+        {
+            using namespace Core;
+            if (!Filesystem::DirectoryExists("data:/assets")) Filesystem::CreateDirectory("data:/assets");
+            if (!Filesystem::DirectoryExists("data:/assets/atlas")) Filesystem::CreateDirectory("data:/assets/atlas");
+
+            if (!Filesystem::FileExists("data:/assets/atlas/atlas.items.vanilla.3dst"))
+                copyFile("rom:/atlas/atlas.items.meta_79954554_0.3dst", "data:/assets/atlas/atlas.items.vanilla.3dst");
+            if (!Filesystem::FileExists("data:/assets/atlas/atlas.items.vanilla.uvs"))
+                copyFile("rom:/atlas/atlas.items.meta_79954554.uvs", "data:/assets/atlas/atlas.items.vanilla.uvs");
+            // LunaCore::LaunchTool("ResourceBuilder");
+        }
+
+        if (!Core::Filesystem::DirectoryExists(PLUGIN_FOLDER"/layouts"))
+            Core::Filesystem::CreateDirectory(PLUGIN_FOLDER"/layouts");
 
         bool loadMenuLayout = G_config.getBool("custom_game_menu_layout", true);
         if (loadMenuLayout && patchEnabled) {
@@ -163,7 +205,7 @@ namespace CTRPluginFramework
                 PLUGIN_FOLDER"/layouts/main_menu_screen.json"
             };
             for (const auto& path : paths) {
-                if (fslib::file_exists(path_from_string(path))) {
+                if (Core::Filesystem::FileExists(path)) {
                     if (LoadGameMenuLayout(path))
                         break;
                 }
@@ -189,6 +231,8 @@ namespace CTRPluginFramework
 
         gmenu->Callback(Core::EventHandlerCallback);
         gmenu->Callback(Core::Scheduler::Update);
+
+        Core::Initializated = true;
 
         // Init our menu entries & folders
         InitMenu(*gmenu);

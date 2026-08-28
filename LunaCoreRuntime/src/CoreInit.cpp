@@ -137,6 +137,8 @@ void Core::InitCore() {
     #else
     // Lua_global = lua_newstate(custom_lua_allocator, NULL);
     Lua_global = luaL_newstate();
+    if (Lua_global == nullptr)
+        Core::Abort("Failed to initialize Lua env");
     #endif
     Core::LoadLuaEnv();
 

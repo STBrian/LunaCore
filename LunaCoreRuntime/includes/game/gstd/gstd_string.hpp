@@ -15,6 +15,12 @@ namespace gstd { // to follow rairai's implementation
         public:
         char* data = nullptr;
 
+        string(u32 id) : data((char*)id) {}
+
+        static string newEmpty() {
+            return string(0x00B3EB10);
+        }
+
         string() {
             reinterpret_cast<char**(*)(char**, const char*)>(0x2ff220|1)(&data, "");
         }

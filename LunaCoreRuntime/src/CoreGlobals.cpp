@@ -11,6 +11,8 @@ int loadedScripts;
 int loadedMods;
 std::string currentLoadingMod = "";
 
+bool Core::Initializated = false;
+
 Core::Config G_config(CONFIG_FILE); // Just a placeholder, it doesn't load here
 std::unordered_map<std::string, std::string> modPaths;
 

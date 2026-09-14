@@ -1,6 +1,7 @@
 #include "Core/Hooks/GameHooks.hpp"
 
 #include <vector>
+#include <unordered_map>
 #include <mutex>
 #include <memory>
 #include <cstring>
@@ -9,6 +10,8 @@
 
 #include "string_hash.hpp"
 #include "lua_common.h"
+#include <csvc.h>
+
 #include "Core/Debug.hpp"
 #include "Core/CrashHandler.hpp"
 #include "Core/Event.hpp"
@@ -27,8 +30,8 @@
 namespace CTRPF = CTRPluginFramework;
 
 #define COND_ALWAYS (u32)(0b1110 << 28)
-#define INS_B COND_ALWAYS | (0b101 << 25) | (0b0 << 24)
-#define INS_BL COND_ALWAYS | (0b101 << 25) | (0b1 << 24)
+#define INS_B COND_ALWAYS | ((u32)0b101 << 25) | ((u32)0b0 << 24)
+#define INS_BL COND_ALWAYS | ((u32)0b101 << 25) | ((u32)0b1 << 24)
 
 #define IS_INS_B(ins) ((((ins) & 0xFF000000) & INS_B) == ((ins) & 0xFF000000))
 #define IS_INS_BL(ins) ((((ins) & 0xFF000000) & INS_BL) == ((ins) & 0xFF000000))
@@ -37,8 +40,20 @@ namespace CTRPF = CTRPluginFramework;
     (((pc_actual) + 8) + (((int32_t)((ins) << 8)) >> 6))
 #define DECODE_TARGET_INS_BL(ins, pc_actual) (DECODE_TARGET_INS_B(ins, pc_actual))
 
+#define MAKE_BL(pc_actual, target) \
+    ((INS_BL) | ((uint32_t)(int32_t)( (uint32_t)(target) - ((uint32_t)(pc_actual) + (int32_t)8) ) >> 2))
+
+
 #define VALID_ADDRESS(addr) (((addr) >= 0x100000 && (addr) < 0xB00000) || ((addr) >= 0x6000000 && (addr) < 0x8000000) \
  || ((addr) >= 0x30000000 && (addr) < 0x40000000))
+
+
+#define GAME_BSS_SECTION_START ((u32*)0x00A39B70)
+#define GAME_BSS_SECTION_END ((u32*)0x00B3FC30)
+
+#define GAME_BSS_SECTION_BLOCK_END ((u32*)0x00B40000)
+
+#define CoreLightHookBodyAddr ((u32*)GAME_BSS_SECTION_END)
 
 extern "C" void lc_setCoreHookState(CoreHookContext* ctx) {
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOK;
@@ -58,20 +73,7 @@ static __attribute__((naked)) void hookBody() {
     ); 
 }
 
-__attribute__((naked)) void hookReturnOverride(CoreHookContext *ctx, u32 returnCallback) {
-    asm volatile ( // r0 contains hookCtxPtr, r1 callback
-        "add r2, r0, #16\n" // Discard r0-r3
-        "ldmia r2, {r4-r12, sp, lr}\n"  // Restore registers
-        "mov r2, r1\n"
-        "ldr r1, [r0, #0x4]\n"
-        "ldr r0, [r0]\n"
-        "bx r2\n"
-    );
-}
-
-// Hooks an ARMv7 function, length must be at least 2 instructions to hook
-// and instructions cannot be pc-relative dependent. B and BL calls are allowed
-void* hookFunction(u32 targetAddr, u32 callbackAddr) {
+void* CoreCreateHook(u32 targetAddr, u32 callbackAddr) {
     CoreHookContext* hookCtx2 = Core::alloc<CoreHookContext>();
     hookCtx2->callbackAddress = callbackAddr;
 
@@ -119,33 +121,6 @@ void* hookFunction(u32 targetAddr, u32 callbackAddr) {
 
     LOGDEBUG("Installed hook @ %08X : %08X", targetAddr, hookCtx2);
     return hookCtx2;
-}
-
-static void RegisterItemsHook(CoreHookContext* ctx) {
-    LOGDEBUG("Hook RegisterItems start");
-    std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
-    GameState.LoadingItems.store(true);
-    Core::Event::TriggerEvent(Lua_global, "Game.Items.OnRegisterItems");
-    GameState.LoadingItems.store(false);
-    LOGDEBUG("Hook RegisterItems end");
-}
-
-static void RegisterItemsTexturesHook(CoreHookContext* ctx) {
-    LOGDEBUG("Hook RegisterItemsTextures start");
-    std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
-    GameState.SettingItemsTextures.store(true);
-    Core::Event::TriggerEvent(Lua_global, "Game.Items.OnRegisterItemsTextures");
-    GameState.SettingItemsTextures.store(false);
-    LOGDEBUG("Hook RegisterItemsTextures end");
-}
-
-static void RegisterCreativeItemsHook(CoreHookContext* ctx) {
-    LOGDEBUG("Hook RegisterCreativeItems start");
-    std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
-    GameState.LoadingCreativeItems.store(true);
-    Core::Event::TriggerEvent(Lua_global, "Game.Items.OnRegisterCreativeItems");
-    GameState.LoadingCreativeItems.store(false);
-    LOGDEBUG("Hook RegisterCreativeItems end");
 }
 
 static void EntitySpawnStartHook(CoreHookContext *ctx) {
@@ -353,22 +328,114 @@ static void GameBaseScreenTouchHandler(CoreHookContext* ctx) {
     }
 }
 
-void hookSomeFunctions() {
+struct LightHookCtx {
+    u32 startIns;
+    u32 overwittenIns[2];
+    u32 endIns;
+    u32 data1, data2;
+    u32 callback;
+    void* passValue;
+
+    void init(u32 target, u32 callback, void* passValue) {
+        this->startIns = 0xE8BD4010; // ldmia sp!, {r4, lr}
+        this->overwittenIns[0] = this->overwittenIns[1] = 0xE320F000; // nop
+        this->endIns = 0xE59FF000; // ldr pc, [pc, #0]
+
+        u32 ins = *((u32*)target);
+        if (IS_INS_BL(ins)) {
+            this->overwittenIns[0] = 0xE1A0E00F; // mov lr, pc
+            this->overwittenIns[1] = 0xE59FF000; // ldr pc, [pc, #0]
+            this->data1 = DECODE_TARGET_INS_BL(ins, target);
+            LOGDEBUG("Decoded arm branch to 0x%08X", this->data1);
+        } else {
+            this->overwittenIns[0] = ins;
+        }
+        
+        this->data2 = target + 4;
+        this->callback = callback;
+        this->passValue = passValue;
+    }
+};
+
+std::unordered_map<u32, LightHookCtx> LightHooks;
+
+extern "C" {
+    void CoreLightHookPreCallback();
+    
+    LightHookCtx* CoreLightHookGetContext(u32 id) {
+        return &LightHooks[id];
+    }
+    
+    void CoreLightHookCallback(LightHookCtx* ctx) {
+        // if (Lua_global == nullptr) {
+        //     while (Lua_global == nullptr) 
+        //     svcSleepThread(500000000ULL);
+        // }
+        
+        reinterpret_cast<void(*)(void*)>(ctx->callback)(ctx->passValue);
+    }
+}
+
+void CoreCreateLightHook(u32 targetAddr, u32 callback, void* passValue) {
+    u32 ins = *((u32*)targetAddr);
+    if (IS_INS_B(ins)) {
+        Core::Debug::LogWarnf("Found an unsupported instruction when installing a light hook. Skipping hook installation for target: 0x%08X", targetAddr);
+        return;
+    }
+    
+    LightHooks[targetAddr+4] = LightHookCtx{};   // The ID will be the LR value when jumping
+    LightHooks[targetAddr+4].init(targetAddr, callback, passValue);
+
+    *reinterpret_cast<vu32*>(targetAddr) = MAKE_BL(targetAddr, CoreLightHookBodyAddr);
+    LOGDEBUG("Installed light hook @ %08X", targetAddr);
+}
+
+static void CoreEventHookCallback(const char* eventName) {
+    if (Lua_global == nullptr) {
+        while (Lua_global == nullptr) 
+            svcSleepThread(500000000ULL);
+    }
+
+    G_LastCoreEvent = eventName;
+    std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
+    Core::Event::TriggerEvent(Lua_global, eventName);
+}
+
+void CoreCreateEventHook(u32 targetAddr, const char* event) {
+    CoreCreateLightHook(targetAddr, (u32)CoreEventHookCallback, (void*)event);
+}
+
+void CoreHooksInit() {
+    *(CoreLightHookBodyAddr + 0) = 0xE51FF004; // ldr pc, [pc, #-0x4]   <- jump to addr stored in the next word
+    *(CoreLightHookBodyAddr + 1) = (u32)CoreLightHookPreCallback;
+
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_HOOKING;
-    hookFunction(0x0056c2ac, (u32)RegisterItemsHook);
-    hookFunction(0x0056de70, (u32)RegisterItemsTexturesHook);
-    hookFunction(0x00578358, (u32)RegisterCreativeItemsHook);
-    hookFunction(0x001b48a4, (u32)RegisterRecipes);
-    hookFunction(0x00114f50, (u32)GameDebugLogfHook);
+
+    CoreCreateEventHook(0x0056c2ac, "Game.Items.OnRegisterItems");
+    CoreCreateEventHook(0x0056de70, "Game.Items.OnRegisterItemsTextures");
+    CoreCreateEventHook(0x00578358, "Game.Items.OnRegisterCreativeItems");
+    
+    CoreCreateEventHook(0x001b48a4, "Game.Recipes.OnRegisterRecipes");
+
+    CoreCreateHook(0x00114f50, (u32)GameDebugLogfHook);
     //hookFunction(0x004df68c, (u32)EntitySpawnStartHook); disabled as there is a weird memory leak ? idk why
     //hookFunction(0x004df7e0, (u32)EntitySpawnFinishedHook);
-    hookFunction(0x00105f6c, (u32)CoreGameMainThreadWorker);
+    CoreCreateHook(0x00105f6c, (u32)CoreGameMainThreadWorker);
     // hookFunction(0x00620670, (u32)GameBaseScreenTouchHandler);
     #ifdef DEBUG
-    hookFunction(0x0059d758, (u32)ModifyColdTaiga);
-    hookFunction(0x003f7480, (u32)ModifyCreateWorldScreen);
-    hookFunction((u32)printf, (u32)CorePrintfHook); 
+    CoreCreateHook(0x0059d758, (u32)ModifyColdTaiga);
+    CoreCreateHook(0x003f7480, (u32)ModifyCreateWorldScreen);
+    CoreCreateHook((u32)printf, (u32)CorePrintfHook); 
     // hookFunction(0x8b65a4, (u32)CheckTestSave);
     #endif
     gGamePanicCallback = gamePanicCallback;
+
+    // Patch Heap allocator behavior
+    u32* badCode = reinterpret_cast<u32*>(0x00114a90);
+    *(badCode + 0) = 0xE3A00000; // mov r0, #0
+    *(badCode + 1) = *(badCode + 3);
+    *(badCode + 2) = *(badCode + 4);
+
+    svcInvalidateEntireInstructionCache();
+    svcFlushEntireDataCache();
 }

@@ -6,6 +6,7 @@
 
 #include <CTRPluginFramework.hpp>
 
+#include "CoreGlobals.hpp"
 #include "Core/Debug.hpp"
 #include "Core/CrashHandler.hpp"
 #include "Core/Utils/Utils.hpp"
@@ -37,6 +38,7 @@ void Core::Event::NewEvent(lua_State* L, const char* eventName) {
 }
 
 void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsigned int nargs) {
+    G_ActiveCoreEvent = eventName.c_str();
     int baseIdx = lua_gettop(L) - nargs;
     int argsIdx = baseIdx + 1;
     Core::CrashHandler::core_state = Core::CrashHandler::CORE_EVENT;
@@ -90,6 +92,7 @@ void Core::Event::TriggerEvent(lua_State* L, const std::string& eventName, unsig
         Core::Debug::ReportInternalError(eventName + ":Trigger error. Unexpected type");
 
     lua_settop(L, baseIdx);
+    G_ActiveCoreEvent = nullptr;
 }
 
 void Core::EventHandlerCallback()

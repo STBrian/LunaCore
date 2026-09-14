@@ -194,7 +194,12 @@ namespace Core {
         Lua_Global_Mut.unlock();
         int lmemusgkb = 0;
         int lmemusgb = 0;
-        if (Lua_global != NULL && threadId == pluginThreadId) {
+        #ifdef DEBUG
+        if (Lua_global != NULL)
+        #else
+        if (Lua_global != NULL && threadId == pluginThreadId) 
+        #endif
+        {
             lmemusgkb = lua_gc(Lua_global, LUA_GCCOUNT, 0);
             lmemusgb = lua_gc(Lua_global, LUA_GCCOUNTB, 0);
             lua_close(Lua_global);
@@ -243,7 +248,12 @@ namespace Core {
             Core::Debug::LogRawf("\t\tPlugin state: %s\n", pluginStateStr[plg_state]);
             Core::Debug::LogRawf("\t\tLast Core state: %s\n", coreStateStr[core_state]);
             Core::Debug::LogRawf("\t\tGame state: %s\n", gameStateStr[game_state]);
-            Core::Debug::LogRawf("\t\tLua memory usage: %d b", lmemusgkb * 1024 + lmemusgb);
+            if (lmemusgkb * 1024 + lmemusgb > 0)
+                Core::Debug::LogRawf("\t\tLua memory usage: %d b\n", lmemusgkb * 1024 + lmemusgb);
+            if (G_LastCoreEvent && G_ActiveCoreEvent == nullptr)
+                Core::Debug::LogRawf("\t\tLast Core event: %s\n", G_LastCoreEvent);
+            if (G_ActiveCoreEvent)
+                Core::Debug::LogRawf("\t\tCurrent Core event: %s\n", G_ActiveCoreEvent);
             if (!manuallyCalled) {
                 Core::Debug::LogRawf("\n\tException type: %s\n", exceptionStr[excep->type]);
                 Core::Debug::LogRawf("\tException at address: %08X\n", regs->pc);

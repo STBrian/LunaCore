@@ -173,7 +173,7 @@ static void MainMenuCustomButtonsHook(CoreHookContext* ctx) {
 }
 
 void Core::Hooks::InstallMainMenuHooks() {
-    hookFunction(0x0026e878, (u32)MainMenuCustomButtonsHook); // Hook MainMenuScreen::buttonPressed
+    CoreCreateHook(0x0026e878, (u32)MainMenuCustomButtonsHook); // Hook MainMenuScreen::buttonPressed
     CTRPF::Process::Write32(0x9ab4a4, (u32)MainMenuLayoutLoadCallback); // Patch vtable reference of MainMenuScreen::setupComponents
 }
 

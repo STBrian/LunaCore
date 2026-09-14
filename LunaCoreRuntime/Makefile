@@ -69,7 +69,7 @@ export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 
 CFILES			:=	$(addprefix ../,$(shell find $(SOURCES) -name "*.c"))
 CPPFILES		:=	$(addprefix ../,$(shell find $(SOURCES) -name "*.cpp"))
-SFILES			:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+SFILES			:=	$(addprefix ../,$(shell find $(SOURCES) -name "*.s"))
 
 export LD 		:= 	$(CXX)
 export OFILES	:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)

@@ -84,7 +84,7 @@ namespace Core {
 
         bool onBack(int p1) override
         {
-            // MC3DSPF::SystemMessagesScreen::RunningInstance->pushMessage(__func__, 0);
+            MC3DSPF::Facade::getMinecraftGame()->getScreenStack().schedulePopScreen(1);
             return true;
         }
 

@@ -1,4 +1,6 @@
 # LunaCore
+**Note:** Development temporarily on hold.
+
 LunaCore is a work in progress script loader for Minecraft: New Nintendo 3DS Edition, featuring an easy API interface to interact with the game. You can check api_docs.md for an introduction on basic usage of the API.
 
 Is the result of merging different community contributions into a single project. To know more about the contributions see the Credits section.

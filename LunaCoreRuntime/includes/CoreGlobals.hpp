@@ -21,9 +21,8 @@ extern bool disableAsyncTimeout;
 extern int loadedScripts;
 extern int loadedMods;
 
-namespace Core {
-    extern bool Initializated;
-} 
+extern const char* G_LastCoreEvent;
+extern const char* G_ActiveCoreEvent;
 
 #if __STDC_HOSTED__
 extern std::string currentLoadingMod;
@@ -33,9 +32,6 @@ extern std::unordered_map<std::string, std::string> modPaths;
 typedef struct coregamestate_struct {
     std::atomic<bool> MainMenuLoaded = false;
     std::atomic<bool> WorldLoaded = false;
-    std::atomic<bool> LoadingItems = false;
-    std::atomic<bool> SettingItemsTextures = false;
-    std::atomic<bool> LoadingCreativeItems = false;
     std::atomic<bool> LoadingRecipes = false;
     std::atomic<bool> CoreLoaded = false;
 } GameState_s;

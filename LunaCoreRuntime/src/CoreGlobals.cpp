@@ -9,6 +9,10 @@ bool patchEnabled = false;
 bool disableAsyncTimeout = false;
 int loadedScripts;
 int loadedMods;
+
+const char* G_LastCoreEvent = nullptr;
+const char* G_ActiveCoreEvent = nullptr;
+
 std::string currentLoadingMod = "";
 
 bool Core::Initializated = false;

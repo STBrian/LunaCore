@@ -143,9 +143,6 @@ namespace CTRPluginFramework
 
         if (Core::Utils::checkCompatibility() || System::IsCitra()) {
             //Minecraft::PatchProcess();
-            Core::Hooks::InstallMainMenuHooks();
-            SetLoadingWorldScreenMessageCallback();
-            SetLeaveLevelPromptCallback();
             if (disableZLandZR) {
                 Process::Write32(0x919530, 0); // Pos keycode for ZL
                 Process::Write32(0x919534, 0); // Pos keycode for ZR
@@ -154,7 +151,10 @@ namespace CTRPluginFramework
                 Process::Write32(0x919530-(4*8), 0); // Pos keycode for DPADRIGHT
                 Process::Write32(0x919530-(4*7), 0); // Pos keycode for DPADLEFT
             }
-            hookSomeFunctions();
+            CoreHooksInit();
+            Core::Hooks::InstallMainMenuHooks();
+            SetLeaveLevelPromptCallback();
+            SetLoadingWorldScreenMessageCallback();
             //MC3DSPluginFramework::Hooks::install();
             Core::InitResourcesInjector();
             patchEnabled = true;
@@ -225,7 +225,7 @@ namespace CTRPluginFramework
         gmenu->Callback(Core::EventHandlerCallback);
         gmenu->Callback(Core::Scheduler::Update);
 
-        Core::Initializated = true;
+        // Core::Initializated = true;
 
         // Init our menu entries & folders
         InitMenu(*gmenu);

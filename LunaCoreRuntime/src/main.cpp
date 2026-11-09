@@ -26,9 +26,9 @@
 #include "PluginInit.hpp"
 #include "CoreConstants.hpp"
 #include "CoreGlobals.hpp"
-#include "CoreTools.hpp"
 
 #include "Helpers/Allocation.hpp"
+#include "Core/Utils/ResourcesInjector.hpp"
 
 #include "game/Minecraft.hpp"
 
@@ -156,7 +156,12 @@ namespace CTRPluginFramework
             }
             hookSomeFunctions();
             //MC3DSPluginFramework::Hooks::install();
+            Core::InitResourcesInjector();
             patchEnabled = true;
+
+            // *reinterpret_cast<u32*>(0x00228a7c) = 0xe320f000;
+            // *reinterpret_cast<u32*>(0x002289c4) = 0xe320f000;
+            // *reinterpret_cast<u32*>(0x00228e54) = 0xe320f000;
         }
     }
 
@@ -181,18 +186,6 @@ namespace CTRPluginFramework
         MenuModsFolder = alloc<MenuFolder>("Mods");
         if (!Core::Utils::checkTitle())
             return 0;
-
-        {
-            using namespace Core;
-            if (!Filesystem::DirectoryExists("data:/assets")) Filesystem::CreateDirectory("data:/assets");
-            if (!Filesystem::DirectoryExists("data:/assets/atlas")) Filesystem::CreateDirectory("data:/assets/atlas");
-
-            if (!Filesystem::FileExists("data:/assets/atlas/atlas.items.vanilla.3dst"))
-                copyFile("rom:/atlas/atlas.items.meta_79954554_0.3dst", "data:/assets/atlas/atlas.items.vanilla.3dst");
-            if (!Filesystem::FileExists("data:/assets/atlas/atlas.items.vanilla.uvs"))
-                copyFile("rom:/atlas/atlas.items.meta_79954554.uvs", "data:/assets/atlas/atlas.items.vanilla.uvs");
-            // LunaCore::LaunchTool("ResourceBuilder");
-        }
 
         if (!Core::Filesystem::DirectoryExists(PLUGIN_FOLDER"/layouts"))
             Core::Filesystem::CreateDirectory(PLUGIN_FOLDER"/layouts");

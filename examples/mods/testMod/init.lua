@@ -6,7 +6,7 @@ local testModReg = CoreAPI.Items.newItemRegistry("testmod") -- This must be the 
 -- Core load mods names as lowercase, so use your mod name as lowercase
 
 local COPPER_INGOT = testModReg:registerItem("copper_ingot", 254, {
-    texture = "items/copper_ingot.3dst", -- This will search the texture in the folder assets/textures
+    textureID = "copper_ingot", -- The ID used in the folder assets/items
     locales = {
         en_US = "Copper ingot",
         es_MX = "Lingote de cobre"
@@ -14,7 +14,7 @@ local COPPER_INGOT = testModReg:registerItem("copper_ingot", 254, {
 })
 
 local COPPER_PICKAXE = testModReg:registerItem("copper_pickaxe", 253, {
-    texture = "items/copper_pickaxe.3dst",
+    textureID = "copper_pickaxe",
     locales = {
         en_US = "Copper pickaxe",
         es_MX = "Pico de cobre"
@@ -23,7 +23,7 @@ local COPPER_PICKAXE = testModReg:registerItem("copper_pickaxe", 253, {
 COPPER_PICKAXE.StackSize = 1
 
 local AMETHYST_SHARD = testModReg:registerItem("amethyst_shard", 252, {
-    texture = "items/amethyst_shard.3dst",
+    textureID = "amethyst_shard",
     locales = {
         en_US = "Amethyst shard",
         es_MX = "Fragmento de amatista"
@@ -38,7 +38,7 @@ CopperTier.DamageBonus = 1
 CopperTier.Enchantability = 13
 
 local COPPER_SWORD = testModReg:registerItem("copper_sword", 251, {
-    texture = "items/copper_sword.3dst",
+    textureID = "copper_sword",
     locales = {
         en_US = "Copper sword",
         es_MX = "Espada de cobre"

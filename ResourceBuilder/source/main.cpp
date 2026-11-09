@@ -1,11 +1,15 @@
 #include <3ds.h>
 
 #include <vector>
+#include <unordered_map>
 #include <memory>
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
 #include <cerrno>
+#include <fstream>
+#include <algorithm>
+#include <cctype>
 
 #include "BaseScreen.hpp"
 #include "ProgressBar.hpp"
@@ -13,6 +17,14 @@
 #include "TextLabel.hpp"
 
 #include "tex3dst.h"
+#include "uvsParser.hpp"
+#include "LangParser.hpp"
+#include "CBlangParser.hpp"
+#include "ModsResHash.hpp"
+
+#include "json.hpp"
+
+using namespace nlohmann;
 
 extern u32 __ctru_heap_size;
 
@@ -129,7 +141,7 @@ class BackgroundScreen : public BaseScreen {
             this->mSecondaryBar->setProgress((float)g_ProgressDisplayInfo.curStepSecondary / g_ProgressDisplayInfo.maxStepsSecondary);
         }
         char buffer[0x40];
-        snprintf(buffer, sizeof(buffer), "Memory: %lu/%lu", g_MemoryUsage, __ctru_heap_size);
+        snprintf(buffer, sizeof(buffer), "Memory: %lu/%lu", (g_MemoryUsage / 1024), (__ctru_heap_size / 1024));
         mMemoryUsageLabel->set(buffer);
         Vector2 dims = mMemoryUsageLabel->getDimensions();
         mMemoryUsageLabel->setPosition(395 - dims.x, 5);
@@ -156,7 +168,8 @@ void scheduleNextApp(u32 lowId, u8 md) {
 
 #define LUNACORE_FOLDER "sdmc:/Minecraft 3DS"
 #define MODS_FOLDER LUNACORE_FOLDER "/mods"
-#define ASSETS_FOLDER LUNACORE_FOLDER "/data/assets"
+#define DATA_FOLDER LUNACORE_FOLDER "/data"
+#define ASSETS_FOLDER DATA_FOLDER "/assets"
 
 char lfsDirectory[] = "sdmc:/luma/titles/0004000000000000/romfs";
 #define PATH_LOW_TITLE_POS 26
@@ -166,7 +179,6 @@ struct GameInfo {
     FS_MediaType titleMt;
 };
 
-GameInfo g_GameInfo{0};
 const char* g_LastErrMsg = nullptr;
 
 bool isCitra(void) {
@@ -175,64 +187,232 @@ bool isCitra(void) {
     return output;
 }
 
-#define DEBUG
+bool findFreeUVSpace(UVSParser::UVValues& out, const UVSParser& parser, u32 atlasWidth, u32 atlasHeight, u32 texMaxWidth, u32 texMaxHeight) {
+    s32 curX = atlasWidth - texMaxWidth, curY = atlasHeight - texMaxHeight;
+    while (parser.checkCollision(UVSParser::createUVBox(atlasWidth, atlasHeight, curX, curY, curX + texMaxWidth, curY + texMaxHeight))) {
+        curX -= 8;
+        if (curX < 0) {
+            curX = atlasWidth - texMaxWidth;
+            curY -= 8;
+        }
+        if (curY < 0) break;
+    }
+    if (curY < 0) return false;
+    out = UVSParser::createUVBox(atlasWidth, atlasHeight, curX, curY, curX + texMaxWidth, curY + texMaxHeight);
+    return true;
+}
 
-void BuilderMainThread(void* arg) {
+#define DEBUG 1
+
+int BuilderMainThread(void* arg) {
     namespace fs = std::filesystem;
     if (!fs::exists(MODS_FOLDER) || !fs::is_directory(MODS_FOLDER)) {
         printf("No mods found\n");
-        threadExit(0);
+        return 0;
     }
 
-    #ifdef DEBUG
+    // #ifdef DEBUG
     svcSleepThread(1000000000ULL);
-    #endif
+    // #endif
     
+    ModResourcesHashDB resDb{};
     fs::directory_iterator modsDir(MODS_FOLDER);
 
-    std::vector<fs::path> modsPaths;
+    std::unordered_map<std::string, fs::path> modsPaths;
+    printf("Checking mods\n");
     for (auto& dir : modsDir) {
         fs::path modDir(dir.path());
         fs::path modManifest = modDir / "mod.json";
-        if (dir.is_directory() && fs::exists(modManifest) && fs::is_regular_file(modManifest))
-            modsPaths.push_back(modDir);
+        if (dir.is_directory() && fs::exists(modManifest) && fs::is_regular_file(modManifest)) {
+            // Validate manifest
+            std::ifstream manifestFile(modManifest);
+            json j = json::parse(manifestFile, nullptr, false, false, true);
+            if (j.is_discarded()) continue;
+
+            if (!j.contains("name") || !j["name"].is_string()) continue;
+
+            std::string name = j["name"];
+            std::string verStr = "0.0.0";
+            if (j.contains("version") && j["version"].is_string()) {
+                verStr = j["version"];
+            }
+            std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+
+            resDb.add((name + "@" + verStr).c_str());
+            modsPaths[name] = modDir;
+        }
     }
 
-    fs::path atlasFolder = ASSETS_FOLDER "/atlas";
+    printf("Found %u mods\n", modsPaths.size());
+    if (modsPaths.empty()) return 0;
 
-    g_ProgressDisplayInfo.configPrimary(3);
+    if (fs::exists(DATA_FOLDER) && !fs::is_directory(DATA_FOLDER)) fs::remove(DATA_FOLDER);
+    if (!fs::exists(DATA_FOLDER)) fs::create_directory(DATA_FOLDER);
+
+    if (fs::exists(ASSETS_FOLDER) && !fs::is_directory(ASSETS_FOLDER)) fs::remove(ASSETS_FOLDER);
+    if (!fs::exists(ASSETS_FOLDER)) fs::create_directory(ASSETS_FOLDER);
+
+    g_ProgressDisplayInfo.configPrimary(2);
 
     /* --- Items atlas --- */
-    // Check for resources
-    if (!fs::is_regular_file(atlasFolder / "atlas.items.vanilla.3dst") || !fs::is_regular_file(atlasFolder / "atlas.items.vanilla.uvs")) {
-        printf("Error: Skipping building resources for item textures because the necessary resources aren't present\n");
-    } else {
-        // Check for item textures
-        std::vector<fs::path> entries;
-        for (auto& mod : modsPaths) {
-            fs::path modItemsPath = mod / "assets" / "textures" / "items";
-            if (fs::is_directory(modItemsPath)) {
-                entries.push_back(modItemsPath);
-            }
-        }
+    {
+        UVSParser uvs_256{};
+        UVSParser uvs_512{};
+        UVSParser uvs_1024{};
 
-        g_ProgressDisplayInfo.configSecondary(entries.size());
-        printf("Opening texture: atlas.items.vanilla.3dst\n");
-        Texture3dst atlas{};
-        atlas.open((atlasFolder / "atlas.items.vanilla.3dst"));
-        if (atlas.texstate != Texture3dst::Tex3dstState::SUCCESS) {
-            printf("Error: Skipping building resources for item textures because one or more resources couldn't be loaded\n");
-        } else {
-            for (auto& path : entries) {
+        g_ProgressDisplayInfo.configSecondary(modsPaths.size());
+
+        printf("Building custom items uvs and textures index\n");
+        for (auto& entry : modsPaths) {
+            printf("Next: %s\n", entry.first.c_str());
+
+            fs::path assetsFolder = entry.second / "assets";
+            fs::path itemModelsDir = assetsFolder / "items";
+
+            if (!fs::is_directory(itemModelsDir)) {
                 g_ProgressDisplayInfo.updateSecondary();
+                continue;
             }
-        }
 
+            for (auto& modelFilePath : fs::directory_iterator(itemModelsDir)) {
+                if (modelFilePath.is_regular_file() && modelFilePath.path().extension() == ".json") {
+                    std::string modelName = modelFilePath.path().stem();
+                    std::transform(modelName.begin(), modelName.end(), modelName.begin(), ::tolower);
+
+                    printf("Opening item model: %s\n", modelFilePath.path().c_str());
+                    std::ifstream modelFile(modelFilePath.path());
+                    if (!modelFile.is_open()) {
+                        printf("Failed to open: %s\n", modelFilePath.path().c_str());
+                        continue;
+                    }
+
+                    printf("Parsing file...\n");
+                    json j = json::parse(modelFile, nullptr, false, false, true);
+                    if (j.is_discarded()) {
+                        printf("Error parsing the model\n");
+                        continue;
+                    }
+
+                    if (j.is_object() && j.contains("textures") && j["textures"].is_array() && j["textures"].size() > 0) {
+                        std::string texNameId = "lc_" + entry.first + "_" + modelName;
+                        uvs_256.addEntry(texNameId.c_str());
+                        uvs_512.addEntry(texNameId.c_str());
+                        printf("Added entry: %s\n", texNameId.c_str());
+                        for (auto& texEntry : j["textures"]) {
+                            if (texEntry.is_string()) {
+                                std::string texPathId = entry.first + "/" + std::string(texEntry);
+                                printf("Appending texture: %s\n", texPathId.c_str());
+                                UVSParser::UVValues freeSpace;
+                                if (findFreeUVSpace(freeSpace, uvs_256, 512, 256, 16, 16)) {
+                                    uvs_256.append(texNameId.c_str(), texPathId.c_str(), 512, 256, freeSpace);
+                                }
+                                if (findFreeUVSpace(freeSpace, uvs_512, 512, 512, 16, 16)) {
+                                    uvs_512.append(texNameId.c_str(), texPathId.c_str(), 512, 512, freeSpace);
+                                }
+                                if (findFreeUVSpace(freeSpace, uvs_1024, 1024, 512, 32, 32)) { // needs 32 textures for some reason
+                                    uvs_1024.append(texNameId.c_str(), texPathId.c_str(), 1024, 512, freeSpace);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            g_ProgressDisplayInfo.updateSecondary();
+        }
+        
+
+        printf("Saving changes to '%s'\n", ASSETS_FOLDER "/custom.items_256.uvs");
+        uvs_256.dump(ASSETS_FOLDER "/custom.items_256.uvs");
+        printf("Saving changes to '%s'\n", ASSETS_FOLDER "/custom.items_512.uvs");
+        uvs_512.dump(ASSETS_FOLDER "/custom.items_512.uvs");
+        printf("Saving changes to '%s'\n", ASSETS_FOLDER "/custom.items_1024.uvs");
+        uvs_1024.dump(ASSETS_FOLDER "/custom.items_1024.uvs");
     }
     g_ProgressDisplayInfo.updatePrimary();
 
+    /* --- LANG --- */
+    {
+        std::unordered_map<std::string, CBlangParser> langRegistry;
 
-    threadExit(0);
+        if (fs::exists(ASSETS_FOLDER "/loc") && !fs::is_directory(ASSETS_FOLDER "/loc")) fs::remove(ASSETS_FOLDER "/loc");
+        if (!fs::exists(ASSETS_FOLDER "/loc")) fs::create_directory(ASSETS_FOLDER "/loc");
+
+        g_ProgressDisplayInfo.configSecondary(modsPaths.size());
+
+        printf("Building custom texts\n");
+        for (auto& entry : modsPaths) {
+            printf("Next: %s\n", entry.first.c_str());
+            fs::path assetsFolder = entry.second / "assets";
+            fs::path locDir = assetsFolder / "loc";
+
+            if (!fs::is_directory(locDir)) {
+                g_ProgressDisplayInfo.updateSecondary();
+                continue;
+            }
+
+            for (auto& file : fs::directory_iterator(locDir)) {
+                if (file.is_regular_file() && file.path().extension() == ".lang") {
+                    std::string fileName = file.path().stem();
+                    std::string langNameId = fileName;
+                    const std::size_t sep = fileName.find("-pocket");
+                    // 0 1 2 3 4 5 6 7 8 9 10 11 12 13
+                    // e n _ U S _ _ - p o c  k  e  t
+                    // This should also accept names without the "-pocket" suffix
+                    if ((sep != std::string::npos && (sep >= 8 || sep + 7 != fileName.size())) || (sep == std::string::npos && langNameId.size() >= 8)) continue; // invalid lang name id
+
+                    if (sep != std::string::npos) {
+                        /* remove suffix */
+                        langNameId = fileName.substr(0, sep);
+                    }
+
+                    const std::size_t sep2 = langNameId.find('_');
+                    if (sep2 != std::string::npos && sep2 != 0 && sep2 != langNameId.size()-1) {
+                        /* Standarize name if needed */
+                        std::transform(langNameId.begin(), langNameId.begin() + sep2, langNameId.begin(), ::tolower);
+                        std::transform(langNameId.begin() + sep2 + 1, langNameId.end(), langNameId.begin() + sep2 + 1, ::toupper);
+                    }
+
+                    /* Add if not present already */
+                    if (langRegistry.find(langNameId) == langRegistry.end()) {
+                        langRegistry[langNameId] = CBlangParser{};
+                    }
+
+                    printf("Opening lang file: %s\n", file.path().c_str());
+                    LangParser parser{};
+                    parser.load(file.path());
+
+                    if (!parser.empty()) {
+                        for (auto& parserEntry : parser.mEntries) {
+                            langRegistry[langNameId].add(parserEntry.first, parserEntry.second);
+                        }
+                    }
+                }
+            }
+
+            g_ProgressDisplayInfo.updateSecondary();
+        }
+
+        for (auto& langRegEntry : langRegistry) {
+            langRegEntry.second.dump(ASSETS_FOLDER "/loc/" + langRegEntry.first + "-pocket.cblang");
+        }
+    }
+    g_ProgressDisplayInfo.updatePrimary();
+
+    if (!resDb.empty()) {
+        if (resDb.dump(DATA_FOLDER "/mods_res_db.bin")) {
+            printf("Built '%s'\n", DATA_FOLDER "/mods_res_db.bin");
+        } else {
+            printf("Failed to build '%s'\n", DATA_FOLDER "/mods_res_db.bin");
+        }
+    }
+
+    return 0;
+}
+
+void BuilderMainThreadWrapper(void* arg) {
+    int res = BuilderMainThread(arg);
+    threadExit(res);
 }
 
 int main(int argc, const char** argv) {
@@ -240,14 +420,72 @@ int main(int argc, const char** argv) {
     bool exit = false;
     bool unsupported = false;
     bool romfsMountedState = false;
+    bool noGameLaunch = false;
+    GameInfo gameInfo{0};
+
+    gfxInitDefault();
+    hidInit();
+    consoleInit(gfxScreen_t::GFX_BOTTOM, nullptr);
 
     if (argc < 3) {
-    #ifndef DEBUG
-        return 1;
-    #else
-        g_GameInfo.lowTitleId = 0x1b8700;
-        g_GameInfo.titleMt = FS_MediaType::MEDIATYPE_SD;
-    #endif
+        // Manual launch
+        int presetSelected = -1;
+        int presetHovered = 0;
+        const char* presets[] = {
+            "USA SD", "USA CARD", "USA NAND",
+            "EUR SD", "EUR CARD", "EUR NAND",
+            "JPN SD", "JPN CARD", "JPN NAND",
+            "I don't care",
+            "Exit"
+        };
+
+        const int size = sizeof(presets) / sizeof(presets[0]);
+        bool needRefresh = true;
+
+        while (presetSelected < 0) {
+            if (needRefresh) {
+                for (int i = 0; i < size; i++) {
+                    printf("\x1b[%d;0H %s %s", i + 1, presetHovered == i ? ">" : " ", presets[i]);
+                }
+                needRefresh = false;
+            }
+
+            hidScanInput();
+
+            u32 kRelease = hidKeysUp();
+
+            if (kRelease & KEY_A) presetSelected = presetHovered;
+
+            if (kRelease & KEY_UP) {
+                if (presetHovered > 0)
+                    presetHovered--;
+                else 
+                    presetHovered = size - 1;
+                needRefresh = true;
+            }
+
+            if (kRelease & KEY_DOWN) {
+                if (presetHovered < size - 1)
+                    presetHovered++;
+                else
+                    presetHovered = 0;
+                needRefresh = true;
+            }
+        }
+
+        consoleClear();
+        if (presetSelected == size - 1) return 0;
+        else if (presetSelected == size - 2) noGameLaunch = true;
+        else {
+            if (presetSelected >= 6) gameInfo.lowTitleId = 0x17fd00;
+            else if (presetSelected <= 2) gameInfo.lowTitleId = 0x1b8700;
+            else gameInfo.lowTitleId = 0x17ca00;
+
+            if (((presetSelected + 1) % 3) == 0) gameInfo.titleMt = FS_MediaType::MEDIATYPE_NAND;
+            else if (((presetSelected + 1) % 3) == 1) gameInfo.titleMt = FS_MediaType::MEDIATYPE_SD;
+            else gameInfo.titleMt = FS_MediaType::MEDIATYPE_GAME_CARD;
+            printf("Selection %08lX %01X", gameInfo.lowTitleId, gameInfo.titleMt);
+        }
     } else {
         char* endPos;
         errno = 0;
@@ -258,8 +496,8 @@ int main(int argc, const char** argv) {
         else if (strcmp(argv[2], "nand") == 0)
             retMt = FS_MediaType::MEDIATYPE_NAND;
         memcpy(lfsDirectory + PATH_LOW_TITLE_POS, argv[1], 8);
-        g_GameInfo.lowTitleId = retLowTitleId;
-        g_GameInfo.titleMt = retMt;
+        gameInfo.lowTitleId = retLowTitleId;
+        gameInfo.titleMt = retMt;
     }
 
     cfguInit();
@@ -278,7 +516,6 @@ int main(int argc, const char** argv) {
     else if (!romfsMountedState) exit = true;
 
     if (!exit) {
-        gfxInitDefault();
         std::srand(std::time(nullptr));
 
         Renderer render{};
@@ -287,11 +524,10 @@ int main(int argc, const char** argv) {
         g_GlobalFont = C2D_FontLoadSystem((CFG_Region)currentRegion);
 
         sceneInit(render);
-        consoleInit(gfxScreen_t::GFX_BOTTOM, nullptr);
 
         s32 prio;
         svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
-        Thread bmainThreadHandle = threadCreate(BuilderMainThread, nullptr, 0x4000, prio + 1, -2, false);
+        Thread bmainThreadHandle = threadCreate(BuilderMainThreadWrapper, nullptr, 0x4000, prio + 1, -2, false);
 
         bool threadFinished = false;
         bool launchGame = false;
@@ -301,12 +537,12 @@ int main(int argc, const char** argv) {
 
             u32 kDown = hidKeysDown();
             u32 kHeld = hidKeysHeld();
-            if (kDown & KEY_START)
-                break;
+            // if (kDown & KEY_START)
+                // break;
 
             if (!threadFinished) {
                 res = threadJoin(bmainThreadHandle, 1000);
-                if (R_SUCCEEDED(res)) {
+                if (res == 0) {
                     threadFinished = true;
                     int exitCode = threadGetExitCode(bmainThreadHandle);
                     if (exitCode == 0) {
@@ -318,8 +554,8 @@ int main(int argc, const char** argv) {
                     }
                 }
             }
-            #ifdef DEBUG
-            if (threadFinished && (kDown & KEY_SELECT))
+            #if DEBUG
+            if (threadFinished && (kDown & KEY_START))
             #else
             if (threadFinished) 
             #endif
@@ -332,8 +568,8 @@ int main(int argc, const char** argv) {
             render.draw(ScreenID::TOP);
         }
 
-        if (launchGame && !isCitra())
-            scheduleNextApp(g_GameInfo.lowTitleId, g_GameInfo.titleMt);
+        if (launchGame && !isCitra() && !noGameLaunch)
+            scheduleNextApp(gameInfo.lowTitleId, gameInfo.titleMt);
 
         render.fini();
         gfxExit();

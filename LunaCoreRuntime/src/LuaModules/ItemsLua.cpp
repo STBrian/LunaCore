@@ -80,16 +80,25 @@ static int l_Items_newToolTier(lua_State *L) {
 
 /*
 - Creates a new item and stores it in the game's items table. Returns the address to the item
+## namespace: string
 ## itemName: string
 ## itemId: integer
 ## return: MCItem?
 ### Game.Items.registerItem
 */
 static int l_Items_registerItem(lua_State *L) {
-    const char* itemName = luaL_checkstring(L, 1);
-    u16 itemId = luaL_checknumber(L, 2);
-    Item* regItem = Minecraft::registerItem<Item>(itemName, itemId);
-    LuaObjectUtils::NewObjectCheck(L, "MCItem", regItem);
+    if (lua_gettop(L) > 2) {
+        const char* itemnamespace = luaL_checkstring(L, 1);
+        const char* itemName = luaL_checkstring(L, 2);
+        u16 itemId = luaL_checknumber(L, 3);
+        Item* regItem = Minecraft::registerRegularItem(itemName, itemId, itemnamespace);
+        LuaObjectUtils::NewObjectCheck(L, "MCItem", regItem);
+    } else {
+        const char* itemName = luaL_checkstring(L, 1);
+        u16 itemId = luaL_checknumber(L, 2);
+        Item* regItem = Minecraft::registerItem<Item>(itemName, itemId);
+        LuaObjectUtils::NewObjectCheck(L, "MCItem", regItem);
+    }
     return 1;
 }
 

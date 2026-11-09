@@ -232,6 +232,13 @@ void _resizeHalf(uint8_t *outTex, uint8_t *tex, uint32_t texWidth, uint32_t texH
     }
 }
 
+void Texture3dst::load(Texture3dst::IFileStream_base& ifile) {
+    if (this->texstate != Texture3dst::Tex3dstState::NOLOADED)
+        return;
+
+    
+}
+
 void Texture3dst::open(const std::string &path) {
     if (this->texstate != Texture3dst::Tex3dstState::NOLOADED)
         return;

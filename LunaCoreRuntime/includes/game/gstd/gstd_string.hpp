@@ -33,6 +33,11 @@ namespace gstd { // to follow rairai's implementation
             reinterpret_cast<void(*)(char**)>(0x2febbc|1)(&data);
         }
 
+        void set(const char* str) {
+            this->~string();
+            reinterpret_cast<char**(*)(char**, const char*)>(0x2ff220|1)(&data, str);
+        }
+
         uint32_t length() const {
             return *reinterpret_cast<uint32_t*>(data - 4);
         }
@@ -71,6 +76,11 @@ namespace gstd { // to follow rairai's implementation
             return length() == rhs.length() && memcmp(data, rhs.data(), length()) == 0;
         }
         #endif
+
+
+        static void toLower(gstd::string& out, const std::string& in) {
+            reinterpret_cast<void(*)(gstd::string&, const std::string&)>(0x005822b0)(out, in);
+        }
     };
 
     inline gstd::string format(const char* fmt, ...) {

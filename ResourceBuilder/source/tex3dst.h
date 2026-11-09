@@ -61,8 +61,40 @@ typedef void *Texture3dst_c;
 
 #ifdef __cplusplus
 
+
 class Texture3dst {
     public:
+        class IFileStream_base {
+            public:
+            IFileStream_base() {}
+        
+            virtual ~IFileStream_base() = default;
+        
+            virtual bool is_open() = 0;
+            virtual int read(void* obuffer, unsigned int length) = 0;
+            virtual int get_size() = 0;
+            virtual void rewind() = 0;
+        };
+
+        class IFileStream_default : public IFileStream_base {
+            FILE* _handle = nullptr;
+
+            public:
+            IFileStream_default(const std::string& fp) {
+                this->_handle = fopen(fp.c_str(), "rb");
+            }
+
+            bool is_open() override {
+                return this->_handle != nullptr;
+            }
+
+            int read(void* obuffer, unsigned int length) override {
+                if (!this->is_open()) return -1;
+
+
+            }
+        };
+
         _HeaderTexture3dst header;
         struct _size size;
         uint8_t *textureData = NULL;
@@ -109,6 +141,8 @@ class Texture3dst {
         }
 
         void open(const std::string &path);
+
+        void load(IFileStream_base& ifile);
 
         void create(uint32_t width, uint32_t height, uint32_t mip_level, Texture3dst::Tex3dstFormats format);
 

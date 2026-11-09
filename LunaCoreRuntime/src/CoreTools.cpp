@@ -7,6 +7,7 @@
 #include <CTRPluginFramework.hpp>
 
 #include "Core/Filesystem.hpp"
+#include "Core/Debug.hpp"
 
 
 Result HBLDR_SetTarget(Handle hbldrHandle, const char* path);
@@ -16,6 +17,11 @@ namespace CTRPluginFramework::ProcessImpl {
 }
 
 void LunaCore::LaunchTool(const char* name) {
+    if (CTRPluginFramework::System::IsCitra()) {
+        Core::Debug::LogWarnf("This feature is not available in emulator: '%s'", name);
+        return; // Only works on real hardware
+    } 
+        
     Handle hbldrHandle;
     const char basePath[] = "/Minecraft 3DS/tools/";
     std::string toolPath(std::string("sdmc:") + basePath + name + ".3dsx");
@@ -59,6 +65,8 @@ void LunaCore::LaunchTool(const char* name) {
         CTRPluginFramework::ProcessImpl::UnlockGameThreads(); // without this the game will hang up
         svcExitProcess();
         for (;;);
+    } else {
+        Core::Debug::LogWarnf("The tool '%s' is not installed", name);
     }
 }
 

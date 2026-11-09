@@ -21,6 +21,10 @@ extern bool disableAsyncTimeout;
 extern int loadedScripts;
 extern int loadedMods;
 
+namespace Core {
+    extern bool Initializated;
+} 
+
 #if __STDC_HOSTED__
 extern std::string currentLoadingMod;
 extern Core::Config G_config;

@@ -24,7 +24,8 @@
                 "COMMIT_LUNACORE=\"DUMMY_COMMIT\"",
                 "LUNACORE_VER_MAJOR=1",
                 "LUNACORE_VER_MINOR=0",
-                "LUNACORE_VER_PATCH=0"
+                "LUNACORE_VER_PATCH=0",
+                "__LCRUNTIME__"
             ],
             "cStandard": "c11",
             "cppStandard": "gnu++20"
@@ -52,7 +53,8 @@
                 "COMMIT_HASH=\"DUMMY_COMMIT\"",
                 "LUNACORE_VER_MAJOR=1",
                 "LUNACORE_VER_MINOR=0",
-                "LUNACORE_VER_PATCH=0"
+                "LUNACORE_VER_PATCH=0",
+                "__LCRUNTIME__"
             ],
             "cStandard": "c11",
             "cppStandard": "gnu++20"

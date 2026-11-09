@@ -57,7 +57,7 @@ bool CancelOperationCallback() {
 bool DrawMonitors(const Screen &screen) {
     static int luaMemoryUsage = 0;
     if (screen.IsTop) {
-        if (Lua_Global_Mut.try_lock()) {
+        if (Core::Initializated && Lua_Global_Mut.try_lock()) {
             int memusgkb = lua_gc(Lua_global, LUA_GCCOUNT, 0);
             int memusgb = lua_gc(Lua_global, LUA_GCCOUNTB, 0);
             luaMemoryUsage = memusgkb * 1024 + memusgb;

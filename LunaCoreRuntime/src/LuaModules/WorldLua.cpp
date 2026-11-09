@@ -26,17 +26,19 @@ enum world_offsets : u32 {
 
 // ----------------------------------------------------------------------------
 
-//$Game.World
+/* @doc:v2
+@module Game.World
+@desc World management, blocks, weather and environment module
+*/
 
 // ----------------------------------------------------------------------------
 
-/*
-=Game.World.Loaded = false
-=Game.World.Raining = false
-=Game.World.Thunderstorm = false
-=Game.World.CloudsHeight = 0.0
-#---@type WeatherType
-#Game.World.Weather = {}
+/* @doc:v2
+@const Game.World.Loaded = false
+@const Game.World.Raining = false
+@const Game.World.Thunderstorm = false
+@const Game.World.CloudsHeight = 0.0
+@table Game.World.Weather: WeatherType
 */
 
 static int l_World_index(lua_State *L)
@@ -152,11 +154,11 @@ static int l_World_newindex(lua_State *L)
     else return LUACT_INVALID_KEY;
 }
 
-/*
-- Displays an in-game message in the world screen if the player is currently inside a world. Returns true if success
-## msg: string
-## return: boolean
-### Game.World.message
+/* @doc:v2
+@func Game.World.message(msg: string): boolean
+@desc Displays an in-game message in the world screen if the player is currently inside a world. Returns true if success
+@param msg string
+@return boolean
 */
 static int l_World_message(lua_State *L) {
     const char* msg = luaL_checkstring(L, 1);
@@ -167,10 +169,10 @@ static int l_World_message(lua_State *L) {
     return 1;
 }
 
-/*
-- Returns the entity that the player is looking at
-## return: table?
-### Game.World.getTargetEntity
+/* @doc:v2
+@func Game.World.getTargetEntity(): table?
+@desc Returns the entity that the player is looking at
+@return table?
 */
 static int l_World_getTargetEntity(lua_State* L) {
     auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
@@ -187,10 +189,10 @@ static int l_World_getTargetEntity(lua_State* L) {
     return 0;
 }
 
-/*
-- Returns the block that the player is looking at
-## return: table?
-### Game.World.getTargetBlock
+/* @doc:v2
+@func Game.World.getTargetBlock(): table?
+@desc Returns the block that the player is looking at
+@return table?
 */
 static int l_World_getTargetBlock(lua_State* L) {
     auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
@@ -212,14 +214,14 @@ static int l_World_getTargetBlock(lua_State* L) {
     return 0;
 }
 
-/*
-- Sets the block at the provided coordinates
-## x: integer
-## y: integer
-## z: integer
-## blockId: integer
-## blockData: integer
-### Game.World.setBlock
+/* @doc:v2
+@func Game.World.setBlock(x: integer, y: integer, z: integer, blockId: integer, blockData: integer)
+@desc Sets the block at the provided coordinates
+@param x integer
+@param y integer
+@param z integer
+@param blockId integer
+@param blockData integer
 */
 static void l_World_setBlock_impl(void* ud) {
     lua_State* L = (lua_State*)ud;
@@ -247,14 +249,14 @@ static int l_World_setBlock(lua_State* L) {
     return 0;
 }
 
-/*
-- Gets the properties of the block at the specified coordinates
-## x: integer
-## y: integer
-## z: integer
-## return: integer
-## return: integer
-### Game.World.getBlock
+/* @doc:v2
+@func Game.World.getBlock(x: integer, y: integer, z: integer): integer
+@desc Gets the properties of the block at the specified coordinates
+@param x integer
+@param y integer
+@param z integer
+@return integer
+@return integer
 */
 static int l_World_getBlock(lua_State* L) {
     int x = luaL_checknumber(L, 1);
@@ -274,10 +276,10 @@ static int l_World_getBlock(lua_State* L) {
     return 2;
 }
 
-/*
-- Gets the current biome ID
-## return: integer
-### Game.World.getCurrentBiome
+/* @doc:v2
+@func Game.World.getCurrentBiome(): integer
+@desc Gets the current biome ID
+@return integer
 */
 static int l_World_getCurrentBiome(lua_State* L) {
     auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
@@ -304,12 +306,12 @@ class SoundEngineProxy : public MC3DSPluginFramework::SoundEngine {
     virtual void playMusic(u32 soundId);
 };
 
-/*
-- Plays a sound globally
-## soundId: string
-## volume: number
-## pitch: number
-### Game.World.playGlobalSound
+/* @doc:v2
+@func Game.World.playGlobalSound(soundId: string, volume: number, pitch: number)
+@desc Plays a sound globally
+@param soundId string
+@param volume number
+@param pitch number
 */
 static int l_World_playGlobalSound(lua_State* L) {
     const char* soundId = luaL_checkstring(L, 1);
@@ -331,10 +333,16 @@ bool Core::Module::RegisterWorldModule(lua_State *L) {
     LuaCustomTable::RegisterNewCustomTable(L, "World", l_World_index, l_World_newindex);
     LuaCustomTable::GetIndexTable(L, "World");
 
-    //$@@@Game.World.OnWorldJoin: EventClass
+    /* @doc:v2
+    @class OnWorldJoin: EventClass
+    @target Game.World.OnWorldJoin
+    */
     Core::Event::NewEvent(L, "OnWorldJoin");
 
-    //$@@@Game.World.OnWorldLeave: EventClass
+    /* @doc:v2
+    @class OnWorldLeave: EventClass
+    @target Game.World.OnWorldLeave
+    */
     Core::Event::NewEvent(L, "OnWorldLeave");
 
     lua_pushcfunction(L, l_World_message);

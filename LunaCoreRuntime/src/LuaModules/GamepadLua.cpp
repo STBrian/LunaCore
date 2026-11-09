@@ -10,16 +10,23 @@ namespace CTRPF = CTRPluginFramework;
 // ----------------------------------------------------------------------------
 
 //!include LunaCoreRuntime/src/LuaModules/LoadModules.cpp
-//$Game.Gamepad
-//@KeyCode: integer
+
+/* @doc:v2
+@module Game.Gamepad
+@desc Gamepad input handling module
+*/
+
+/* @doc:v2
+@alias KeyCode integer
+*/
 
 // ----------------------------------------------------------------------------
 
-/*
-- Returns true if the key is pressed (only counts for the first press, for button held use isDown)
-## keycode: KeyCode
-## return: boolean
-### Game.Gamepad.isPressed
+/* @doc:v2
+@func Game.Gamepad.isPressed(keycode: KeyCode): boolean
+@desc Returns true if the key is pressed (only counts for the first press, for button held use isDown)
+@param keycode KeyCode
+@return boolean
 */
 static int l_Gamepad_isPressed(lua_State *L)
 {
@@ -28,11 +35,11 @@ static int l_Gamepad_isPressed(lua_State *L)
     return 1;
 }
 
-/*
-- Returns true if the key is down
-## keycode: KeyCode
-## return: boolean
-### Game.Gamepad.isDown
+/* @doc:v2
+@func Game.Gamepad.isDown(keycode: KeyCode): boolean
+@desc Returns true if the key is down
+@param keycode KeyCode
+@return boolean
 */
 static int l_Gamepad_isDown(lua_State *L)
 {
@@ -41,11 +48,11 @@ static int l_Gamepad_isDown(lua_State *L)
     return 1;
 }
 
-/*
-- Returns true if the key just got released
-## keycode: KeyCode
-## return: boolean
-### Game.Gamepad.isReleased
+/* @doc:v2
+@func Game.Gamepad.isReleased(keycode: KeyCode): boolean
+@desc Returns true if the key just got released
+@param keycode KeyCode
+@return boolean
 */
 static int l_Gamepad_isReleased(lua_State *L)
 {
@@ -54,10 +61,10 @@ static int l_Gamepad_isReleased(lua_State *L)
     return 1;
 }
 
-/*
-- Performs a virtual button press
-## keycode: KeyCode
-### Game.Gamepad.pressButton
+/* @doc:v2
+@func Game.Gamepad.pressButton(keycode: KeyCode)
+@desc Performs a virtual button press
+@param keycode KeyCode
 */
 static int l_Gamepad_pressButton(lua_State *L)
 {
@@ -66,11 +73,11 @@ static int l_Gamepad_pressButton(lua_State *L)
     return 0;
 }
 
-/*
-- Returns touch x and y position
-## return: number
-## return: number
-### Game.Gamepad.getTouch
+/* @doc:v2
+@func Game.Gamepad.getTouch(): number
+@desc Returns touch x and y position
+@return number
+@return number
 */
 static int l_Gamepad_getTouch(lua_State *L)
 {
@@ -100,74 +107,86 @@ bool Core::Module::RegisterGamepadModule(lua_State *L)
 
     luaL_register(L, NULL, gamepad_functions);
 
-    //$@@@Game.Gamepad.OnKeyPressed: EventClass
+    /* @doc:v2
+    @class OnKeyPressed: EventClass
+    @target Game.Gamepad.OnKeyPressed
+    */
     Core::Event::NewEvent(L, "OnKeyPressed");
 
-    //$@@@Game.Gamepad.OnKeyDown: EventClass
+    /* @doc:v2
+    @class OnKeyDown: EventClass
+    @target Game.Gamepad.OnKeyDown
+    */
     Core::Event::NewEvent(L, "OnKeyDown");
 
-    //$@@@Game.Gamepad.OnKeyReleased: EventClass
+    /* @doc:v2
+    @class OnKeyReleased: EventClass
+    @target Game.Gamepad.OnKeyReleased
+    */
     Core::Event::NewEvent(L, "OnKeyReleased");
 
-    //$Game.Gamepad.KeyCodes
+    /* @doc:v2
+    @table Game.Gamepad.KeyCodes
+    @desc Button and key code constants
+    @const Game.Gamepad.KeyCodes.A = 1
+    @const Game.Gamepad.KeyCodes.B = 2
+    @const Game.Gamepad.KeyCodes.SELECT = 4
+    @const Game.Gamepad.KeyCodes.START = 8
+    @const Game.Gamepad.KeyCodes.DPADRIGHT = 16
+    @const Game.Gamepad.KeyCodes.DPADLEFT = 32
+    @const Game.Gamepad.KeyCodes.DPADUP = 64
+    @const Game.Gamepad.KeyCodes.DPADDOWN = 128
+    @const Game.Gamepad.KeyCodes.R = 256
+    @const Game.Gamepad.KeyCodes.L = 512
+    @const Game.Gamepad.KeyCodes.X = 1024
+    @const Game.Gamepad.KeyCodes.Y = 2048
+    @const Game.Gamepad.KeyCodes.ZL = 16384
+    @const Game.Gamepad.KeyCodes.ZR = 32768
+    @const Game.Gamepad.KeyCodes.TOUCHPAD = 1048576
+    @const Game.Gamepad.KeyCodes.CSTICKRIGHT = 16777216
+    @const Game.Gamepad.KeyCodes.CSTICKLEFT = 33554432
+    @const Game.Gamepad.KeyCodes.CSTICKUP = 67108864
+    @const Game.Gamepad.KeyCodes.CSTICKDOWN = 134217728
+    @const Game.Gamepad.KeyCodes.CPADRIGHT = 268435456
+    @const Game.Gamepad.KeyCodes.CPADLEFT = 536870912
+    @const Game.Gamepad.KeyCodes.CPADUP = 1073741824
+    @const Game.Gamepad.KeyCodes.CPADDOWN = 2147483648
+    @const Game.Gamepad.KeyCodes.UP = 1073741888
+    @const Game.Gamepad.KeyCodes.DOWN = 2147483776
+    @const Game.Gamepad.KeyCodes.LEFT = 536870944
+    @const Game.Gamepad.KeyCodes.RIGHT = 268435472
+    @const Game.Gamepad.KeyCodes.CPAD = 2952790016
+    @const Game.Gamepad.KeyCodes.CSTICK = 184549376
+    */
     lua_newtable(L);
-    //=Game.Gamepad.KeyCodes.A = 1
     luaC_setfield_integer(L, (KEY_A), "A");
-    //=Game.Gamepad.KeyCodes.B = 2
     luaC_setfield_integer(L, (KEY_B), "B");
-    //=Game.Gamepad.KeyCodes.SELECT = 4
     luaC_setfield_integer(L, (KEY_SELECT), "SELECT");
-    //=Game.Gamepad.KeyCodes.START = 8
     luaC_setfield_integer(L, (KEY_START), "START");
-    //=Game.Gamepad.KeyCodes.DPADRIGHT = 16
     luaC_setfield_integer(L, (KEY_DRIGHT), "DPADRIGHT");
-    //=Game.Gamepad.KeyCodes.DPADLEFT = 32
     luaC_setfield_integer(L, (KEY_DLEFT), "DPADLEFT");
-    //=Game.Gamepad.KeyCodes.DPADUP = 64
     luaC_setfield_integer(L, (KEY_DUP), "DPADUP");
-    //=Game.Gamepad.KeyCodes.DPADDOWN = 128
     luaC_setfield_integer(L, (KEY_DDOWN), "DPADDOWN");
-    //=Game.Gamepad.KeyCodes.R = 256
     luaC_setfield_integer(L, (KEY_R), "R");
-    //=Game.Gamepad.KeyCodes.L = 512
     luaC_setfield_integer(L, (KEY_L), "L");
-    //=Game.Gamepad.KeyCodes.X = 1024
     luaC_setfield_integer(L, (KEY_X), "X");
-    //=Game.Gamepad.KeyCodes.Y = 2048
     luaC_setfield_integer(L, (KEY_Y), "Y");
-    //=Game.Gamepad.KeyCodes.ZL = 16384
     luaC_setfield_integer(L, (KEY_ZL), "ZL");
-    //=Game.Gamepad.KeyCodes.ZR = 32768
     luaC_setfield_integer(L, (KEY_ZR), "ZR");
-    //=Game.Gamepad.KeyCodes.TOUCHPAD = 1048576
     luaC_setfield_integer(L, (KEY_TOUCH), "TOUCHPAD");
-    //=Game.Gamepad.KeyCodes.CSTICKRIGHT = 16777216
     luaC_setfield_integer(L, (KEY_CSTICK_RIGHT), "CSTICKRIGHT");
-    //=Game.Gamepad.KeyCodes.CSTICKLEFT = 33554432
     luaC_setfield_integer(L, (KEY_CSTICK_LEFT), "CSTICKLEFT");
-    //=Game.Gamepad.KeyCodes.CSTICKUP = 67108864
     luaC_setfield_integer(L, (KEY_CSTICK_UP), "CSTICKUP");
-    //=Game.Gamepad.KeyCodes.CSTICKDOWN = 134217728
     luaC_setfield_integer(L, (KEY_CSTICK_DOWN), "CSTICKDOWN");
-    //=Game.Gamepad.KeyCodes.CPADRIGHT = 268435456
     luaC_setfield_integer(L, (KEY_CPAD_RIGHT), "CPADRIGHT");
-    //=Game.Gamepad.KeyCodes.CPADLEFT = 536870912
     luaC_setfield_integer(L, (KEY_CPAD_LEFT), "CPADLEFT");
-    //=Game.Gamepad.KeyCodes.CPADUP = 1073741824
     luaC_setfield_integer(L, (KEY_CPAD_UP), "CPADUP");
-    //=Game.Gamepad.KeyCodes.CPADDOWN = 2147483648
     luaC_setfield_integer(L, (KEY_CPAD_DOWN), "CPADDOWN");
-    //=Game.Gamepad.KeyCodes.UP = 1073741888
     luaC_setfield_integer(L, (KEY_DUP | KEY_CPAD_UP), "UP");
-    //=Game.Gamepad.KeyCodes.DOWN = 2147483776
     luaC_setfield_integer(L, (KEY_DDOWN | KEY_CPAD_DOWN), "DOWN");
-    //=Game.Gamepad.KeyCodes.LEFT = 536870944
     luaC_setfield_integer(L, (KEY_DLEFT | KEY_CPAD_LEFT), "LEFT");
-    //=Game.Gamepad.KeyCodes.RIGHT = 268435472
     luaC_setfield_integer(L, (KEY_DRIGHT | KEY_CPAD_RIGHT), "RIGHT");
-    //=Game.Gamepad.KeyCodes.CPAD = 2952790016
     luaC_setfield_integer(L, (KEY_CPAD_DOWN | KEY_CPAD_LEFT | KEY_CPAD_RIGHT | KEY_CPAD_UP), "CPAD");
-    //=Game.Gamepad.KeyCodes.CSTICK = 184549376
     luaC_setfield_integer(L, (KEY_CSTICK_DOWN | KEY_CSTICK_LEFT | KEY_CSTICK_RIGHT | KEY_CSTICK_UP), "CSTICK");
     lua_setfield(L, -2, "KeyCodes");
 

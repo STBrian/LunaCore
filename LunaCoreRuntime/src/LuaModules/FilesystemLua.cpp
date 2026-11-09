@@ -21,20 +21,26 @@ typedef struct {
 
 // ----------------------------------------------------------------------------
 
-//$Core.Filesystem
+/* @doc:v2
+@module Core.Filesystem
+@desc Filesystem module for reading and writing files and directories
+*/
 
 // ----------------------------------------------------------------------------
 
-//@@FilesystemFile
+/* @doc:v2
+@class FilesystemFile
+@desc File handle returned by Core.Filesystem.open
+*/
 
-/*
-- Opens a file. Returns nil if the file wasn't opened with an error message. Use sdmc:/ for sd card or extdata:/ for game extdata. Optionally, you can pass a file size when creating a file
-## fp: string
-## mode: string
-## size: number?
-## return: FilesystemFile?
-## return: string?
-### Core.Filesystem.open
+/* @doc:v2
+@func Core.Filesystem.open(fp: string, mode: string, size: number?)
+@desc Opens a file. Returns nil if the file wasn't opened with an error message. Use sdmc:/ for sd card or extdata:/ for game extdata. Optionally, you can pass a file size when creating a file
+@param fp string
+@param mode string
+@param size number?
+@return FilesystemFile?
+@return string?
 */
 static int l_Filesystem_open(lua_State *L) {
     const char* filepath = luaL_checkstring(L, 1);
@@ -101,11 +107,11 @@ static int l_Filesystem_open(lua_State *L) {
     return 2;
 }
 
-/*
-- Checks if the file exists
-## fp: string
-## return: boolean
-### Core.Filesystem.fileExists
+/* @doc:v2
+@func Core.Filesystem.fileExists(fp: string): boolean
+@desc Checks if the file exists
+@param fp string
+@return boolean
 */
 static int l_Filesystem_fileExists(lua_State *L) {
     const char* fp = luaL_checkstring(L, 1);
@@ -113,11 +119,11 @@ static int l_Filesystem_fileExists(lua_State *L) {
     return 1;
 }
 
-/*
-- Checks if the directory exists
-## path: string
-## return: boolean
-### Core.Filesystem.directoryExists
+/* @doc:v2
+@func Core.Filesystem.directoryExists(path: string): boolean
+@desc Checks if the directory exists
+@param path string
+@return boolean
 */
 static int l_Filesystem_directoryExists(lua_State *L) {
     const char* fp = luaL_checkstring(L, 1);
@@ -125,11 +131,11 @@ static int l_Filesystem_directoryExists(lua_State *L) {
     return 1;
 }
 
-/*
-- Returns a table with all the elements in a directory
-## path: string
-## return: table
-### Core.Filesystem.getDirectoryElements
+/* @doc:v2
+@func Core.Filesystem.getDirectoryElements(path: string): table
+@desc Returns a table with all the elements in a directory
+@param path string
+@return table
 */
 static int l_Filesystem_getDirectoryElements(lua_State *L) {
     lua_newtable(L);
@@ -145,11 +151,11 @@ static int l_Filesystem_getDirectoryElements(lua_State *L) {
     return 1;
 }
 
-/*
-- Creates a directory and returns if success
-## path: string
-## return: boolean
-### Core.Filesystem.createDirectory
+/* @doc:v2
+@func Core.Filesystem.createDirectory(path: string): boolean
+@desc Creates a directory and returns if success
+@param path string
+@return boolean
 */
 static int l_Filesystem_createDirectory(lua_State *L) {
     const char* fp = luaL_checkstring(L, 1);
@@ -157,11 +163,11 @@ static int l_Filesystem_createDirectory(lua_State *L) {
     return 1;
 }
 
-/*
-- To delete a file. Returns true on success
-## file: string
-## return: boolean
-### Core.Filesystem.deleteFile
+/* @doc:v2
+@func Core.Filesystem.deleteFile(file: string): boolean
+@desc To delete a file. Returns true on success
+@param file string
+@return boolean
 */
 static int l_Filesystem_deleteFile(lua_State *L) {
     const char* fp = luaL_checkstring(L, 1);
@@ -169,12 +175,12 @@ static int l_Filesystem_deleteFile(lua_State *L) {
     return 1;
 }
 
-/*
-- To rename a file. Only accepts two paths on the same device. Returns true on success
-## oldPath: string
-## newPath: string
-## return: boolean
-### Core.Filesystem.renameFile
+/* @doc:v2
+@func Core.Filesystem.renameFile(oldPath: string, newPath: string): boolean
+@desc To rename a file. Only accepts two paths on the same device. Returns true on success
+@param oldPath string
+@param newPath string
+@return boolean
 */
 static int l_Filesystem_renameFile(lua_State *L) {
     const char* oldPath = luaL_checkstring(L, 1);
@@ -185,11 +191,11 @@ static int l_Filesystem_renameFile(lua_State *L) {
 
 // ----------------------------------------------------------------------------
 
-/*
-- Reads the specified amount of bytes to read, or use "*all" to read all file and returns the data in a string or nil if error
-## bytes: any
-## return: string?
-### FilesystemFile:read
+/* @doc:v2
+@method FilesystemFile:read(bytes: any): string?
+@desc Reads the specified amount of bytes to read, or use "*all" to read all file and returns the data in a string or nil if error
+@param bytes any
+@return string?
 */
 static int l_Filesystem_File_read(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
@@ -227,12 +233,12 @@ static int l_Filesystem_File_read(lua_State *L) {
     return 1;
 }
 
-/*
-- Writes all data to file of the specified amount of bytes if provided. Returns true is success, false otherwise
-## data: string
-## bytes: integer?
-## return: boolean
-### FilesystemFile:write
+/* @doc:v2
+@method FilesystemFile:write(data: string, bytes: integer?): boolean
+@desc Writes all data to file of the specified amount of bytes if provided. Returns true is success, false otherwise
+@param data string
+@param bytes integer?
+@return boolean
 */
 static int l_Filesystem_File_write(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
@@ -252,10 +258,10 @@ static int l_Filesystem_File_write(lua_State *L) {
     return 1;
 }
 
-/*
-- Returns the actual position in the file
-## return: integer
-### FilesystemFile:tell
+/* @doc:v2
+@method FilesystemFile:tell(): integer
+@desc Returns the actual position in the file
+@return integer
 */
 static int l_Filesystem_File_tell(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
@@ -263,10 +269,10 @@ static int l_Filesystem_File_tell(lua_State *L) {
     return 1;
 }
 
-/*
-- Flushes all file data in write buffer
-## return: boolean
-### FilesystemFile:flush
+/* @doc:v2
+@method FilesystemFile:flush(): boolean
+@desc Flushes all file data in write buffer
+@return boolean
 */
 static int l_Filesystem_File_flush(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
@@ -274,12 +280,12 @@ static int l_Filesystem_File_flush(lua_State *L) {
     return 1;
 }
 
-/*
-- Sets the position in file and returns the new position or nil if error
-## offset: integer
-## whence: string?
-## return: integer
-### FilesystemFile:seek
+/* @doc:v2
+@method FilesystemFile:seek(offset: integer, whence: string?): integer
+@desc Sets the position in file and returns the new position or nil if error
+@param offset integer
+@param whence string?
+@return integer
 */
 static int l_Filesystem_File_seek(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
@@ -309,10 +315,10 @@ static int l_Filesystem_File_seek(lua_State *L) {
     LUAUTILS_SET_ERROR_HANDLER(L);
 }
 
-/*
-- Checks if the file is open
-## return: boolean
-### FilesystemFile:isOpen
+/* @doc:v2
+@method FilesystemFile:isOpen(): boolean
+@desc Checks if the file is open
+@return boolean
 */
 static int l_Filesystem_File_isOpen(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
@@ -320,10 +326,10 @@ static int l_Filesystem_File_isOpen(lua_State *L) {
     return 1;
 }
 
-/*
-- Checks if the file is on end of file
-## return: boolean
-### FilesystemFile:isEOF
+/* @doc:v2
+@method FilesystemFile:isEOF(): boolean
+@desc Checks if the file is on end of file
+@return boolean
 */
 static int l_Filesystem_File_isEOF(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
@@ -334,10 +340,10 @@ static int l_Filesystem_File_isEOF(lua_State *L) {
     return 1;
 }
 
-/*
-- Returns the size of the file
-## return: integer
-### FilesystemFile:getSize
+/* @doc:v2
+@method FilesystemFile:getSize(): integer
+@desc Returns the size of the file
+@return integer
 */
 static int l_Filesystem_File_getSize(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");
@@ -348,9 +354,9 @@ static int l_Filesystem_File_getSize(lua_State *L) {
     return 1;
 }
 
-/*
-- Closes the file
-### FilesystemFile:close
+/* @doc:v2
+@method FilesystemFile:close()
+@desc Closes the file
 */
 static int l_Filesystem_File_close(lua_State *L) {
     FilesystemFile* fileStruct = (FilesystemFile*)luaC_funccheckudata(L, 1, "FilesystemFile");

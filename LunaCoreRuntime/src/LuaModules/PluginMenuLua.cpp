@@ -13,25 +13,33 @@ using namespace Core;
 // ----------------------------------------------------------------------------
 
 //!include LunaCoreRuntime/src/LuaModules/LoadModules.cpp
-//$Core.Menu
-//@@MenuFolder
+
+/* @doc:v2
+@module Core.Menu
+@desc In-game CTRPluginFramework menu integration
+*/
+
+/* @doc:v2
+@class MenuFolder
+@desc Represents a folder item in the in-game plugin menu
+*/
 
 // ----------------------------------------------------------------------------
 
-/*
-- Returns a reference to the mods plugin menu folder
-## return: MenuFolder
-### Core.Menu.getMenuFolder
+/* @doc:v2
+@func Core.Menu.getMenuFolder(): MenuFolder
+@desc Returns a reference to the mods plugin menu folder
+@return MenuFolder
 */
 static int l_Menu_getMenuFolder(lua_State* L) {
     LuaObjectUtils::NewObject(L, "MenuFolder", MenuModsFolder);
     return 1;
 }
 
-/*
-- Allows to show a message in the menu
-## msg: string
-### Core.Menu.showMessageBox
+/* @doc:v2
+@func Core.Menu.showMessageBox(msg: string)
+@desc Allows to show a message in the menu
+@param msg string
 */
 static int l_Menu_showMessageBox(lua_State* L) {
     const char* msg = luaL_checkstring(L, 1);
@@ -39,11 +47,11 @@ static int l_Menu_showMessageBox(lua_State* L) {
     return 0;
 }
 
-/*
-- When used, an ask message box will appear on screen. Returns the user selection as boolean
-## msg: string
-## return: boolean
-### Core.Menu.showAskMessageBox
+/* @doc:v2
+@func Core.Menu.showAskMessageBox(msg: string): boolean
+@desc When used, an ask message box will appear on screen. Returns the user selection as boolean
+@param msg string
+@return boolean
 */
 static int l_Menu_showAskMessageBox(lua_State* L) {
     const char* msg = luaL_checkstring(L, 1);
@@ -51,10 +59,10 @@ static int l_Menu_showAskMessageBox(lua_State* L) {
     return 1;
 }
 
-/*
-- Returns if the plugin menu is currently open. This won't be useful, only in specific cases
-## return: boolean
-### Core.Menu.isOpen
+/* @doc:v2
+@func Core.Menu.isOpen(): boolean
+@desc Returns if the plugin menu is currently open. This won't be useful, only in specific cases
+@return boolean
 */
 static int l_Menu_isOpen(lua_State* L) {
     lua_pushboolean(L, gmenu->IsOpen());
@@ -70,11 +78,11 @@ static const luaL_Reg menu_functions[] =
     {NULL, NULL}
 };
 
-/*
-- Creates and appends a new folder to the current folder, and then it returns a reference to the new folder
-## name: string
-## return: MenuFolder
-### MenuFolder:newFolder
+/* @doc:v2
+@method MenuFolder:newFolder(name: string): MenuFolder
+@desc Creates and appends a new folder to the current folder, and then it returns a reference to the new folder
+@param name string
+@return MenuFolder
 */
 static int l_MenuFolder_newFolder(lua_State* L) {
     CTRPF::MenuFolder* obj = LuaObjectUtils::CheckObject<CTRPF::MenuFolder>(L, 1, "MenuFolder").get();
@@ -85,11 +93,11 @@ static int l_MenuFolder_newFolder(lua_State* L) {
     return 1;
 }
 
-/*
-- Creates and appends a new entry to the current folder. When selected in menu it will execute the callback function
-## name: string
-## callback: function
-### MenuFolder:newEntry
+/* @doc:v2
+@method MenuFolder:newEntry(name: string, callback: function)
+@desc Creates and appends a new entry to the current folder. When selected in menu it will execute the callback function
+@param name string
+@param callback function
 */
 static int l_MenuFolder_newEntry(lua_State* L) {
     CTRPF::MenuFolder* obj = LuaObjectUtils::CheckObject<CTRPF::MenuFolder>(L, 1, "MenuFolder").get();

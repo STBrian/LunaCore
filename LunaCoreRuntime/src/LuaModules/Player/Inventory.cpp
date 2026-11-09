@@ -22,9 +22,11 @@ using Item = Minecraft::Item;
 
 // ----------------------------------------------------------------------------
 
-//$Game.LocalPlayer.Inventory
-//#$Game.LocalPlayer.Inventory.Slots : ---@type table<"hand"|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36,InventorySlot>
-//#$Game.LocalPlayer.Inventory.ArmorSlots : ---@type table<"helmet"|"chestplate"|"leggings"|"boots"|1|2|3|4,InventorySlot>
+/* @doc:v2
+@module Game.LocalPlayer.Inventory
+@table Game.LocalPlayer.Inventory.Slots: table<"hand"|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36, InventorySlot>
+@table Game.LocalPlayer.Inventory.ArmorSlots: table<"helmet"|"chestplate"|"leggings"|"boots"|1|2|3|4, InventorySlot>
+*/
 
 // ----------------------------------------------------------------------------
 
@@ -47,11 +49,13 @@ static int l_Inventory_Slots_index(lua_State *L) {
 
 // ----------------------------------------------------------------------------
 
-//@@InventorySlot
+/* @doc:v2
+@class InventorySlot
+*/
 
-/*
-## return: boolean
-### InventorySlot:isEmpty
+/* @doc:v2
+@method InventorySlot:isEmpty(): boolean
+@return boolean
 */
 static int l_InventorySlot_isEmpty(lua_State *L) {
     InventorySlot* slotData = LuaObjectUtils::CheckObject<InventorySlot>(L, 1, "InventorySlot").get();
@@ -59,10 +63,10 @@ static int l_InventorySlot_isEmpty(lua_State *L) {
     return 1;
 }
 
-/*
-## item: MCItem
-## value: integer?
-### InventorySlot:setItem
+/* @doc:v2
+@method InventorySlot:setItem(item: MCItem, value: integer?)
+@param item MCItem
+@param value integer?
 */
 static int l_InventorySlot_setItem(lua_State *L) {
     if (CTRPF::Process::IsPaused())
@@ -82,10 +86,10 @@ static int l_InventorySlot_setItem(lua_State *L) {
     return 0;
 }
 
-/*
-#$InventorySlot.Item : ---@type MCItem?
-=InventorySlot.ItemCount = 0
-=InventorySlot.ItemData = 0
+/* @doc:v2
+@table InventorySlot.Item: MCItem?
+@const InventorySlot.ItemCount = 0
+@const InventorySlot.ItemData = 0
 */
 
 // ----------------------------------------------------------------------------

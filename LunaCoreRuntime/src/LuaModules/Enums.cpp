@@ -16,14 +16,19 @@ EnumGroups& EnumGroups::getInstance() {
 
 // ----------------------------------------------------------------------------
 
-//$Enums
+/* @doc:v2
+@module Enums
+@desc Enumeration groups module
+*/
 
-/*
-#---@class BaseEnumItem
-#---@field Name string
-#---@field Value integer
-#local BaseEnumItem = {}
-@EnumItem : BaseEnumItem
+/* @doc:v2
+@class BaseEnumItem
+@field Name string
+@field Value integer
+*/
+
+/* @doc:v2
+@class EnumItem: BaseEnumItem
 */
 
 // ----------------------------------------------------------------------------
@@ -33,8 +38,15 @@ EnumGroups& EnumGroups::getInstance() {
     lua_setfield(L, -2, name); \
     } while (0)
 
-//$@@@EntityState : EnumItem
-//$@@@WeatherType : EnumItem
+/* @doc:v2
+@class EntityState: EnumItem
+@global EntityState
+*/
+
+/* @doc:v2
+@class WeatherType: EnumItem
+@global WeatherType
+*/
 
 bool Core::Module::RegisterEnumsModule(lua_State *L) {
     ClassBuilder<EnumItem>(L, "EnumItem")
@@ -48,59 +60,109 @@ bool Core::Module::RegisterEnumsModule(lua_State *L) {
     lua_newtable(L);
 
     using EntityState = MC3DSPluginFramework::SynchedEntityData::EntitySharedFlag;
-    //$Enums.EntityState
+    /* @doc:v2
+    @table Enums.EntityState
+    */
     lua_newtable(L);
     EnumGroup& entityState = EnumGroups::getInstance().addGroup("EntityState");
-    //#$Enums.EntityState.Burning : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.Burning: EntityState
+    */
     SETNEWENUM(entityState, "Burning", EntityState::Burning);
-    //#$Enums.EntityState.Sneaking : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.Sneaking: EntityState
+    */
     SETNEWENUM(entityState, "Sneaking", EntityState::Sneak);
-    //#$Enums.EntityState.Sprinting : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.Sprinting: EntityState
+    */
     SETNEWENUM(entityState, "Sprinting", EntityState::Sprint);
-    //#$Enums.EntityState.Eating : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.Eating: EntityState
+    */
     SETNEWENUM(entityState, "Eating", EntityState::Eating);
-    //#$Enums.EntityState.Invisible : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.Invisible: EntityState
+    */
     SETNEWENUM(entityState, "Invisible", EntityState::InVisible);
-    //#$Enums.EntityState.Tempted : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.Tempted: EntityState
+    */
     SETNEWENUM(entityState, "Tempted", EntityState::IsTempted);
-    //#$Enums.EntityState.InLove : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.InLove: EntityState
+    */
     SETNEWENUM(entityState, "InLove", EntityState::Love);
-    //#$Enums.EntityState.HasSaddle : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.HasSaddle: EntityState
+    */
     SETNEWENUM(entityState, "HasSaddle", EntityState::Saddled);
-    //#$Enums.EntityState.IsAdult : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.IsAdult: EntityState
+    */
     SETNEWENUM(entityState, "IsAdult", EntityState::Baby);
-    //#$Enums.EntityState.Named : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.Named: EntityState
+    */
     SETNEWENUM(entityState, "Named", EntityState::Named);
-    //#$Enums.EntityState.Tamed : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.Tamed: EntityState
+    */
     SETNEWENUM(entityState, "Tamed", EntityState::Tamed);
-    //#$Enums.EntityState.Leaded : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.Leaded: EntityState
+    */
     SETNEWENUM(entityState, "Leaded", 28);
-    //#$Enums.EntityState.Sheared : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.Sheared: EntityState
+    */
     SETNEWENUM(entityState, "Sheared", EntityState::Sheared);
-    //#$Enums.EntityState.ElytraFly : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.ElytraFly: EntityState
+    */
     SETNEWENUM(entityState, "ElytraFly", EntityState::Gliding);
-    //#$Enums.EntityState.Gliding : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.Gliding: EntityState
+    */
     SETNEWENUM(entityState, "Gliding", EntityState::Gliding);
-    //#$Enums.EntityState.Chested : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.Chested: EntityState
+    */
     SETNEWENUM(entityState, "Chested", EntityState::Chested);
-    //#$Enums.EntityState.Sitting : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.Sitting: EntityState
+    */
     SETNEWENUM(entityState, "Sitting", EntityState::Sitting);
-    //#$Enums.EntityState.Angry : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.Angry: EntityState
+    */
     SETNEWENUM(entityState, "Angry", EntityState::Angry);
-    //#$Enums.EntityState.ShowBottom : ---@type EntityState
+    /* @doc:v2
+    @table Enums.EntityState.ShowBottom: EntityState
+    */
     SETNEWENUM(entityState, "ShowBottom", EntityState::ShowBottom);
     lua_setfield(L, -2, "EntityState");
 
-    //$Enums.WeatherType
+    /* @doc:v2
+    @table Enums.WeatherType
+    */
     lua_newtable(L);
     EnumGroup& weatherType = EnumGroups::getInstance().addGroup("WeatherType");
-    //#$Enums.WeatherType.Clear : ---@type WeatherType
+    /* @doc:v2
+    @table Enums.WeatherType.Clear: WeatherType
+    */
     SETNEWENUM(weatherType, "Clear", MC3DSPluginFramework::Weathers::Clear);
-    //#$Enums.WeatherType.Rain : ---@type WeatherType
+    /* @doc:v2
+    @table Enums.WeatherType.Rain: WeatherType
+    */
     SETNEWENUM(weatherType, "Rain", MC3DSPluginFramework::Weathers::Rain);
-    //#$Enums.WeatherType.Thunder : ---@type WeatherType
+    /* @doc:v2
+    @table Enums.WeatherType.Thunder: WeatherType
+    */
     SETNEWENUM(weatherType, "Thunder", MC3DSPluginFramework::Weathers::Thunder);
-    //#$Enums.WeatherType.RainThunder : ---@type WeatherType
+    /* @doc:v2
+    @table Enums.WeatherType.RainThunder: WeatherType
+    */
     SETNEWENUM(weatherType, "RainThunder", MC3DSPluginFramework::Weathers::Rain|MC3DSPluginFramework::Weathers::Thunder);
     lua_setfield(L, -2, "WeatherType");
 

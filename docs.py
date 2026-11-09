@@ -356,6 +356,31 @@ class ModernDocParser:
         self.registry = registry
         self.emitter = emitter
 
+    def _parse_chunk(self, ctx: DocContext, chunk: list[str]) -> None:
+        first_line = chunk[0]
+        if any(first_line.startswith(p) for p in ("@func", "@function", "@method")):
+            self._parse_function(ctx, chunk)
+        elif first_line.startswith("@class"):
+            self._parse_class(ctx, chunk)
+        elif any(first_line.startswith(p) for p in ("@module", "@table", "@global")):
+            self._parse_table(ctx, chunk)
+        elif any(first_line.startswith(p) for p in ("@const", "@value", "@enum")):
+            self._parse_const(ctx, chunk)
+        elif first_line.startswith("@raw") or first_line.startswith("@lua"):
+            self._parse_raw(ctx, chunk)
+        elif first_line.startswith("@alias"):
+            self._parse_alias(ctx, chunk)
+        else:
+            for line in chunk:
+                if line.startswith("@class"):
+                    self._parse_class(ctx, [line])
+                elif any(line.startswith(p) for p in ("@module", "@table", "@global")):
+                    self._parse_table(ctx, [line])
+                elif any(line.startswith(p) for p in ("@const", "@value", "@enum")):
+                    self._parse_const(ctx, [line])
+                elif line.startswith("@raw") or line.startswith("@lua"):
+                    self._parse_raw(ctx, [line])
+
     def parse_block(self, ctx: DocContext, lines: list[str]) -> None:
         cleaned_lines = []
         for line in lines:
@@ -369,29 +394,33 @@ class ModernDocParser:
         if not cleaned_lines:
             return
 
-        first_line = cleaned_lines[0]
-        if any(first_line.startswith(p) for p in ("@func", "@function", "@method")):
-            self._parse_function(ctx, cleaned_lines)
-        elif first_line.startswith("@class"):
-            self._parse_class(ctx, cleaned_lines)
-        elif any(first_line.startswith(p) for p in ("@module", "@table", "@global")):
-            self._parse_table(ctx, cleaned_lines)
-        elif any(first_line.startswith(p) for p in ("@const", "@value", "@enum")):
-            self._parse_const(ctx, cleaned_lines)
-        elif first_line.startswith("@raw") or first_line.startswith("@lua"):
-            self._parse_raw(ctx, cleaned_lines)
-        elif first_line.startswith("@alias"):
-            self._parse_alias(ctx, cleaned_lines)
-        else:
-            for line in cleaned_lines:
-                if line.startswith("@class"):
-                    self._parse_class(ctx, [line])
-                elif any(line.startswith(p) for p in ("@module", "@table", "@global")):
-                    self._parse_table(ctx, [line])
-                elif any(line.startswith(p) for p in ("@const", "@value", "@enum")):
-                    self._parse_const(ctx, [line])
-                elif line.startswith("@raw") or line.startswith("@lua"):
-                    self._parse_raw(ctx, [line])
+        top_prefixes = (
+            "@func", "@function", "@method",
+            "@class",
+            "@module", "@table",
+            "@const", "@value", "@enum",
+            "@alias",
+            "@raw", "@lua"
+        )
+
+        chunks = []
+        current_chunk = []
+        in_class = False
+
+        for line in cleaned_lines:
+            is_top = any(line.startswith(p + " ") or line == p or line.startswith(p + ":") for p in top_prefixes)
+            if is_top:
+                if current_chunk:
+                    chunks.append(current_chunk)
+                    current_chunk = []
+                in_class = line.startswith("@class")
+            current_chunk.append(line)
+
+        if current_chunk:
+            chunks.append(current_chunk)
+
+        for chunk in chunks:
+            self._parse_chunk(ctx, chunk)
 
     def _parse_function(self, ctx: DocContext, lines: list[str]) -> None:
         func_line = lines[0]
@@ -461,11 +490,16 @@ class ModernDocParser:
                     r_type = r_match.group(2).strip()
                     r_desc = (r_match.group(3) or "").strip()
                     if r_type.lower() != "void":
-                        returns = [{"type": r_type, "desc": r_desc}]
+                        if len(returns) == 1 and returns[0]["type"] == r_type and not returns[0]["desc"] and sig_return:
+                            returns[0]["desc"] = r_desc
+                        elif len(returns) == 1 and sig_return and not returns[0]["desc"]:
+                            returns[0] = {"type": r_type, "desc": r_desc}
+                        else:
+                            returns.append({"type": r_type, "desc": r_desc})
                 else:
                     r_desc = re.sub(r"^@(return|returns)\s*", "", line).strip()
                     if returns:
-                        returns[0]["desc"] = r_desc
+                        returns[-1]["desc"] = r_desc
             elif line.startswith("@deprecated"):
                 reason = re.sub(r"^@deprecated\s*", "", line).strip()
                 annotations.append(f"deprecated {reason}".strip())
@@ -524,10 +558,12 @@ class ModernDocParser:
 
     def _parse_table(self, ctx: DocContext, lines: list[str]) -> None:
         first_line = lines[0]
-        m = re.match(r"^@(module|table|global)\s+([A-Za-z0-9_.]+)", first_line)
+        m = re.match(r"^@(module|table|global)\s+([A-Za-z0-9_.]+)(?:\s*:\s*(.+))?$", first_line)
         if not m:
             raise DocsParseException(f"Invalid @table declaration: '{first_line}'", ctx)
-        table_name = m.group(2)
+        _, table_name, type_annot = m.groups()
+        if type_annot:
+            type_annot = type_annot.strip()
         self.registry.ensure_path(table_name)
 
         desc_lines = []
@@ -539,7 +575,15 @@ class ModernDocParser:
             elif not line.startswith("@"):
                 desc_lines.append(line)
 
-        self.emitter.emit_table(table_name, desc_lines)
+        if type_annot:
+            self.emitter.out.write("\n")
+            if desc_lines:
+                for line in desc_lines:
+                    self.emitter.out.write(f"---{line}\n")
+            self.emitter.out.write(f"---@type {type_annot}\n")
+            self.emitter.out.write(f"{table_name} = {{}}\n")
+        else:
+            self.emitter.emit_table(table_name, desc_lines)
 
     def _parse_const(self, ctx: DocContext, lines: list[str]) -> None:
         first_line = lines[0]

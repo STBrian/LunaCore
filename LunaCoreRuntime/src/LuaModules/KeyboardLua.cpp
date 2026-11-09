@@ -11,15 +11,18 @@ namespace CTRPF = CTRPluginFramework;
 
 // ----------------------------------------------------------------------------
 
-//$Core.Keyboard
+/* @doc:v2
+@module Core.Keyboard
+@desc Software keyboard input dialogs
+*/
 
 // ----------------------------------------------------------------------------
 
-/*
-- Opens the keyboard and returns the user input as string. Returns nil if the user cancels the operation
-## message: string?
-## return: string?
-### Core.Keyboard.getString
+/* @doc:v2
+@func Core.Keyboard.getString(message: string?): string?
+@desc Opens the keyboard and returns the user input as string. Returns nil if the user cancels the operation
+@param message string?
+@return string?
 */
 static int l_Keyboard_getString(lua_State *L) {
     CTRPF::Keyboard keyboard;
@@ -40,11 +43,11 @@ static int l_Keyboard_getString(lua_State *L) {
     return 1;
 }
 
-/*
-- Opens the keyboard and returns the user input as number. Returns nil if the user cancels the operation
-## message: string?
-## return: number?
-### Core.Keyboard.getNumber
+/* @doc:v2
+@func Core.Keyboard.getNumber(message: string?): number?
+@desc Opens the keyboard and returns the user input as number. Returns nil if the user cancels the operation
+@param message string?
+@return number?
 */
 static int l_Keyboard_getNumber(lua_State *L) {
     CTRPF::Keyboard keyboard;
@@ -65,11 +68,11 @@ static int l_Keyboard_getNumber(lua_State *L) {
     return 1;
 }
 
-/*
-- Opens the keyboard and returns the user input as unsigned integer. Returns nil if the user cancels the operation
-## message: string?
-## return: integer?
-### Core.Keyboard.getInteger
+/* @doc:v2
+@func Core.Keyboard.getInteger(message: string?): integer?
+@desc Opens the keyboard and returns the user input as unsigned integer. Returns nil if the user cancels the operation
+@param message string?
+@return integer?
 */
 static int l_Keyboard_getInteger(lua_State *L) {
     CTRPF::Keyboard keyboard;
@@ -90,11 +93,11 @@ static int l_Keyboard_getInteger(lua_State *L) {
     return 1;
 }
 
-/*
-- Opens the keyboard and returns the user input as hexadecimal. Returns nil if the user cancels the operation
-## message: string?
-## return: integer?
-### Core.Keyboard.getHex
+/* @doc:v2
+@func Core.Keyboard.getHex(message: string?): integer?
+@desc Opens the keyboard and returns the user input as hexadecimal. Returns nil if the user cancels the operation
+@param message string?
+@return integer?
 */
 static int l_Keyboard_getHex(lua_State *L) {
     CTRPF::Keyboard keyboard;
@@ -116,11 +119,11 @@ static int l_Keyboard_getHex(lua_State *L) {
     return 1;
 }
 
-/*
-- Opens a selection keyboard. Returns the index of the selected item or nil if none was selected
-## options: table
-## return: integer?
-### Core.Keyboard.populate
+/* @doc:v2
+@func Core.Keyboard.populate(options: table): integer?
+@desc Opens a selection keyboard. Returns the index of the selected item or nil if none was selected
+@param options table
+@return integer?
 */
 static int l_Keyboard_populate(lua_State* L) {
     if (!lua_istable(L, 1))

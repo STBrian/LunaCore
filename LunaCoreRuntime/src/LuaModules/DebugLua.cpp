@@ -5,14 +5,18 @@
 // ----------------------------------------------------------------------------
 
 //!include LunaCoreRuntime/src/LuaModules/LoadModules.cpp
-//$Core.Debug
+
+/* @doc:v2
+@module Core.Debug
+@desc Debugging and logging utilities
+*/
 
 // ----------------------------------------------------------------------------
 
-/*
-- Displays a notification on screen
-## msg: string
-### Core.Debug.message
+/* @doc:v2
+@func Core.Debug.message(msg: string)
+@desc Displays a notification on screen
+@param msg string
 */
 static int l_Debug_message(lua_State *L)
 {
@@ -22,14 +26,11 @@ static int l_Debug_message(lua_State *L)
     return 0;
 }
 
-/*&docfmt_version=2
-
-*/
-/*
-- Appends the message to log file. Optionally shows the message on screen
-## msg: string
-## showOnScreen: boolean?
-### Core.Debug.log
+/* @doc:v2
+@func Core.Debug.log(msg: string, showOnScreen: boolean?)
+@desc Appends the message to log file. Optionally shows the message on screen
+@param msg string
+@param showOnScreen boolean?
 */
 static int l_Debug_log(lua_State *L)
 {
@@ -43,10 +44,10 @@ static int l_Debug_log(lua_State *L)
     return 0;
 }
 
-/*
-- Appends the error message to log file and shows it on screen
-## msg: string
-### Core.Debug.logerror
+/* @doc:v2
+@func Core.Debug.logerror(msg: string)
+@desc Appends the error message to log file and shows it on screen
+@param msg string
 */
 static int l_Debug_logerror(lua_State *L)
 {
@@ -55,10 +56,10 @@ static int l_Debug_logerror(lua_State *L)
     return 0;
 }
 
-/*
-- Show error on screen
-## msg: string
-### Core.Debug.error
+/* @doc:v2
+@func Core.Debug.error(msg: string)
+@desc Show error on screen
+@param msg string
 */
 
 static const luaL_Reg debug_functions[] =

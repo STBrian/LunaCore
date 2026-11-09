@@ -128,6 +128,24 @@ class TestDocsParsers(unittest.TestCase):
         self.assertIn("---Puerto por defecto", output)
         self.assertIn("Config.Network.PORT = 8080", output)
 
+    def test_modern_multi_declaration_block(self):
+        ctx = DocContext("modern_test.cpp", 40)
+        block = [
+            "@doc:v2",
+            "@module Player.Inventory",
+            '@table Player.Inventory.Slots: table<"hand"|0|1|2, ItemSlot>',
+            "@const Player.Inventory.MAX_SLOTS = 36",
+            "@const Player.Inventory.NAME = 'Inv'"
+        ]
+        self.dispatcher.dispatch_block(ctx, block)
+        output = self.buf.getvalue()
+
+        self.assertIn("Player.Inventory = {}", output)
+        self.assertIn('---@type table<"hand"|0|1|2, ItemSlot>', output)
+        self.assertIn("Player.Inventory.Slots = {}", output)
+        self.assertIn("Player.Inventory.MAX_SLOTS = 36", output)
+        self.assertIn("Player.Inventory.NAME = 'Inv'", output)
+
     def test_version_detection(self):
         self.assertTrue(self.dispatcher.is_v2_block(["@doc:v2", "@func foo"]))
         self.assertTrue(self.dispatcher.is_v2_block(["/*&docfmt_version=2", "@func foo"]))

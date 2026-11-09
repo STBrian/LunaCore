@@ -26,8 +26,15 @@ static bool repeatedValue(std::vector<Minecraft::RecipeComponentDefIns>& compone
 
 // ----------------------------------------------------------------------------
 
-//$Game.Recipes
-//@@RecipesTable
+/* @doc:v2
+@module Game.Recipes
+@desc Crafting recipes registration module
+*/
+
+/* @doc:v2
+@class RecipesTable
+@desc Crafting recipes registry table passed to OnRegisterRecipes
+*/
 
 // ----------------------------------------------------------------------------
 
@@ -83,17 +90,17 @@ static const char* ProcessTableKeys(lua_State* L, std::vector<Minecraft::RecipeC
     return nullptr;
 }
 
-/*
-- Allows to register a recipe. Use with the value given in event Game.Recipes.OnRegisterRecipes to get RecipesTable value
-## recipesTable: RecipesTable
-## resultItem: MCItemInstance
-## categoryId: integer
-## position: integer
-## line1: string
-## line2: string
-## line3: string
-## components: table
-### Game.Recipes.registerShapedRecipe
+/* @doc:v2
+@func Game.Recipes.registerShapedRecipe(recipesTable: RecipesTable, resultItem: MCItemInstance, categoryId: integer, position: integer, line1: string, line2: string, line3: string, components: table)
+@desc Allows to register a recipe. Use with the value given in event Game.Recipes.OnRegisterRecipes to get RecipesTable value
+@param recipesTable RecipesTable
+@param resultItem MCItemInstance
+@param categoryId integer
+@param position integer
+@param line1 string
+@param line2 string
+@param line3 string
+@param components table
 */
 static int l_Recipes_registerShapedRecipe(lua_State* L) {
     void* ptr1 = LuaObjectUtils::CheckObject<void>(L, 1, "RecipesTable").get();
@@ -155,7 +162,10 @@ bool Core::Module::RegisterRecipesModule(lua_State *L) {
     lua_getglobal(L, "Game");
     lua_newtable(L); // Recipes
 
-    //$@@@Game.Recipes.OnRegisterRecipes: EventClass
+    /* @doc:v2
+    @class OnRegisterRecipes: EventClass
+    @target Game.Recipes.OnRegisterRecipes
+    */
     Core::Event::NewEvent(L, "OnRegisterRecipes");
 
     luaL_register(L, NULL, recipes_functions);

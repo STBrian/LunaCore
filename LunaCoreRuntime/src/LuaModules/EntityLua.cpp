@@ -7,21 +7,39 @@ using Entity = Game::Entity;
 
 // ----------------------------------------------------------------------------
 
-//@@GameEntity
-//@@GameSpawnCoords
-//$Game.Entity
+/* @doc:v2
+@class GameEntity
+@desc Represents an entity in the game world
+@field X number
+@field Y number
+@field Z number
+@field EntityID integer
+*/
+
+/* @doc:v2
+@class GameSpawnCoords
+@desc Coordinates used for spawning entities
+@field X number
+@field Y number
+@field Z number
+*/
+
+/* @doc:v2
+@module Game.Entity
+@desc Game Entity module
+*/
 
 // ----------------------------------------------------------------------------
 
-/*
-=GameEntity.X = 0.0
-=GameEntity.Y = 0.0
-=GameEntity.Z = 0.0
-=GameEntity.EntityID = 0
+/* @doc:v2
+@const GameEntity.X = 0.0
+@const GameEntity.Y = 0.0
+@const GameEntity.Z = 0.0
+@const GameEntity.EntityID = 0
 
-=GameSpawnCoords.X = 0.0
-=GameSpawnCoords.Y = 0.0
-=GameSpawnCoords.Z = 0.0
+@const GameSpawnCoords.X = 0.0
+@const GameSpawnCoords.Y = 0.0
+@const GameSpawnCoords.Z = 0.0
 */
 
 typedef struct {

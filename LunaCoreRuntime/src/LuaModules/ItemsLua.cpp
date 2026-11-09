@@ -20,18 +20,42 @@ using ItemInstance = Minecraft::ItemInstance;
 
 // ----------------------------------------------------------------------------
 
-//$Game.Items
-//@@MCItem
-//@@MCItemInstance
-//@@MCToolTier
+/* @doc:v2
+@module Game.Items
+@desc Item management and registration module
+*/
+
+/* @doc:v2
+@class MCItem
+@desc Represents a registered Minecraft item definition
+@field StackSize integer
+@field ID integer
+@field NameID string
+@field DescriptionID string
+*/
+
+/* @doc:v2
+@class MCItemInstance
+@desc Represents an instance of an item in game
+*/
+
+/* @doc:v2
+@class MCToolTier
+@desc Tool tier definition for mining and durability
+@field MiningLevel integer
+@field Durability integer
+@field MiningEfficiency number
+@field DamageBonus number
+@field Enchantability integer
+*/
 
 // ----------------------------------------------------------------------------
 
-/*
-- Find an item using its ID
-## name: string
-## return: MCItem?
-### Game.Items.findItemByName
+/* @doc:v2
+@func Game.Items.findItemByName(name: string): MCItem?
+@desc Find an item using its ID
+@param name string
+@return MCItem?
 */
 static int l_Items_findItemByName(lua_State *L) {
     const char *name = luaL_checkstring(L, 1);
@@ -40,11 +64,11 @@ static int l_Items_findItemByName(lua_State *L) {
     return 1;
 }
 
-/*
-- Find and item using its name
-## itemID: integer
-## return: MCItem?
-### Game.Items.findItemByID
+/* @doc:v2
+@func Game.Items.findItemByID(itemID: integer): MCItem?
+@desc Find and item using its name
+@param itemID integer
+@return MCItem?
 */
 static int l_Items_findItemByID(lua_State *L) {
     u16 itemID = luaL_checknumber(L, 1);
@@ -53,12 +77,12 @@ static int l_Items_findItemByID(lua_State *L) {
     return 1;
 }
 
-/*
-- Get the item position in creative using the id
-## itemID: integer
-## groupID: integer
-## return: number
-### Game.Items.getCreativePosition
+/* @doc:v2
+@func Game.Items.getCreativePosition(itemID: integer, groupID: integer): number
+@desc Get the item position in creative using the id
+@param itemID integer
+@param groupID integer
+@return number
 */
 static int l_Items_getCreativePosition(lua_State *L) {
     u16 itemID = luaL_checknumber(L, 1);
@@ -68,23 +92,23 @@ static int l_Items_getCreativePosition(lua_State *L) {
     return 1;
 }
 
-/*
-- Returns a new empty ToolTier
-## return: MCToolTier
-### Game.Items.newToolTier
+/* @doc:v2
+@func Game.Items.newToolTier(): MCToolTier
+@desc Returns a new empty ToolTier
+@return MCToolTier
 */
 static int l_Items_newToolTier(lua_State *L) {
     LuaObjectUtils::NewObject(L, "MCToolTier", alloc<Item::Tier>());
     return 1;
 }
 
-/*
-- Creates a new item and stores it in the game's items table. Returns the address to the item
-## namespace: string
-## itemName: string
-## itemId: integer
-## return: MCItem?
-### Game.Items.registerItem
+/* @doc:v2
+@func Game.Items.registerItem(namespace: string, itemName: string, itemId: integer): MCItem?
+@desc Creates a new item and stores it in the game's items table. Returns the address to the item
+@param namespace string
+@param itemName string
+@param itemId integer
+@return MCItem?
 */
 static int l_Items_registerItem(lua_State *L) {
     if (lua_gettop(L) > 2) {
@@ -102,13 +126,13 @@ static int l_Items_registerItem(lua_State *L) {
     return 1;
 }
 
-/*
-- Creates a new sword tool item and registers it in the game. Returns the address to the item
-## itemName: string
-## itemId: integer
-## tier: MCToolTier
-## return: MCItem?
-### Game.Items.registerSwordItem
+/* @doc:v2
+@func Game.Items.registerSwordItem(itemName: string, itemId: integer, tier: MCToolTier): MCItem?
+@desc Creates a new sword tool item and registers it in the game. Returns the address to the item
+@param itemName string
+@param itemId integer
+@param tier MCToolTier
+@return MCItem?
 */
 static int l_Items_registerItemSwordTool(lua_State *L) {
     const char* itemName = luaL_checkstring(L, 1);
@@ -119,13 +143,13 @@ static int l_Items_registerItemSwordTool(lua_State *L) {
     return 1;
 }
 
-/*
-- Creates a new hoe tool item and registers it in the game. Returns the address to the item
-## itemName: string
-## itemId: integer
-## tier: MCToolTier
-## return: MCItem?
-### Game.Items.registerHoeItem
+/* @doc:v2
+@func Game.Items.registerHoeItem(itemName: string, itemId: integer, tier: MCToolTier): MCItem?
+@desc Creates a new hoe tool item and registers it in the game. Returns the address to the item
+@param itemName string
+@param itemId integer
+@param tier MCToolTier
+@return MCItem?
 */
 static int l_Items_registerItemHoeTool(lua_State *L) {
     const char* itemName = luaL_checkstring(L, 1);
@@ -136,13 +160,13 @@ static int l_Items_registerItemHoeTool(lua_State *L) {
     return 1;
 }
 
-/*
-- Creates a new axe tool item and registers it in the game. Returns the address to the item
-## itemName: string
-## itemId: integer
-## tier: MCToolTier
-## return: MCItem?
-### Game.Items.registerAxeItem
+/* @doc:v2
+@func Game.Items.registerAxeItem(itemName: string, itemId: integer, tier: MCToolTier): MCItem?
+@desc Creates a new axe tool item and registers it in the game. Returns the address to the item
+@param itemName string
+@param itemId integer
+@param tier MCToolTier
+@return MCItem?
 */
 static int l_Items_registerItemAxeTool(lua_State *L) {
     const char* itemName = luaL_checkstring(L, 1);
@@ -153,13 +177,13 @@ static int l_Items_registerItemAxeTool(lua_State *L) {
     return 1;
 }
 
-/*
-- Creates a new pickaxe tool item and registers it in the game. Returns the address to the item
-## itemName: string
-## itemId: integer
-## tier: MCToolTier
-## return: MCItem?
-### Game.Items.registerPickaxeItem
+/* @doc:v2
+@func Game.Items.registerPickaxeItem(itemName: string, itemId: integer, tier: MCToolTier): MCItem?
+@desc Creates a new pickaxe tool item and registers it in the game. Returns the address to the item
+@param itemName string
+@param itemId integer
+@param tier MCToolTier
+@return MCItem?
 */
 static int l_Items_registerItemPickaxeTool(lua_State *L) {
     const char* itemName = luaL_checkstring(L, 1);
@@ -170,13 +194,13 @@ static int l_Items_registerItemPickaxeTool(lua_State *L) {
     return 1;
 }
 
-/*
-- Creates a new shovel tool item and registers it in the game. Returns the address to the item
-## itemName: string
-## itemId: integer
-## tier: MCToolTier
-## return: MCItem?
-### Game.Items.registerShovelItem
+/* @doc:v2
+@func Game.Items.registerShovelItem(itemName: string, itemId: integer, tier: MCToolTier): MCItem?
+@desc Creates a new shovel tool item and registers it in the game. Returns the address to the item
+@param itemName string
+@param itemId integer
+@param tier MCToolTier
+@return MCItem?
 */
 static int l_Items_registerItemShovelTool(lua_State *L) {
     const char* itemName = luaL_checkstring(L, 1);
@@ -187,12 +211,11 @@ static int l_Items_registerItemShovelTool(lua_State *L) {
     return 1;
 }
 
-/*
-- Takes a registered item with Game.Items.registerItem, and sets its texture
-## item: MCItem
-## textureName: string
-## textureIndex: integer
-### MCItem:setTexture
+/* @doc:v2
+@method MCItem:setTexture(textureName: string, textureIndex: integer)
+@desc Takes a registered item with Game.Items.registerItem, and sets its texture
+@param textureName string
+@param textureIndex integer
 */
 static int l_Items_registerItemTexture(lua_State *L) {
     Item* item = LuaObjectUtils::CheckObject<Item>(L, 1, "MCItem").get();
@@ -202,12 +225,12 @@ static int l_Items_registerItemTexture(lua_State *L) {
     return 0;
 }
 
-/*
-- Takes a registered item with Game.Items.registerItem, and registers it in creative menu
-## item: MCItem
-## groupId: integer
-## position: integer
-### Game.Items.registerCreativeItem
+/* @doc:v2
+@func Game.Items.registerCreativeItem(item: MCItem, groupId: integer, position: integer)
+@desc Takes a registered item with Game.Items.registerItem, and registers it in creative menu
+@param item MCItem
+@param groupId integer
+@param position integer
 */
 static int l_Items_registerCreativeItem(lua_State *L) {
     Item* item = LuaObjectUtils::CheckObject<Item>(L, 1, "MCItem").get();
@@ -217,13 +240,13 @@ static int l_Items_registerCreativeItem(lua_State *L) {
     return 0;
 }
 
-/*
-- Returns a MCItemInstance
-## item: MCItem
-## count: integer
-## data: integer
-## return: MCItemInstance
-### Game.Items.getItemInstance
+/* @doc:v2
+@func Game.Items.getItemInstance(item: MCItem, count: integer, data: integer): MCItemInstance
+@desc Returns a MCItemInstance
+@param item MCItem
+@param count integer
+@param data integer
+@return MCItemInstance
 */
 static int l_Items_getItemInstance(lua_State *L) {
     Item* item = LuaObjectUtils::CheckObject<Item>(L, 1, "MCItem").get();
@@ -252,18 +275,17 @@ static const luaL_Reg items_functions[] = {
 
 // ----------------------------------------------------------------------------
 
-/*
-=MCItem.StackSize = 64
-=MCItem.ID = 1
-=MCItem.NameID = ""
-=MCItem.DescriptionID = ""
-*/
-/*
-=MCToolTier.MiningLevel = 0
-=MCToolTier.Durability = 0
-=MCToolTier.MiningEfficiency = 0
-=MCToolTier.DamageBonus = 0
-=MCToolTier.Enchantability = 0
+/* @doc:v2
+@const MCItem.StackSize = 64
+@const MCItem.ID = 1
+@const MCItem.NameID = ""
+@const MCItem.DescriptionID = ""
+
+@const MCToolTier.MiningLevel = 0
+@const MCToolTier.Durability = 0
+@const MCToolTier.MiningEfficiency = 0
+@const MCToolTier.DamageBonus = 0
+@const MCToolTier.Enchantability = 0
 */
 
 
@@ -301,32 +323,59 @@ bool Core::Module::RegisterItemsModule(lua_State *L) {
     lua_getglobal(L, "Game");
     lua_newtable(L); // Items
 
-    //$Game.Items.ToolTiers
+    /* @doc:v2
+    @table Game.Items.ToolTiers
+    @desc Built-in tool tier constants
+    */
     lua_newtable(L);
-    //$@@@Game.Items.ToolTiers.WOOD: MCToolTier
+    /* @doc:v2
+    @class WOOD: MCToolTier
+    @target Game.Items.ToolTiers.WOOD
+    */
     LuaObjectUtils::NewObject(L, "MCToolTier", Item::Tier::WOOD);
     lua_setfield(L, -2, "WOOD");
-    //$@@@Game.Items.ToolTiers.STONE: MCToolTier
+    /* @doc:v2
+    @class STONE: MCToolTier
+    @target Game.Items.ToolTiers.STONE
+    */
     LuaObjectUtils::NewObject(L, "MCToolTier", Item::Tier::STONE);
     lua_setfield(L, -2, "STONE");
-    //$@@@Game.Items.ToolTiers.IRON: MCToolTier
+    /* @doc:v2
+    @class IRON: MCToolTier
+    @target Game.Items.ToolTiers.IRON
+    */
     LuaObjectUtils::NewObject(L, "MCToolTier", Item::Tier::IRON);
     lua_setfield(L, -2, "IRON");
-    //$@@@Game.Items.ToolTiers.GOLD: MCToolTier
+    /* @doc:v2
+    @class GOLD: MCToolTier
+    @target Game.Items.ToolTiers.GOLD
+    */
     LuaObjectUtils::NewObject(L, "MCToolTier", Item::Tier::GOLD);
     lua_setfield(L, -2, "GOLD");
-    //$@@@Game.Items.ToolTiers.DIAMOND: MCToolTier
+    /* @doc:v2
+    @class DIAMOND: MCToolTier
+    @target Game.Items.ToolTiers.DIAMOND
+    */
     LuaObjectUtils::NewObject(L, "MCToolTier", Item::Tier::DIAMOND);
     lua_setfield(L, -2, "DIAMOND");
     lua_setfield(L, -2, "ToolTiers");
 
-    //$@@@Game.Items.OnRegisterItems: EventClass
+    /* @doc:v2
+    @class OnRegisterItems: EventClass
+    @target Game.Items.OnRegisterItems
+    */
     Core::Event::NewEvent(L, "OnRegisterItems");
 
-    //$@@@Game.Items.OnRegisterItemsTextures: EventClass
+    /* @doc:v2
+    @class OnRegisterItemsTextures: EventClass
+    @target Game.Items.OnRegisterItemsTextures
+    */
     Core::Event::NewEvent(L, "OnRegisterItemsTextures");
 
-    //$@@@Game.Items.OnRegisterCreativeItems: EventClass
+    /* @doc:v2
+    @class OnRegisterCreativeItems: EventClass
+    @target Game.Items.OnRegisterCreativeItems
+    */
     Core::Event::NewEvent(L, "OnRegisterCreativeItems");
 
     luaL_register(L, NULL, items_functions);

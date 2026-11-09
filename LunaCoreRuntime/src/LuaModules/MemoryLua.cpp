@@ -13,15 +13,18 @@ namespace CTRPF = CTRPluginFramework;
 
 // ----------------------------------------------------------------------------
 
-//$Core.Memory
+/* @doc:v2
+@module Core.Memory
+@desc Process memory read and write operations
+*/
 
 // ----------------------------------------------------------------------------
 
-/*
-- Reads an unsigned integer of 32 bits from memory
-## offset: integer
-## return: integer?
-### Core.Memory.readU32
+/* @doc:v2
+@func Core.Memory.readU32(offset: integer): integer?
+@desc Reads an unsigned integer of 32 bits from memory
+@param offset integer
+@return integer?
 */
 static int l_Memory_readU32(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
@@ -33,11 +36,11 @@ static int l_Memory_readU32(lua_State *L) {
     return 1;
 }
 
-/*
-- Reads a signed integer of 32 bits from memory
-## offset: integer
-## return: integer?
-### Core.Memory.readS32
+/* @doc:v2
+@func Core.Memory.readS32(offset: integer): integer?
+@desc Reads a signed integer of 32 bits from memory
+@param offset integer
+@return integer?
 */
 static int l_Memory_readS32(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
@@ -50,11 +53,11 @@ static int l_Memory_readS32(lua_State *L) {
     return 1;
 }
 
-/*
-- Reads an unsigned integer of 16 bits from memory
-## offset: integer
-## return: integer?
-### Core.Memory.readU16
+/* @doc:v2
+@func Core.Memory.readU16(offset: integer): integer?
+@desc Reads an unsigned integer of 16 bits from memory
+@param offset integer
+@return integer?
 */
 static int l_Memory_readU16(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
@@ -66,11 +69,11 @@ static int l_Memory_readU16(lua_State *L) {
     return 1;
 }
 
-/*
-- Reads a signed integer of 16 bits from memory
-## offset: integer
-## return: integer?
-### Core.Memory.readS16
+/* @doc:v2
+@func Core.Memory.readS16(offset: integer): integer?
+@desc Reads a signed integer of 16 bits from memory
+@param offset integer
+@return integer?
 */
 static int l_Memory_readS16(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
@@ -83,11 +86,11 @@ static int l_Memory_readS16(lua_State *L) {
     return 1;
 }
 
-/*
-- Reads an unsigned integer of 8 bits from memory
-## offset: integer
-## return: integer?
-### Core.Memory.readU8
+/* @doc:v2
+@func Core.Memory.readU8(offset: integer): integer?
+@desc Reads an unsigned integer of 8 bits from memory
+@param offset integer
+@return integer?
 */
 static int l_Memory_readU8(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
@@ -99,11 +102,11 @@ static int l_Memory_readU8(lua_State *L) {
     return 1;
 }
 
-/*
-- Reads a signed integer of 8 bits from memory
-## offset: integer
-## return: integer?
-### Core.Memory.readS8
+/* @doc:v2
+@func Core.Memory.readS8(offset: integer): integer?
+@desc Reads a signed integer of 8 bits from memory
+@param offset integer
+@return integer?
 */
 static int l_Memory_readS8(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
@@ -116,11 +119,11 @@ static int l_Memory_readS8(lua_State *L) {
     return 1;
 }
 
-/*
-- Reads a float from memory
-## offset: integer
-## return: number?
-### Core.Memory.readFloat
+/* @doc:v2
+@func Core.Memory.readFloat(offset: integer): number?
+@desc Reads a float from memory
+@param offset integer
+@return number?
 */
 static int l_Memory_readFloat(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
@@ -132,11 +135,11 @@ static int l_Memory_readFloat(lua_State *L) {
     return 1;
 }
 
-/*
-- Reads a double from memory
-## offset: integer
-## return: number?
-### Core.Memory.readDouble
+/* @doc:v2
+@func Core.Memory.readDouble(offset: integer): number?
+@desc Reads a double from memory
+@param offset integer
+@return number?
 */
 static int l_Memory_readDouble(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
@@ -148,12 +151,12 @@ static int l_Memory_readDouble(lua_State *L) {
     return 1;
 }
 
-/*
-- Reads a string from memory
-## offset: integer
-## size: integer
-## return: string?
-### Core.Memory.readString
+/* @doc:v2
+@func Core.Memory.readString(offset: integer, size: integer): string?
+@desc Reads a string from memory
+@param offset integer
+@param size integer
+@return string?
 */
 static int l_Memory_readString(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
@@ -166,19 +169,19 @@ static int l_Memory_readString(lua_State *L) {
     return 1;
 }
 
-/*
-- Writes a signed integer of 32 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
-## offset: integer
-## value: integer
-## return: boolean
-### Core.Memory.writeS32
+/* @doc:v2
+@func Core.Memory.writeS32(offset: integer, value: integer): boolean
+@desc Writes a signed integer of 32 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
+@param offset integer
+@param value integer
+@return boolean
 */
-/*
-- Writes an unsigned integer of 32 bits to memory offset
-## offset: integer
-## value: integer
-## return: boolean
-### Core.Memory.writeU32
+/* @doc:v2
+@func Core.Memory.writeU32(offset: integer, value: integer): boolean
+@desc Writes an unsigned integer of 32 bits to memory offset
+@param offset integer
+@param value integer
+@return boolean
 */
 static int l_Memory_writeU32(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
@@ -229,59 +232,59 @@ static int l_Memory_write(lua_State *L) {
     return 1;
 }
 
-/*
-- Writes a signed integer of 16 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
-## offset: integer
-## value: integer
-## return: boolean
-### Core.Memory.writeS16
+/* @doc:v2
+@func Core.Memory.writeS16(offset: integer, value: integer): boolean
+@desc Writes a signed integer of 16 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
+@param offset integer
+@param value integer
+@return boolean
 */
-/*
-- Writes an unsigned integer of 16 bits to memory offset
-## offset: integer
-## value: integer
-## return: boolean
-### Core.Memory.writeU16
-*/
-
-/*
-- Writes a signed integer of 8 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
-## offset: integer
-## value: integer
-## return: boolean
-### Core.Memory.writeS8
-*/
-/*
-- Writes an unsigned integer of 8 bits to memory offset
-## offset: integer
-## value: integer
-## return: boolean
-### Core.Memory.writeU8
+/* @doc:v2
+@func Core.Memory.writeU16(offset: integer, value: integer): boolean
+@desc Writes an unsigned integer of 16 bits to memory offset
+@param offset integer
+@param value integer
+@return boolean
 */
 
-/*
-- Writes a float to memory offset
-## offset: integer
-## value: number
-## return: boolean
-### Core.Memory.writeFloat
+/* @doc:v2
+@func Core.Memory.writeS8(offset: integer, value: integer): boolean
+@desc Writes a signed integer of 8 bits to memory offset. Does the same as the unsigned version, added just to avoid confusion
+@param offset integer
+@param value integer
+@return boolean
+*/
+/* @doc:v2
+@func Core.Memory.writeU8(offset: integer, value: integer): boolean
+@desc Writes an unsigned integer of 8 bits to memory offset
+@param offset integer
+@param value integer
+@return boolean
 */
 
-/*
-- Writes a double to memory offset
-## offset: integer
-## value: number
-## return: boolean
-### Core.Memory.writeDouble
+/* @doc:v2
+@func Core.Memory.writeFloat(offset: integer, value: number): boolean
+@desc Writes a float to memory offset
+@param offset integer
+@param value number
+@return boolean
 */
 
-/*
-- Writes a string to memory offset
-## offset: integer
-## s: string
-## size: integer
-## return: boolean
-### Core.Memory.writeString
+/* @doc:v2
+@func Core.Memory.writeDouble(offset: integer, value: number): boolean
+@desc Writes a double to memory offset
+@param offset integer
+@param value number
+@return boolean
+*/
+
+/* @doc:v2
+@func Core.Memory.writeString(offset: integer, s: string, size: integer): boolean
+@desc Writes a string to memory offset
+@param offset integer
+@param s string
+@param size integer
+@return boolean
 */
 static int l_Memory_writeString(lua_State *L) {
     u32 offset = (u32)luaL_checknumber(L, 1);
@@ -291,12 +294,12 @@ static int l_Memory_writeString(lua_State *L) {
     return 1;
 }
 
-/*
-- Allocates memory and returns the start offset
-## size: integer
-## useGameHeap: boolean?
-## return: integer?
-### Core.Memory.malloc
+/* @doc:v2
+@func Core.Memory.malloc(size: integer, useGameHeap: boolean?): integer?
+@desc Allocates memory and returns the start offset
+@param size integer
+@param useGameHeap boolean?
+@return integer?
 */
 static int l_Memory_malloc(lua_State *L) {
     size_t size = (size_t)luaL_checknumber(L, 1);
@@ -316,11 +319,11 @@ static int l_Memory_malloc(lua_State *L) {
     return 1;
 }
 
-/*
-- Free memory allocated with malloc
-## offset: integer
-## useGameHeap: boolean?
-### Core.Memory.free
+/* @doc:v2
+@func Core.Memory.free(offset: integer, useGameHeap: boolean?)
+@desc Free memory allocated with malloc
+@param offset integer
+@param useGameHeap boolean?
 */
 static int l_Memory_free(lua_State *L) {
     void* offset = (void*)(u32)luaL_checknumber(L, 1);
@@ -337,14 +340,14 @@ static int l_Memory_free(lua_State *L) {
     return 0;
 }
 
-/*
-- Allows to call a function from memory
-## foffset: integer
-## argstype: string
-## returntype: string
-## ...
-## return: number
-### Core.Memory.call
+/* @doc:v2
+@func Core.Memory.call(foffset: integer, argstype: string, returntype: string, ...: any): number
+@desc Allows to call a function from memory
+@param foffset integer
+@param argstype string
+@param returntype string
+@param ... any
+@return number
 */
 static int l_Memory_call(lua_State *L) {
     u32 foffset = (u32)luaL_checknumber(L, 1);

@@ -12,7 +12,7 @@ CTRPFLIB	?=	$(DEVKITPRO)/libctrpf
 TARGET		:= 	LunaCore
 PLGINFO 	:= 	plgInfo.yaml
 
-BUILD		:= 	Build
+BUILD		:= 	build
 INCLUDES	:= 	includes externals/platform/include externals/MC3DSPluginFramework/Sources
 SOURCES 	:= 	src
 
@@ -63,14 +63,24 @@ ifneq ($(BUILD),$(notdir $(CURDIR)))
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
 export TOPDIR	:=	$(CURDIR)
-export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
+
+SRC_DIRS		:=	$(foreach dir,$(SOURCES),$(shell find $(CURDIR)/$(dir) -type d))
+export VPATH	:=	$(SRC_DIRS) \
 					$(foreach dir,$(DATA),$(CURDIR)/$(dir))
 
 export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 
-CFILES			:=	$(addprefix ../,$(shell find $(SOURCES) -name "*.c"))
-CPPFILES		:=	$(addprefix ../,$(shell find $(SOURCES) -name "*.cpp"))
-SFILES			:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+ALL_SRCS		:=	$(shell find $(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) -type f \( -name "*.cpp" -o -name "*.c" -o -name "*.s" \))
+SRC_BASENAMES	:=	$(notdir $(ALL_SRCS))
+DUPLICATES		:=	$(strip $(foreach f,$(sort $(SRC_BASENAMES)),$(if $(filter-out 1,$(words $(filter $(f),$(SRC_BASENAMES)))),$(f))))
+
+ifneq ($(DUPLICATES),)
+$(error Se detectaron archivos fuente con el mismo nombre en diferentes directorios: $(DUPLICATES). Esto provocaria que los archivos .o y .d se sobreescriban silenciosamente en $(BUILD)/. Archivos en conflicto: $(foreach d,$(DUPLICATES),$(filter %/$(d),$(ALL_SRCS))))
+endif
+
+CFILES			:=	$(notdir $(filter %.c,$(ALL_SRCS)))
+CPPFILES		:=	$(notdir $(filter %.cpp,$(ALL_SRCS)))
+SFILES			:=	$(notdir $(filter %.s,$(ALL_SRCS)))
 
 export LD 		:= 	$(CXX)
 export OFILES	:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
@@ -101,7 +111,7 @@ $(BUILD):
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ... 
-	@rm -fr $(BUILD) $(shell find $(SOURCES) -name "*.o") $(shell find $(SOURCES) -name "*.d") $(OUTPUT).3gx $(OUTPUT).elf
+	@rm -fr $(BUILD) Build $(shell find $(SOURCES) -name "*.o" 2>/dev/null) $(shell find $(SOURCES) -name "*.d" 2>/dev/null) $(OUTPUT).3gx $(OUTPUT).elf
 
 clean_all: clean
 	@$(MAKE) -C externals/MC3DSPluginFramework clean
@@ -136,7 +146,7 @@ $(OUTPUT).elf : $(OFILES)
 #---------------------------------------------------------------------------------
 	@echo creating $(notdir $@)
 	@3gxtool -s $(word 1, $^) $(TOPDIR)/$(PLGINFO) $@
-	@rm ../src/main.d ../src/main.o 
+	@rm -f main.d main.o 
 
 -include $(DEPENDS)
 

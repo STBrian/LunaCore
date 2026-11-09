@@ -1,1 +1,4 @@
 /docker-compose.yml
+
+*.elf
+*.3gx

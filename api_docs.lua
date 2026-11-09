@@ -1,24 +1,5 @@
 ---@diagnostic disable: missing-return, duplicate-set-field, missing-fields
 
-Async = {}
-
----@class AsyncTask
-local AsyncTask = {}
-
----Returns a new task with the given function that can be connected to game events
----@param func function
----@return AsyncTask
-function Async.create(func) end
-
----Adds the function to the queue that will run alongside the game until the functions ends
----@param func function
-function Async.run(func) end
-
----Yeilds the current task until time has passed. Always returns true
----@param seconds number?
----@return boolean
-function Async.wait(seconds) end
-
 Game = {}
 
 Core = {}
@@ -38,8 +19,26 @@ function Core.getTitleId() end
 
 Core._VERSION = "LunaCore 0.15.0"
 
-Core.Event = {}
+Async = {}
 
+---@class AsyncTask
+local AsyncTask = {}
+
+---Returns a new task with the given function that can be connected to game events
+---@param func function
+---@return AsyncTask
+function Async.create(func) end
+
+---Adds the function to the queue that will run alongside the game until the functions ends
+---@param func function
+function Async.run(func) end
+
+---Yeilds the current task until time has passed. Always returns true
+---@param seconds number?
+---@return boolean
+function Async.wait(seconds) end
+
+Core.Event = {}
 ---@class EventClass
 local EventClass = {}
 
@@ -65,7 +64,6 @@ Core.Event.OnGameEntitySpawnStart = {}
 Core.Event.OnGameEntitySpawn = {}
 
 Core.Graphics = {}
-
 ---@class Drawable
 local Drawable = {}
 
@@ -215,10 +213,8 @@ function Core.Debug.logerror(msg) end
 ---Show error on screen
 ---@param msg string
 function Core.Debug.error(msg) end
-
 ---@class GameEntity
 local GameEntity = {}
-
 ---@class GameSpawnCoords
 local GameSpawnCoords = {}
 
@@ -243,7 +239,6 @@ Enums = {}
 ---@field Name string
 ---@field Value integer
 local BaseEnumItem = {}
-
 ---@class EnumItem: BaseEnumItem
 
 ---@class EntityState: EnumItem
@@ -326,7 +321,6 @@ Enums.WeatherType.Thunder = {}
 Enums.WeatherType.RainThunder = {}
 
 Core.Filesystem = {}
-
 ---@class FilesystemFile
 local FilesystemFile = {}
 
@@ -410,7 +404,6 @@ function FilesystemFile:getSize() end
 function FilesystemFile:close() end
 
 Game.Gamepad = {}
-
 ---@class KeyCode: integer
 
 ---Returns true if the key is pressed (only counts for the first press, for button held use isDown)
@@ -507,13 +500,10 @@ Game.Gamepad.KeyCodes.CPAD = 2952790016
 Game.Gamepad.KeyCodes.CSTICK = 184549376
 
 Game.Items = {}
-
 ---@class MCItem
 local MCItem = {}
-
 ---@class MCItemInstance
 local MCItemInstance = {}
-
 ---@class MCToolTier
 local MCToolTier = {}
 
@@ -538,10 +528,11 @@ function Game.Items.getCreativePosition(itemID, groupID) end
 function Game.Items.newToolTier() end
 
 ---Creates a new item and stores it in the game's items table. Returns the address to the item
+---@param namespace string
 ---@param itemName string
 ---@param itemId integer
 ---@return MCItem?
-function Game.Items.registerItem(itemName, itemId) end
+function Game.Items.registerItem(namespace, itemName, itemId) end
 
 ---Creates a new sword tool item and registers it in the game. Returns the address to the item
 ---@param itemName string
@@ -901,7 +892,6 @@ Game.LocalPlayer.Inventory.Slots = {}
 
 ---@type table<"helmet"|"chestplate"|"leggings"|"boots"|1|2|3|4,InventorySlot>
 Game.LocalPlayer.Inventory.ArmorSlots = {}
-
 ---@class InventorySlot
 local InventorySlot = {}
 
@@ -920,7 +910,6 @@ InventorySlot.ItemCount = 0
 InventorySlot.ItemData = 0
 
 Core.Menu = {}
-
 ---@class MenuFolder
 local MenuFolder = {}
 
@@ -952,7 +941,6 @@ function MenuFolder:newFolder(name) end
 function MenuFolder:newEntry(name, callback) end
 
 Game.Recipes = {}
-
 ---@class RecipesTable
 local RecipesTable = {}
 
@@ -1033,6 +1021,12 @@ function Game.World.getBlock(x, y, z) end
 ---Gets the current biome ID
 ---@return integer
 function Game.World.getCurrentBiome() end
+
+---Plays a sound globally
+---@param soundId string
+---@param volume number
+---@param pitch number
+function Game.World.playGlobalSound(soundId, volume, pitch) end
 
 ---@class OnWorldJoin: EventClass
 Game.World.OnWorldJoin = {}

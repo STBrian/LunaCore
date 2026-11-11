@@ -13,3 +13,5 @@ void* ExtendedHeapMalloc(size_t size);
 void* ExtendedHeapRealloc(void* ptr, size_t size);
 
 void ExtendedHeapFree(void* p);
+
+void ExtendedHeapExit(void);

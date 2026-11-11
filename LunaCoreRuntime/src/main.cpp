@@ -31,6 +31,7 @@
 #include "Core/Utils/ResourcesInjector.hpp"
 
 #include "game/Minecraft.hpp"
+#include "ExtendedHeap.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
@@ -173,6 +174,8 @@ namespace CTRPluginFramework
         Core::CrashHandler::plg_state = Core::CrashHandler::PLUGIN_EXIT;
         if (Lua_global != nullptr)
             lua_close(Lua_global);
+
+        ExtendedHeapExit();
 
         // Cleanup
         Core::Debug::LogInfo("Exiting LunaCore");

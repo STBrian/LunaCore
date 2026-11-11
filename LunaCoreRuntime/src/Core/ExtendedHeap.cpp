@@ -10,12 +10,16 @@
 
 #define PAGE_SIZE (0x1000) // 4KB (1 physical pages)
 #define START_EXTHEAP_ADDR 0x02000000
-#define MAX_LOADED_PAGES (128/4)
+#define MAX_LOADED_PAGES 96 // 96 * 4KB = 384KB (well within the 1024KB free CTRPF heap)
 
 // #define BUILD_AZAHAR 1
 
 namespace CTRPluginFramework::ProcessImpl {
     void    UpdateMemRegions(bool ignoreLock);
+}
+
+namespace CTRPluginFramework::Heap {
+    u32 SpaceFree(void);
 }
 
 typedef struct {
@@ -117,7 +121,7 @@ Result ExtendedHeapInit(size_t heapsize) {
     const u32 heapsize_b = heapsize * PAGE_SIZE;
     const u16 maxLoadedPages = heapsize < MAX_LOADED_PAGES ? heapsize : MAX_LOADED_PAGES;
 
-    LOGDEBUG("Init extended heap");
+    Core::Debug::LogInfof("Init extended heap. Available CTRPF heap: %u KB", CTRPluginFramework::Heap::SpaceFree() / 1024);
     if (!Core::Filesystem::DirectoryExists("lcfs:/LunaCore")) {
         if (!Core::Filesystem::CreateDirectory("lcfs:/LunaCore")) 
             return -1;
@@ -218,31 +222,18 @@ bool ExtendedHeapIsAddressInHeap(u32 addr) {
     return (addr >= HeapCtx.heapStart && addr < HeapCtx.heapEnd);
 }
 
-static void swapfileFlush() {
-    HeapCtx.swapfile.flush();
-}
-
 static void writePageContent(u32 addr) {
     const size_t fileOffset = addr - START_EXTHEAP_ADDR;
     HeapCtx.swapfile.seek(fileOffset, SEEK_SET);
-    u32 bytesWritten = 0;
-    while (bytesWritten < PAGE_SIZE) {
-        int status = HeapCtx.swapfile.write((void*)(addr + bytesWritten), 0x800);
-        if (status != 0x800) Core::Abort("Failed to write page to swapfile");
-        bytesWritten += 0x800;
-    }
-    swapfileFlush();
+    int status = HeapCtx.swapfile.write((void*)addr, PAGE_SIZE);
+    if (status != PAGE_SIZE) Core::Abort("Failed to write page to swapfile");
 }
 
 static void loadPageContent(u32 addr) {
     const size_t fileOffset = addr - START_EXTHEAP_ADDR;
-    int noff = HeapCtx.swapfile.seek(fileOffset, SEEK_SET);
-    u32 bytesRead = 0;
-    while (bytesRead < PAGE_SIZE) {
-        int status = HeapCtx.swapfile.read((void*)(addr + bytesRead), 0x800);
-        if (status != 0x800) Core::Abort(CTRPF::Utils::Format("Failed to read swap page! %08X", status).c_str());
-        bytesRead += 0x800;
-    }
+    HeapCtx.swapfile.seek(fileOffset, SEEK_SET);
+    int status = HeapCtx.swapfile.read((void*)addr, PAGE_SIZE);
+    if (status != PAGE_SIZE) Core::Abort(CTRPF::Utils::Format("Failed to read swap page! %08X", status).c_str());
 }
 
 static u16 getVictimPageSlot(u32 incomingPageIdx) {
@@ -250,18 +241,36 @@ static u16 getVictimPageSlot(u32 incomingPageIdx) {
         return 0;
     }
 
-    u16 victimSlot = 1;
-    u32 oldestAccess = HeapCtx.mappedPages[1].lastAccess;
+    // 1. If any slot is currently unmapped, use it immediately
+    for (u16 i = 1; i < HeapCtx.maxLoadedPages; i++) {
+        if (!HeapCtx.mappedPages[i].mapped) {
+            return i;
+        }
+    }
 
-    for (u16 i = 2; i < HeapCtx.maxLoadedPages; i++) {
+    // 2. Select victim using frequency + foundation protection + recency
+    u64 bestScore = 0xFFFFFFFFFFFFFFFFULL;
+    u16 victimSlot = 1;
+
+    for (u16 i = 1; i < HeapCtx.maxLoadedPages; i++) {
         if (HeapCtx.mappedPages[i].idx == incomingPageIdx) {
             continue;
         }
-        if (HeapCtx.mappedPages[i].lastAccess < oldestAccess) {
-            oldestAccess = HeapCtx.mappedPages[i].lastAccess;
+
+        const u32 pIdx = HeapCtx.mappedPages[i].idx;
+        // Protect early foundation pages (0-3 contain TLSF control headers and initial Lua state)
+        const u64 foundationPenalty = (pIdx < 4) ? 1000000000ULL : 0ULL;
+        // High miss count indicates a hot working-set page that must be kept in memory
+        const u64 missPenalty = (u64)HeapCtx.pageMissCount[pIdx] * 1000000ULL;
+        // Recency tie-breaker
+        const u64 score = foundationPenalty + missPenalty + HeapCtx.mappedPages[i].lastAccess;
+
+        if (score < bestScore) {
+            bestScore = score;
             victimSlot = i;
         }
     }
+
     return victimSlot;
 }
 
@@ -374,4 +383,13 @@ void* ExtendedHeapRealloc(void* ptr, size_t size) {
 
 void ExtendedHeapFree(void* p) {
     return tlsf_free(HeapCtx.allocator, p);
+}
+
+void ExtendedHeapExit(void) {
+    HeapCtx_mutex.lock();
+    if (HeapCtx.swapfile.isOpen()) {
+        HeapCtx.swapfile.flush();
+        HeapCtx.swapfile.close();
+    }
+    HeapCtx_mutex.unlock();
 }

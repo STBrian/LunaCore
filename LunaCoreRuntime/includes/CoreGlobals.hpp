@@ -24,6 +24,10 @@ extern int loadedMods;
 extern const char* G_LastCoreEvent;
 extern const char* G_ActiveCoreEvent;
 
+namespace Core {
+    extern bool Initializated;
+}
+
 #if __STDC_HOSTED__
 extern std::string currentLoadingMod;
 extern Core::Config G_config;

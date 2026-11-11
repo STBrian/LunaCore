@@ -365,18 +365,18 @@ static void rinj_LangPhase4_LoadTextsAndSort(CoreHookContext* ctx) {
 namespace Core {
     void InitResourcesInjector() {
         /* UVs Injection */
-        hookFunction(0x001f13ac, (u32)rinj_UVSPhase1_Init);
-        hookFunction(0x001f1448, (u32)rinj_UVSPhase2_FixRead1);
-        hookFunction(0x001f1464, (u32)rinj_UVSPhase2_FixRead2);
-        hookFunction(0x001f14b8, (u32)rinj_UVSPhase2_FixRead3AndLoadCustomUVS);
-        hookFunction(0x001f1500, (u32)rinj_UVSPhase3_SortNewEntries);
+        CoreCreateHook(0x001f13ac, (u32)rinj_UVSPhase1_Init);
+        CoreCreateHook(0x001f1448, (u32)rinj_UVSPhase2_FixRead1);
+        CoreCreateHook(0x001f1464, (u32)rinj_UVSPhase2_FixRead2);
+        CoreCreateHook(0x001f14b8, (u32)rinj_UVSPhase2_FixRead3AndLoadCustomUVS);
+        CoreCreateHook(0x001f1500, (u32)rinj_UVSPhase3_SortNewEntries);
 
         /* Lang Injection */
-        hookFunction(0x003507b8, (u32)rinj_LangPhase1_Init);
-        hookFunction(0x003507f4, (u32)rinj_LangPhase2_AddEntriesSpace);
-        hookFunction(0x0035082c, (u32)rinj_LangPhase2_FixRead);
-        hookFunction(0x0035084c, (u32)rinj_LangPhase3_AddTextsSpace);
-        hookFunction(0x00350880, (u32)rinj_LangPhase3_FixRead);
-        hookFunction(0x00350894, (u32)rinj_LangPhase4_LoadTextsAndSort);
+        CoreCreateHook(0x003507b8, (u32)rinj_LangPhase1_Init);
+        CoreCreateHook(0x003507f4, (u32)rinj_LangPhase2_AddEntriesSpace);
+        CoreCreateHook(0x0035082c, (u32)rinj_LangPhase2_FixRead);
+        CoreCreateHook(0x0035084c, (u32)rinj_LangPhase3_AddTextsSpace);
+        CoreCreateHook(0x00350880, (u32)rinj_LangPhase3_FixRead);
+        CoreCreateHook(0x00350894, (u32)rinj_LangPhase4_LoadTextsAndSort);
     }
 }

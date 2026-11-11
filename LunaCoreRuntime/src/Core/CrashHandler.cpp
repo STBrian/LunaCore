@@ -4,7 +4,6 @@
 
 #include "Core/Debug.hpp"
 #include "CoreGlobals.hpp"
-#include "ExtendedHeap.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 

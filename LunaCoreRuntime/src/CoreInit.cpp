@@ -24,8 +24,6 @@
 #include "CoreTools.hpp"
 #include "ExtendedHeap.hpp"
 
-#include "game/gmalloc.h"
-
 using json = nlohmann::ordered_json;
 namespace CTRPF = CTRPluginFramework;
 using namespace Core;
@@ -38,48 +36,6 @@ CTRPF::Clock timeoutLoadClock;
 
 u32 pluginHeapUsage = 0;
 #define PLUGIN_HEAP_MAX (1 * 1024 * 1024) // 1 Mb
-
-void* custom_lua_allocator(void* ud, void* ptr, size_t osize, size_t nsize) {
-    if (nsize == 0 && ptr != nullptr) {
-        // ExtendedHeapFree(ptr);
-        u32* heapType = ((u32*)ptr - 2);
-        if (*heapType == HEAP_PLUGIN) {
-            pluginHeapUsage -= osize + 8;
-            free(heapType);
-        } else
-            gstd_free(heapType);
-        return NULL;
-    } else {
-        if (ptr == NULL) {
-            if (pluginHeapUsage >= PLUGIN_HEAP_MAX) {
-                // NOTE: As far as I know, the game's allocator returns memory from the app heap
-                // if it's called from outside a game's thread. That makes glinearAlloc the same
-                // as gstd_malloc in this context
-                void* mem = glinearMemAlign(nsize + 8, 8);
-                u32* p = (u32*)mem;
-                *p = HEAP_GAME_APP;
-                return p + 2;
-            } else {
-                void* mem = malloc(nsize + 8);
-                if (!mem) return nullptr;
-                pluginHeapUsage += nsize + 8;
-                u32* p = (u32*)mem;
-                *p = HEAP_PLUGIN;
-                return p + 2;
-            }
-        }
-        else {
-            u32* heapType = ((u32*)ptr - 2);
-            if (*heapType == HEAP_PLUGIN) {
-                void* mem = realloc(heapType, nsize + 8);
-                if (!mem) return nullptr;
-                pluginHeapUsage += (ssize_t)(nsize + 8) - (ssize_t)(osize + 8);
-                return (u32*)mem + 2;
-            } else
-                return (u32*)custom_glinearReallocAligned(heapType, nsize + 8, 8) + 2;
-        }
-    }
-}
 
 void* extended_lua_allocator_extended(void* ud, void* ptr, size_t osize, size_t nsize) {
     if (nsize == 0 && ptr != nullptr) {
@@ -133,12 +89,12 @@ void Core::InitCore() {
     bool loadScripts = G_config.getBool("enable_scripts", true);
     
     Core::Debug::LogInfo("Loading Lua environment");
-    #ifdef EXPERIMENTAL
+    // #ifdef EXPERIMENTAL
+    ExtendedHeapInit(1000);
     Lua_global = lua_newstate(extended_lua_allocator_extended, NULL);
-    #else
-    // Lua_global = lua_newstate(custom_lua_allocator, NULL);
-    Lua_global = luaL_newstate();
-    #endif
+    // #else
+    // Lua_global = luaL_newstate();
+    // #endif
     if (Lua_global == nullptr)
         Core::Abort("Failed to initialize Lua env");
     Core::LoadLuaEnv();

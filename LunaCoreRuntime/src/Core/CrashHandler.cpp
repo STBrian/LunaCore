@@ -210,7 +210,6 @@ namespace Core {
         char extrainfobuffer[0x80];
         const char* extrainfo = coreAbortMsg ? coreAbortMsg : "";
         const char* actionmsg = plg_state == PluginState::PLUGIN_MAINLOOP ? "The game will exit now" : "The console will reboot now";
-        if (coreAbortMsg != nullptr) extrainfo = coreAbortMsg;
         if (regs == nullptr || excep == nullptr) {
             errtitle = "Fatal core exception";
         } else {
@@ -254,7 +253,8 @@ namespace Core {
             if (G_ActiveCoreEvent)
                 Core::Debug::LogRawf("\t\tCurrent Core event: %s\n", G_ActiveCoreEvent);
             if (!manuallyCalled) {
-                Core::Debug::LogRawf("\n\tException type: %s\n", exceptionStr[excep->type]);
+                Core::Debug::LogRawf("\t%s\n", extrainfo);
+                Core::Debug::LogRawf("\tException type: %s\n", exceptionStr[excep->type]);
                 Core::Debug::LogRawf("\tException at address: %08X\n", regs->pc);
                 Core::Debug::LogRawf("\tThread ID: %d\n", threadId);
                 Core::Debug::LogRawf("\n\tLR: %08X\n", regs->lr);

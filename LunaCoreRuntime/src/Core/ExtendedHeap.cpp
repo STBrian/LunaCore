@@ -1,4 +1,5 @@
 #include "ExtendedHeap.hpp"
+#include "CoreConstants.hpp"
 #include "Core/Filesystem.hpp"
 #include <CTRPluginFramework.hpp>
 #include "Core/Debug.hpp"
@@ -11,8 +12,6 @@
 #define PAGE_SIZE (0x1000) // 4KB (1 physical pages)
 #define START_EXTHEAP_ADDR 0x02000000
 #define MAX_LOADED_PAGES 96 // 96 * 4KB = 384KB (well within the 1024KB free CTRPF heap)
-
-// #define BUILD_AZAHAR 1
 
 namespace CTRPluginFramework::ProcessImpl {
     void    UpdateMemRegions(bool ignoreLock);
@@ -43,9 +42,6 @@ typedef struct {
 } ExtHeapCtx;
 
 static ExtHeapCtx HeapCtx;
-#ifndef BUILD_AZAHAR
-static Handle curHandle = 0;
-#endif
 Core::Mutex HeapCtx_mutex;
 static u32 g_lruCounter = MAX_LOADED_PAGES;
 
@@ -121,13 +117,24 @@ Result ExtendedHeapInit(size_t heapsize) {
     const u32 heapsize_b = heapsize * PAGE_SIZE;
     const u16 maxLoadedPages = heapsize < MAX_LOADED_PAGES ? heapsize : MAX_LOADED_PAGES;
 
-    Core::Debug::LogInfof("Init extended heap. Available CTRPF heap: %u KB", CTRPluginFramework::Heap::SpaceFree() / 1024);
+    Core::Debug::LogInfof("ExtendedHeap: Initializing (target: %u KB, max loaded: %u KB). Available CTRPF heap: %u KB",
+        (u32)(heapsize_b / 1024), (u32)(maxLoadedPages * 4), CTRPluginFramework::Heap::SpaceFree() / 1024);
+
     if (!Core::Filesystem::DirectoryExists("lcfs:/LunaCore")) {
-        if (!Core::Filesystem::CreateDirectory("lcfs:/LunaCore")) 
-            return -1;
+        Core::Filesystem::CreateDirectory("lcfs:/LunaCore");
     }
+    CTRPF::Directory::Create(PLUGIN_FOLDER "/LunaCore");
+
+    // Open swapfile: try in LunaCore subdirectory, fall back to root of lcfs if needed
     HeapCtx.swapfile.open("lcfs:/LunaCore/swapfile.bin", FS_OPEN_CREATE|FS_OPEN_READ|FS_OPEN_WRITE, heapsize_b);
-    if (!HeapCtx.swapfile.isOpen()) return -1;
+    if (!HeapCtx.swapfile.isOpen()) {
+        Core::Debug::LogWarnf("ExtendedHeap: Failed to open swapfile at 'lcfs:/LunaCore/swapfile.bin' (status: %d). Falling back to 'lcfs:/swapfile.bin'", (int)HeapCtx.swapfile.getStatus());
+        HeapCtx.swapfile.open("lcfs:/swapfile.bin", FS_OPEN_CREATE|FS_OPEN_READ|FS_OPEN_WRITE, heapsize_b);
+    }
+    if (!HeapCtx.swapfile.isOpen()) {
+        Core::Debug::LogErrorf("ExtendedHeap: Failed to open swapfile (status: %d)", (int)HeapCtx.swapfile.getStatus());
+        return -1;
+    }
 
     HeapCtx.heapStart = START_EXTHEAP_ADDR;
     HeapCtx.heapEnd = START_EXTHEAP_ADDR + heapsize_b;
@@ -138,9 +145,10 @@ Result ExtendedHeapInit(size_t heapsize) {
     u16* pageMissCount = (u16*)calloc(sizeof(u16), heapsize);
     u8* pageWrittenToSwap = (u8*)calloc(sizeof(u8), heapsize);
 
-    if (mappedPages == nullptr) goto error;
-    if (pageMissCount == nullptr) goto error;
-    if (pageWrittenToSwap == nullptr) goto error;
+    if (mappedPages == nullptr || pageMissCount == nullptr || pageWrittenToSwap == nullptr) {
+        Core::Debug::LogError("ExtendedHeap: Failed to allocate management buffers");
+        goto error;
+    }
 
     HeapCtx.mappedPages = mappedPages;
     HeapCtx.pageMissCount = pageMissCount;
@@ -149,7 +157,10 @@ Result ExtendedHeapInit(size_t heapsize) {
     // Initialize pages
     for (size_t i = 0; i < maxLoadedPages; i++) {
         mappedPages[i].srcAddr = (u32)aligned_alloc(0x1000, PAGE_SIZE);
-        if (mappedPages[i].srcAddr == 0) goto error;
+        if (mappedPages[i].srcAddr == 0) {
+            Core::Debug::LogErrorf("ExtendedHeap: Failed to allocate physical page buffer %u", (u32)i);
+            goto error;
+        }
         mappedPages[i].idx = i;
         mappedPages[i].dstAddr = START_EXTHEAP_ADDR + PAGE_SIZE * i;
         mappedPages[i].lastAccess = (u32)i;
@@ -157,44 +168,44 @@ Result ExtendedHeapInit(size_t heapsize) {
         memset((void*)mappedPages[i].srcAddr, 0, PAGE_SIZE);
     }
 
-    // Map pages
+    // Map initial pages with svcMapProcessMemoryEx
     LOGDEBUG("Mapping initial pages");
-    #ifndef BUILD_AZAHAR
-    svcDuplicateHandle(&curHandle, CUR_PROCESS_HANDLE);
-    #endif
     for (size_t i = 0; i < maxLoadedPages; i++) {
         LOGDEBUG("Mirroring %d", i);
-        #ifndef BUILD_AZAHAR
-        Result res = svcControlProcessMemory(curHandle, mappedPages[i].dstAddr, mappedPages[i].srcAddr, PAGE_SIZE, MEMOP_MAP, MEMPERM_READWRITE);
-        #else
         Result res = svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, mappedPages[i].dstAddr, CUR_PROCESS_HANDLE, mappedPages[i].srcAddr, PAGE_SIZE);
         svcCustomBackdoor((void*)invalidate_mmu_cache);
-        #endif
-        //Result res = svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, mappedPages[i].dstAddr, CUR_PROCESS_HANDLE, mappedPages[i].srcAddr, PAGE_SIZE, MAPEXFLAGS_PRIVATE);
         if (R_FAILED(res)) {
-            LOGDEBUG("Failed to mirror %08X to %08X", mappedPages[i].srcAddr, mappedPages[i].dstAddr);
+            Core::Debug::LogErrorf("ExtendedHeap: Failed to mirror page %u (%08X -> %08X), res: %08X", (u32)i, mappedPages[i].srcAddr, mappedPages[i].dstAddr, res);
             goto error;
-        } else 
+        } else {
             mappedPages[i].mapped = true;
+        }
     }
 
     LOGDEBUG("Creating allocator");
     Core::CrashHandler::SetCallback(CrashHandlerExtendedHeapCallback);
     HeapCtx.allocator = tlsf_create_with_pool((void*)START_EXTHEAP_ADDR, heapsize_b);
+    if (!HeapCtx.allocator) {
+        Core::Debug::LogError("ExtendedHeap: Failed to create tlsf allocator");
+        goto error;
+    }
+
     {
         LOGDEBUG("Test malloc");
         void* test = ExtendedHeapMalloc(100);
         if (test == NULL) {
-            LOGDEBUG("Test malloc failed");
+            Core::Debug::LogError("ExtendedHeap: Self-test malloc failed");
             goto error;
         } else {
             LOGDEBUG("Test free");
             ExtendedHeapFree(test);
         }
     }
+    Core::Debug::LogInfo("ExtendedHeap: Initialized successfully");
     return 0;
 
     error:
+    Core::Debug::LogError("ExtendedHeap: Failed to init ExtendedHeap. Cleaning up...");
     svcCustomBackdoor((void*)invalidate_mmu_cache);
     HeapCtx.swapfile.close();
     if (pageMissCount) free(pageMissCount);
@@ -202,18 +213,11 @@ Result ExtendedHeapInit(size_t heapsize) {
     if (mappedPages) {
         // Free blocks if any
         for (size_t i = 0; i < maxLoadedPages; i++) {
-            #ifndef BUILD_AZAHAR
-            if (mappedPages[i].mapped) svcControlProcessMemory(curHandle, mappedPages[i].dstAddr, mappedPages[i].srcAddr, PAGE_SIZE, MEMOP_UNMAP, MEMPERM_READWRITE);
-            #else 
             if (mappedPages[i].mapped) svcUnmapProcessMemoryEx(CUR_PROCESS_HANDLE, mappedPages[i].dstAddr, PAGE_SIZE);
-            #endif
             if (mappedPages[i].srcAddr != 0) free((void*)mappedPages[i].srcAddr);
         }
         free(mappedPages);
     }
-    #ifndef BUILD_AZAHAR
-    if (curHandle != 0) svcCloseHandle(curHandle);
-    #endif
     svcCustomBackdoor((void*)invalidate_mmu_cache);
     return -1;
 }
@@ -312,14 +316,10 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
         writePageContent(pageInfo.dstAddr);
         HeapCtx.pageWrittenToSwap[pageInfo.idx] = 1;
 
-        #ifndef BUILD_AZAHAR
-        Result status = svcControlProcessMemory(curHandle, pageInfo.dstAddr, pageInfo.srcAddr, PAGE_SIZE, MEMOP_UNMAP, MEMPERM_READWRITE);
-        #else
         Result status = svcUnmapProcessMemoryEx(CUR_PROCESS_HANDLE, pageInfo.dstAddr, PAGE_SIZE);
         svcCustomBackdoor((void*)invalidate_mmu_cache);
-        #endif
         if (R_FAILED(status)) {
-            LOGDEBUG("Failed to unmap memory page %08X, code: %08X", pageInfo.dstAddr, status);
+            Core::Debug::LogErrorf("Failed to unmap memory page %08X, code: %08X", pageInfo.dstAddr, status);
             HeapCtx_mutex.unlock();
             return -1;
         }
@@ -333,20 +333,16 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
     PageInfo out;
     Result status = svcQueryProcessMemory(&info, &out, CUR_PROCESS_HANDLE, pageStart);
     if (info.state != MemState::MEMSTATE_FREE) {
-        LOGDEBUG("Failed to map memory at %08X. Expected to be free, instead state: %d", pageStart, info.state);
+        Core::Debug::LogErrorf("Failed to map memory at %08X. Expected to be free, instead state: %d", pageStart, info.state);
         HeapCtx_mutex.unlock();
         return -4;
     }
 
     // 6. Map the physical buffer to the new page address
-    #ifndef BUILD_AZAHAR
-    status = svcControlProcessMemory(curHandle, pageStart, pageInfo.srcAddr, PAGE_SIZE, MEMOP_MAP, MEMPERM_READWRITE);
-    #else
     status = svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, pageStart, CUR_PROCESS_HANDLE, pageInfo.srcAddr, PAGE_SIZE);
     svcCustomBackdoor((void*)invalidate_mmu_cache);
-    #endif
     if (R_FAILED(status)) {
-        LOGDEBUG("Failed to map memory page %08X, code: %08X", pageStart, status);
+        Core::Debug::LogErrorf("Failed to map memory page %08X, code: %08X", pageStart, status);
         HeapCtx_mutex.unlock();
         return -2;
     }

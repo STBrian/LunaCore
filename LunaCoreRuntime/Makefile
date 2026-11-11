@@ -31,11 +31,16 @@ CFLAGS		+=	-DCOMMIT_HASH="\"$(shell git rev-parse --short HEAD)\"" \
 				-DLUNACORE_VER_PATCH=$(shell grep -oP 'Revision:\s+\K\d+' $(TOPDIR)/$(PLGINFO)) \
 				-D__LCRUNTIME__
 
+DEBUG		?=	1
+
 ifeq ($(EXPERIMENTAL), 1)
 	CFLAGS		+=	-DEXPERIMENTAL
 endif
 ifeq ($(DEBUG), 1)
 	CFLAGS		+=	-DDEBUG
+endif
+ifeq ($(BUILD_JIT), 1)
+	CFLAGS		+=	-DBUILD_JIT
 endif
 
 CXXFLAGS	:= 	$(CFLAGS) -g -fno-rtti -fno-exceptions -std=gnu++20

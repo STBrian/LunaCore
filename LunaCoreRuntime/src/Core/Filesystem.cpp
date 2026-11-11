@@ -121,23 +121,41 @@ class CTRPF_File : public Core::File_impl {
         return mFile.IsOpen();
     }
 
-    ~CTRPF_File() {}
+    ~CTRPF_File() override {
+        close();
+    }
 };
 
 static Core::File_impl* ctrpf_fopen(const char* fp, unsigned int mode, unsigned int fileSize) {
     CTRPF_File* filePtr = new(std::nothrow) CTRPF_File;
-    if (filePtr == nullptr)
-        return nullptr;
-
-    int res = CTRPF::File::Open(filePtr->mFile, fp, mode);
-    if (mode & (unsigned int)FS_OPEN_CREATE)
-        filePtr->mFile.Clear();
-    
-    if (res != CTRPF::File::OPResult::SUCCESS) {
-        delete filePtr;
+    if (filePtr == nullptr) {
+        LOGDEBUG("CTRPF File open operation failed: Allocation failed");
         return nullptr;
     }
 
+    bool createRequested = (mode & (unsigned int)FS_OPEN_CREATE) != 0;
+    if (createRequested) {
+        // Ensure parent directory exists before creating file
+        std::string pathStr(fp);
+        size_t lastSlash = pathStr.find_last_of('/');
+        if (lastSlash != std::string::npos) {
+            std::string parentDir = pathStr.substr(0, lastSlash);
+            CTRPF::Directory::Create(parentDir);
+        }
+        CTRPF::File::Create(fp);
+        mode &= ~FS_OPEN_CREATE;
+    }
+
+    int res = CTRPF::File::Open(filePtr->mFile, fp, mode);
+    if (res != CTRPF::File::OPResult::SUCCESS) {
+        delete filePtr;
+        LOGDEBUG("CTRPF File open operation failed: %08X", res);
+        return nullptr;
+    }
+
+    if (createRequested)
+        filePtr->mFile.Clear();
+    
     if (fileSize > 0) {
         FSFILE_SetSize(filePtr->mFile.*get(tag_handle()), fileSize);
     }
@@ -146,11 +164,13 @@ static Core::File_impl* ctrpf_fopen(const char* fp, unsigned int mode, unsigned 
 }
 
 static bool ctrpf_file_exists(const char* fp) {
-    // I don't know why CTRPF::File::Exists function doesn't work
-    // CTRPF::File::Exists(fp)
     CTRPF::File file;
-    CTRPF::File::Open(file, fp, CTRPF::File::READ);
-    return file.IsOpen();
+    int res = CTRPF::File::Open(file, fp, CTRPF::File::READ);
+    bool exists = (res == CTRPF::File::OPResult::SUCCESS && file.IsOpen());
+    if (exists) {
+        file.Close();
+    }
+    return exists;
 }
 
 static bool ctrpf_delete_file(const char* fp) {
@@ -222,16 +242,21 @@ class FsLib_File : public Core::File_impl {
         return mFile.is_open();
     }
 
-    ~FsLib_File() {}
+    ~FsLib_File() override {
+        close();
+    }
 };
 
 static Core::File_impl* fslib_fopen(const char* fp, unsigned int mode, unsigned int fileSize) {
     FsLib_File* filePtr = new(std::nothrow) FsLib_File;
-    if (filePtr == nullptr)
+    if (filePtr == nullptr) {
+        LOGDEBUG("FsLib File open operation failed: Allocation failed");
         return nullptr;
+    }
 
     filePtr->mFile.open(path_from_string(fp), mode, fileSize);
     if (!filePtr->mFile.is_open()) {
+        LOGDEBUG("FsLib File open operation failed: ", fslib::error::get_string());
         delete filePtr;
         return nullptr;
     }
@@ -240,7 +265,7 @@ static Core::File_impl* fslib_fopen(const char* fp, unsigned int mode, unsigned 
 }
 
 static bool fslib_file_exists(const char* fp) {
-    return fslib::file_exists(path_from_string(fp));
+    return fslib::file_exists(path_from_string(fp)); 
 }
 
 static bool fslib_delete_file(const char* fp) {
@@ -624,6 +649,7 @@ Result Core::FsInit() {
         CTRPF::Directory::Create(PLUGIN_FOLDER);
     if (!CTRPF::Directory::IsExists(PLUGIN_FOLDER "/data"))
         CTRPF::Directory::Create(PLUGIN_FOLDER "/data");
+    CTRPF::Directory::Create(PLUGIN_FOLDER "/LunaCore");
     return 0;
 }
 

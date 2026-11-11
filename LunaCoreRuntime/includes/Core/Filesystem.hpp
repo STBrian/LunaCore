@@ -135,7 +135,8 @@ namespace Core {
         }
 
         void close() {
-            mFile->close();
+            if (mFile)
+                mFile->close();
         }
 
         char getByte() {

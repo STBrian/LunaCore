@@ -90,7 +90,8 @@ void Core::InitCore() {
     
     Core::Debug::LogInfo("Loading Lua environment");
     // #ifdef EXPERIMENTAL
-    ExtendedHeapInit(1000);
+    Result result = ExtendedHeapInit(1000);
+    if (result < 0) Core::Abort("Failed to initialize ExtendedHeap");
     Lua_global = lua_newstate(extended_lua_allocator_extended, NULL);
     // #else
     // Lua_global = luaL_newstate();

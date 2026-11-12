@@ -11,7 +11,7 @@
 
 #define PAGE_SIZE (0x1000) // 4KB (1 physical pages)
 #define START_EXTHEAP_ADDR 0x02000000
-#define MAX_LOADED_PAGES 96 // 96 * 4KB = 384KB (well within the 1024KB free CTRPF heap)
+#define MAX_LOADED_PAGES 32 // 96 * 4KB = 384KB (well within the 1024KB free CTRPF heap)
 
 namespace CTRPluginFramework::ProcessImpl {
     void    UpdateMemRegions(bool ignoreLock);
@@ -42,6 +42,8 @@ typedef struct {
 } ExtHeapCtx;
 
 static ExtHeapCtx HeapCtx;
+static bool isEmulator = false;
+static Handle curHandle = 0;
 Core::Mutex HeapCtx_mutex;
 static u32 g_lruCounter = MAX_LOADED_PAGES;
 
@@ -74,6 +76,26 @@ static void invalidate_mmu_cache() {
     );
 }
 
+static Result mapPageMemory(u32 dst, u32 src) {
+    if (isEmulator) {
+        Result res = svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, dst, CUR_PROCESS_HANDLE, src, PAGE_SIZE);
+        svcCustomBackdoor((void*)invalidate_mmu_cache);
+        return res;
+    } else {
+        return svcControlProcessMemory(curHandle, dst, src, PAGE_SIZE, MEMOP_MAP, MEMPERM_READWRITE);
+    }
+}
+
+static Result unmapPageMemory(u32 dst, u32 src) {
+    if (isEmulator) {
+        Result res = svcUnmapProcessMemoryEx(CUR_PROCESS_HANDLE, dst, PAGE_SIZE);
+        svcCustomBackdoor((void*)invalidate_mmu_cache);
+        return res;
+    } else {
+        return svcControlProcessMemory(curHandle, dst, src, PAGE_SIZE, MEMOP_UNMAP, MEMPERM_READWRITE);
+    }
+}
+
 namespace CTRPluginFramework::ProcessImpl {
     extern u32 exceptionCount;
 
@@ -96,7 +118,7 @@ static const char* CrashHandlerExtendedHeapCallback(ERRF_ExceptionInfo* excep, C
         u32 status = (excep->fsr & 0xF) | ((excep->fsr >> 6) & 0x10);
         if ((status == 0x05 || status == 0x07) && ExtendedHeapIsAddressInHeap(excep->far)) { // Section | Page translation fault
             LOGDEBUG("Page fault reached at: %08X", excep->far);
-            //CTRPF::ScreenImpl::SwitchFrameBuffers(true);
+            CTRPF::ScreenImpl::SwitchFrameBuffers(true);
             Result status = ExtendedHeapAttemptLoadPage(excep->far);
             if (R_FAILED(status)) {
                 return "Page swap failed";
@@ -117,8 +139,18 @@ Result ExtendedHeapInit(size_t heapsize) {
     const u32 heapsize_b = heapsize * PAGE_SIZE;
     const u16 maxLoadedPages = heapsize < MAX_LOADED_PAGES ? heapsize : MAX_LOADED_PAGES;
 
-    Core::Debug::LogInfof("ExtendedHeap: Initializing (target: %u KB, max loaded: %u KB). Available CTRPF heap: %u KB",
-        (u32)(heapsize_b / 1024), (u32)(maxLoadedPages * 4), CTRPluginFramework::Heap::SpaceFree() / 1024);
+    isEmulator = CTRPluginFramework::System::IsCitra();
+    if (!isEmulator) {
+        svcCustomBackdoor((void*)ctr_enable_all_svc_kernel);
+        Result res = svcDuplicateHandle(&curHandle, CUR_PROCESS_HANDLE);
+        if (R_FAILED(res)) {
+            Core::Debug::LogErrorf("ExtendedHeap: Failed to duplicate process handle: %08X", res);
+            return -1;
+        }
+    }
+
+    Core::Debug::LogInfof("ExtendedHeap: Initializing (target: %u KB, max loaded: %u KB, isEmulator: %d). Available CTRPF heap: %u KB",
+        (u32)(heapsize_b / 1024), (u32)(maxLoadedPages * 4), (int)isEmulator, CTRPluginFramework::Heap::SpaceFree() / 1024);
 
     if (!Core::Filesystem::DirectoryExists("lcfs:/LunaCore")) {
         Core::Filesystem::CreateDirectory("lcfs:/LunaCore");
@@ -163,17 +195,16 @@ Result ExtendedHeapInit(size_t heapsize) {
         }
         mappedPages[i].idx = i;
         mappedPages[i].dstAddr = START_EXTHEAP_ADDR + PAGE_SIZE * i;
-        mappedPages[i].lastAccess = (u32)i;
+        mappedPages[i].lastAccess = (u32)(maxLoadedPages - i);
         mappedPages[i].mapped = false;
         memset((void*)mappedPages[i].srcAddr, 0, PAGE_SIZE);
     }
 
-    // Map initial pages with svcMapProcessMemoryEx
+    // Map initial pages
     LOGDEBUG("Mapping initial pages");
     for (size_t i = 0; i < maxLoadedPages; i++) {
         LOGDEBUG("Mirroring %d", i);
-        Result res = svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, mappedPages[i].dstAddr, CUR_PROCESS_HANDLE, mappedPages[i].srcAddr, PAGE_SIZE);
-        svcCustomBackdoor((void*)invalidate_mmu_cache);
+        Result res = mapPageMemory(mappedPages[i].dstAddr, mappedPages[i].srcAddr);
         if (R_FAILED(res)) {
             Core::Debug::LogErrorf("ExtendedHeap: Failed to mirror page %u (%08X -> %08X), res: %08X", (u32)i, mappedPages[i].srcAddr, mappedPages[i].dstAddr, res);
             goto error;
@@ -213,10 +244,14 @@ Result ExtendedHeapInit(size_t heapsize) {
     if (mappedPages) {
         // Free blocks if any
         for (size_t i = 0; i < maxLoadedPages; i++) {
-            if (mappedPages[i].mapped) svcUnmapProcessMemoryEx(CUR_PROCESS_HANDLE, mappedPages[i].dstAddr, PAGE_SIZE);
+            if (mappedPages[i].mapped) unmapPageMemory(mappedPages[i].dstAddr, mappedPages[i].srcAddr);
             if (mappedPages[i].srcAddr != 0) free((void*)mappedPages[i].srcAddr);
         }
         free(mappedPages);
+    }
+    if (!isEmulator && curHandle != 0) {
+        svcCloseHandle(curHandle);
+        curHandle = 0;
     }
     svcCustomBackdoor((void*)invalidate_mmu_cache);
     return -1;
@@ -231,6 +266,7 @@ static void writePageContent(u32 addr) {
     HeapCtx.swapfile.seek(fileOffset, SEEK_SET);
     int status = HeapCtx.swapfile.write((void*)addr, PAGE_SIZE);
     if (status != PAGE_SIZE) Core::Abort("Failed to write page to swapfile");
+    HeapCtx.swapfile.flush();
 }
 
 static void loadPageContent(u32 addr) {
@@ -262,8 +298,8 @@ static u16 getVictimPageSlot(u32 incomingPageIdx) {
         }
 
         const u32 pIdx = HeapCtx.mappedPages[i].idx;
-        // Protect early foundation pages (0-3 contain TLSF control headers and initial Lua state)
-        const u64 foundationPenalty = (pIdx < 4) ? 1000000000ULL : 0ULL;
+        // Protect early foundation pages (0-15 contain TLSF control headers and initial Lua state)
+        const u64 foundationPenalty = (pIdx < 16) ? 1000000000ULL : 0ULL;
         // High miss count indicates a hot working-set page that must be kept in memory
         const u64 missPenalty = (u64)HeapCtx.pageMissCount[pIdx] * 1000000ULL;
         // Recency tie-breaker
@@ -316,8 +352,7 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
         writePageContent(pageInfo.dstAddr);
         HeapCtx.pageWrittenToSwap[pageInfo.idx] = 1;
 
-        Result status = svcUnmapProcessMemoryEx(CUR_PROCESS_HANDLE, pageInfo.dstAddr, PAGE_SIZE);
-        svcCustomBackdoor((void*)invalidate_mmu_cache);
+        Result status = unmapPageMemory(pageInfo.dstAddr, pageInfo.srcAddr);
         if (R_FAILED(status)) {
             Core::Debug::LogErrorf("Failed to unmap memory page %08X, code: %08X", pageInfo.dstAddr, status);
             HeapCtx_mutex.unlock();
@@ -339,8 +374,7 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
     }
 
     // 6. Map the physical buffer to the new page address
-    status = svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, pageStart, CUR_PROCESS_HANDLE, pageInfo.srcAddr, PAGE_SIZE);
-    svcCustomBackdoor((void*)invalidate_mmu_cache);
+    status = mapPageMemory(pageStart, pageInfo.srcAddr);
     if (R_FAILED(status)) {
         Core::Debug::LogErrorf("Failed to map memory page %08X, code: %08X", pageStart, status);
         HeapCtx_mutex.unlock();
@@ -386,6 +420,10 @@ void ExtendedHeapExit(void) {
     if (HeapCtx.swapfile.isOpen()) {
         HeapCtx.swapfile.flush();
         HeapCtx.swapfile.close();
+    }
+    if (!isEmulator && curHandle != 0) {
+        svcCloseHandle(curHandle);
+        curHandle = 0;
     }
     HeapCtx_mutex.unlock();
 }

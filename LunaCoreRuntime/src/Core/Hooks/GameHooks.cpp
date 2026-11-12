@@ -358,6 +358,7 @@ struct LightHookCtx {
 };
 
 std::unordered_map<u32, LightHookCtx> LightHooks;
+void* s_RecipesInstance = nullptr;
 
 extern "C" {
     void CoreLightHookPreCallback();
@@ -366,13 +367,13 @@ extern "C" {
         return &LightHooks[id];
     }
     
-    void CoreLightHookCallback(LightHookCtx* ctx) {
+    void CoreLightHookCallback(LightHookCtx* ctx, void* r0) {
         // if (Lua_global == nullptr) {
         //     while (Lua_global == nullptr) 
         //     svcSleepThread(500000000ULL);
         // }
         
-        reinterpret_cast<void(*)(void*)>(ctx->callback)(ctx->passValue);
+        reinterpret_cast<void(*)(void*, void*)>(ctx->callback)(ctx->passValue, r0);
     }
 }
 
@@ -390,7 +391,7 @@ void CoreCreateLightHook(u32 targetAddr, u32 callback, void* passValue) {
     LOGDEBUG("Installed light hook @ %08X", targetAddr);
 }
 
-static void CoreEventHookCallback(const char* eventName) {
+static void CoreEventHookCallback(const char* eventName, void* r0) {
     if (Lua_global == nullptr) {
         while (Lua_global == nullptr) 
             svcSleepThread(500000000ULL);
@@ -398,6 +399,14 @@ static void CoreEventHookCallback(const char* eventName) {
 
     G_LastCoreEvent = eventName;
     std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
+
+    if (strcmp(eventName, "Game.Recipes.OnRegisterRecipes") == 0) {
+        s_RecipesInstance = r0;
+        LuaObjectUtils::NewObject(Lua_global, "RecipesTable", r0);
+        Core::Event::TriggerEvent(Lua_global, eventName, 1);
+        return;
+    }
+
     Core::Event::TriggerEvent(Lua_global, eventName);
 }
 

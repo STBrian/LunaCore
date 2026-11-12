@@ -228,7 +228,7 @@ namespace CTRPluginFramework
         gmenu->Callback(Core::EventHandlerCallback);
         gmenu->Callback(Core::Scheduler::Update);
 
-        // Core::Initializated = true;
+        Core::Initializated = true;
 
         // Init our menu entries & folders
         InitMenu(*gmenu);

@@ -20,6 +20,7 @@ BEGIN_ASM_FUNC CoreLightHookPreCallback
     mov r0, lr
     bl CoreLightHookGetContext
     mov r4, r0
+    ldr r1, [sp]                             // pass original r0 as second argument
     bl CoreLightHookCallback
     ldmia sp!, {r0, r1, r2, r3}
     blx r4

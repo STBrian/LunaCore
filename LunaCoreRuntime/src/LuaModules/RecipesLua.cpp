@@ -101,11 +101,30 @@ static const char* ProcessTableKeys(lua_State* L, std::vector<Minecraft::RecipeC
 @param line3 string
 @param components table
 */
+extern void* s_RecipesInstance;
+
 static int l_Recipes_registerShapedRecipe(lua_State* L) {
     int argIdx = 1;
-    if (lua_isnil(L, 1)) argIdx = 2; // to avoid breaking mod compatibility
-    // void* ptr1 = LuaObjectUtils::CheckObject<void>(L, 1, "RecipesTable").get();
-    void* ptr1 = reinterpret_cast<void*>(0x00a33ebc);
+    void* ptr1 = nullptr;
+
+    if (LuaObjectUtils::IsObject(L, 1, "RecipesTable")) {
+        ptr1 = LuaObjectUtils::CheckObject<void>(L, 1, "RecipesTable").get();
+        argIdx = 2;
+    } else if (lua_isnil(L, 1)) {
+        argIdx = 2; // to avoid breaking mod compatibility
+    }
+
+    if (!ptr1) {
+        ptr1 = s_RecipesInstance;
+    }
+    if (!ptr1 && *reinterpret_cast<void**>(0x00a33ebc) != nullptr) {
+        ptr1 = *reinterpret_cast<void**>(0x00a33ebc);
+    }
+
+    if (!ptr1) {
+        return luaL_error(L, "Recipes instance is not available yet (must be called inside OnRegisterRecipes)");
+    }
+
     Minecraft::ItemInstance* resultItem = LuaObjectUtils::CheckObject<Minecraft::ItemInstance>(L, argIdx++, "MCItemInstance").get();
     u16 categoryId = luaL_checkinteger(L, argIdx++);
     s16 position = luaL_checkinteger(L, argIdx++);
@@ -159,7 +178,7 @@ static const luaL_Reg recipes_functions[] = {
 // class RecipesTableDummyClass {};
 
 bool Core::Module::RegisterRecipesModule(lua_State *L) {
-    // ClassBuilder<DummyEmpty>(L, "RecipesTable").build();
+    ClassBuilder<DummyEmpty>(L, "RecipesTable").build();
 
     lua_getglobal(L, "Game");
     lua_newtable(L); // Recipes

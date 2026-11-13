@@ -193,7 +193,7 @@ bool Core::LoadBuffer(const char *buffer, size_t size, const char* name) {
         int errfunc = lua_gettop(L);
         lua_insert(L, errfunc - 1);
 
-        lua_sethook(L, TimeoutLoadHook, LUA_MASKCOUNT, 100);
+        // lua_sethook(L, TimeoutLoadHook, LUA_MASKCOUNT, 100);
         timeoutLoadClock.Restart();
         if (lua_pcall(L, 0, 0, errfunc - 1))
         {

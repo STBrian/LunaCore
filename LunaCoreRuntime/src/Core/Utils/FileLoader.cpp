@@ -34,6 +34,8 @@ static int l_custom_dofile(lua_State *L)
     if (lua_pcall(L, 1, 1, 0) != 0)
         return lua_error(L);
 
+    if (lua_isstring(L, -1))
+        return luaL_error(L, "loadfile returned error: %s", lua_tostring(L, -1));
     if (!lua_isfunction(L, -1))
         return luaL_error(L, "Failed to load. A function was expected but got %s", luaL_typename(L, -1));
 

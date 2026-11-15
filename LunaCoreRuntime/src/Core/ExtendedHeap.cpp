@@ -28,7 +28,7 @@ typedef struct {
 typedef struct {
     Core::File swapfile;
     PageMapInfo* mappedPages;
-    u16* pageMissCount;
+    u32* pageMissCount;
     u8* pageWrittenToSwap;
     u16 maxLoadedPages;
     u32 maxPages;
@@ -49,29 +49,6 @@ static u32 alignToPageStart(u32 addr) {
 
 #define GET_PAGE_INDEX(pageaddr) ((u32)(((u32)pageaddr - START_EXTHEAP_ADDR) / PAGE_SIZE))
 
-static s32 ctr_enable_all_svc_kernel(void)
-{
-   __asm__ volatile("cpsid aif");
-
-   unsigned int*  svc_access_control = *(*(unsigned int***)0xFFFF9000 + 0x22) - 0x6;
-
-   svc_access_control[0]=0xFFFFFFFE;
-   svc_access_control[1]=0xFFFFFFFF;
-   svc_access_control[2]=0xFFFFFFFF;
-   svc_access_control[3]=0x3FFFFFFF;
-   return 0;
-}
-
-static void invalidate_mmu_cache() {
-    asm volatile (
-        "mov r0, #0\n"
-        "mcr p15, 0, r0, c8, c7, 0\n"  // Invalidate unified TLB
-        "mcr p15, 0, r0, c7, c5, 0\n"  // Invalidate instruction cache
-        "mcr p15, 0, r0, c7, c10, 4\n" // Data Synchronization Barrier (DSB)
-        "mcr p15, 0, r0, c7, c5, 4\n"  // PrefetchFlush / ISB
-    );
-}
-
 static inline void ctr_dsb(void) {
     asm volatile("mcr p15, 0, %0, c7, c10, 4" :: "r" (0) : "memory");
 }
@@ -82,9 +59,7 @@ static inline void ctr_isb(void) {
 
 static Result mapPageMemory(u32 dst, u32 src) {
     if (isEmulator) {
-        Result res = svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, dst, CUR_PROCESS_HANDLE, src, PAGE_SIZE);
-        svcCustomBackdoor((void*)invalidate_mmu_cache);
-        return res;
+        return svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, dst, CUR_PROCESS_HANDLE, src, PAGE_SIZE);
     } else {
         return svcControlProcessMemory(curHandle, dst, src, PAGE_SIZE, MEMOP_MAP, MEMPERM_READWRITE);
     }
@@ -92,9 +67,7 @@ static Result mapPageMemory(u32 dst, u32 src) {
 
 static Result unmapPageMemory(u32 dst, u32 src) {
     if (isEmulator) {
-        Result res = svcUnmapProcessMemoryEx(CUR_PROCESS_HANDLE, dst, PAGE_SIZE);
-        svcCustomBackdoor((void*)invalidate_mmu_cache);
-        return res;
+        return svcUnmapProcessMemoryEx(CUR_PROCESS_HANDLE, dst, PAGE_SIZE);
     } else {
         return svcControlProcessMemory(curHandle, dst, src, PAGE_SIZE, MEMOP_UNMAP, MEMPERM_READWRITE);
     }
@@ -111,10 +84,14 @@ static void ExtendedHeapFastExceptionHandler(ERRF_ExceptionInfo* excep, CpuRegis
     if (excep != nullptr && regs != nullptr && excep->type == ERRF_EXCEPTION_DATA_ABORT) {
         u32 status = (excep->fsr & 0xF) | ((excep->fsr >> 6) & 0x10);
         if ((status == 0x05 || status == 0x07) && ExtendedHeapIsAddressInHeap(excep->far)) {
-            LOGDEBUG("Page fault reached at: %08X", excep->far);
+            #ifdef DEBUG
+            Core::Debug::LogInfof("Page fault reached at: %08X", excep->far);
+            #endif
             Result res = ExtendedHeapAttemptLoadPage(excep->far);
             if (R_SUCCEEDED(res)) {
-                LOGDEBUG("Resuming to PC: %08X", regs->pc);
+                #ifdef DEBUG
+                Core::Debug::LogInfof("[DEBUG] Resuming to PC: %08X", regs->pc);
+                #endif
                 CTRPluginFramework::ProcessImpl::ReturnFromException(regs);
             }
             Core::Debug::LogErrorf("ExtendedHeap: Page swap failed for address %08X, code: %08X", excep->far, res);
@@ -137,11 +114,11 @@ static const char* CrashHandlerExtendedHeapCallback(ERRF_ExceptionInfo* excep, C
 
 Result ExtendedHeapInit(size_t heapsize) {
     const u32 heapsize_b = heapsize * PAGE_SIZE;
-    const u16 maxLoadedPages = heapsize < MAX_LOADED_PAGES ? heapsize : MAX_LOADED_PAGES;
+    u16 maxLoadedPages = heapsize < MAX_LOADED_PAGES ? (u16)heapsize : (u16)MAX_LOADED_PAGES;
+    maxLoadedPages &= ~1; // Ensure an even number of slots for balanced page coloring
 
     isEmulator = CTRPluginFramework::System::IsCitra();
     if (!isEmulator) {
-        svcCustomBackdoor((void*)ctr_enable_all_svc_kernel);
         Result res = svcDuplicateHandle(&curHandle, CUR_PROCESS_HANDLE);
         if (R_FAILED(res)) {
             Core::Debug::LogErrorf("ExtendedHeap: Failed to duplicate process handle: %08X", res);
@@ -174,7 +151,7 @@ Result ExtendedHeapInit(size_t heapsize) {
     HeapCtx.maxLoadedPages = maxLoadedPages;
     
     PageMapInfo* mappedPages = (PageMapInfo*)calloc(sizeof(PageMapInfo), maxLoadedPages);
-    u16* pageMissCount = (u16*)calloc(sizeof(u16), heapsize);
+    u32* pageMissCount = (u32*)calloc(sizeof(u32), heapsize);
     u8* pageWrittenToSwap = (u8*)calloc(sizeof(u8), heapsize);
 
     if (mappedPages == nullptr || pageMissCount == nullptr || pageWrittenToSwap == nullptr) {
@@ -186,30 +163,50 @@ Result ExtendedHeapInit(size_t heapsize) {
     HeapCtx.pageMissCount = pageMissCount;
     HeapCtx.pageWrittenToSwap = pageWrittenToSwap;
     
-    // Initialize pages
-    for (size_t i = 0; i < maxLoadedPages; i++) {
-        mappedPages[i].srcAddr = (u32)aligned_alloc(0x1000, PAGE_SIZE);
-        if (mappedPages[i].srcAddr == 0) {
-            Core::Debug::LogErrorf("ExtendedHeap: Failed to allocate physical page buffer %u", (u32)i);
+    // Allocate physical page buffers in 8KB-aligned pairs so even slots have bit 12 = 0
+    // and odd slots have bit 12 = 1, exactly matching their virtual address page colors.
+    for (size_t i = 0; i < maxLoadedPages; i += 2) {
+        void* pairBuffer = aligned_alloc(0x2000, PAGE_SIZE * 2);
+        if (pairBuffer == nullptr) {
+            Core::Debug::LogErrorf("ExtendedHeap: Failed to allocate physical page pair %u", (u32)i);
             goto error;
         }
-        mappedPages[i].idx = i;
-        mappedPages[i].dstAddr = START_EXTHEAP_ADDR + PAGE_SIZE * i;
-        mappedPages[i].lastAccess = (u32)(100 + i);
-        mappedPages[i].mapped = false;
-        memset((void*)mappedPages[i].srcAddr, 0, PAGE_SIZE);
+        mappedPages[i].srcAddr = (u32)pairBuffer;
+        mappedPages[i + 1].srcAddr = (u32)pairBuffer + PAGE_SIZE;
     }
+
+    // Initialize pages and assign slots respecting page coloring (slot % 2 == pageIdx % 2)
+    for (size_t i = 0; i < maxLoadedPages; i++) {
+        // Map sentinel tail page to a matching-color slot near the end
+        u32 initialPageIdx = (u32)i;
+        if (heapsize > maxLoadedPages) {
+            u32 tailPage = (u32)(heapsize - 1);
+            if ((tailPage & 1) == 1 && i == (size_t)(maxLoadedPages - 1)) {
+                initialPageIdx = tailPage;
+            } else if ((tailPage & 1) == 0 && i == (size_t)(maxLoadedPages - 2)) {
+                initialPageIdx = tailPage;
+            }
+        }
+
+        mappedPages[i].idx = initialPageIdx;
+        mappedPages[i].dstAddr = START_EXTHEAP_ADDR + PAGE_SIZE * initialPageIdx;
+        // Tail page gets lastAccess = 1 so it is chosen first when swaps begin
+        mappedPages[i].lastAccess = (initialPageIdx >= maxLoadedPages) ? 1 : (u32)(100 + i);
+        mappedPages[i].mapped = false;
+    }
+    g_lruCounter = maxLoadedPages + 100;
 
     // Map initial pages
     LOGDEBUG("Mapping initial pages");
     for (size_t i = 0; i < maxLoadedPages; i++) {
-        LOGDEBUG("Mirroring %d", i);
+        LOGDEBUG("Mirroring %d (page %u)", (int)i, mappedPages[i].idx);
         Result res = mapPageMemory(mappedPages[i].dstAddr, mappedPages[i].srcAddr);
         if (R_FAILED(res)) {
             Core::Debug::LogErrorf("ExtendedHeap: Failed to mirror page %u (%08X -> %08X), res: %08X", (u32)i, mappedPages[i].srcAddr, mappedPages[i].dstAddr, res);
             goto error;
         } else {
             mappedPages[i].mapped = true;
+            memset((void*)mappedPages[i].dstAddr, 0, PAGE_SIZE);
         }
     }
 
@@ -224,6 +221,8 @@ Result ExtendedHeapInit(size_t heapsize) {
             if (*handlerSlot != (u32)ExtendedHeapFastExceptionHandler) {
                 g_originalExceptionHandler = (CTRPF_ExceptionHandler)(*handlerSlot);
                 *handlerSlot = (u32)ExtendedHeapFastExceptionHandler;
+                *(u32*)(mainTls + 0x44) = 1;
+                *(u32*)(mainTls + 0x48) = 1;
             }
         }
         u32 curTls = (u32)getThreadLocalStorage();
@@ -264,7 +263,8 @@ Result ExtendedHeapInit(size_t heapsize) {
 
     error:
     Core::Debug::LogError("ExtendedHeap: Failed to init ExtendedHeap. Cleaning up...");
-    svcCustomBackdoor((void*)invalidate_mmu_cache);
+    ctr_dsb();
+    ctr_isb();
     HeapCtx.swapfile.close();
     if (pageMissCount) free(pageMissCount);
     if (pageWrittenToSwap) free(pageWrittenToSwap);
@@ -272,6 +272,8 @@ Result ExtendedHeapInit(size_t heapsize) {
         // Free blocks if any
         for (size_t i = 0; i < maxLoadedPages; i++) {
             if (mappedPages[i].mapped) unmapPageMemory(mappedPages[i].dstAddr, mappedPages[i].srcAddr);
+        }
+        for (size_t i = 0; i < maxLoadedPages; i += 2) {
             if (mappedPages[i].srcAddr != 0) free((void*)mappedPages[i].srcAddr);
         }
         free(mappedPages);
@@ -280,7 +282,8 @@ Result ExtendedHeapInit(size_t heapsize) {
         svcCloseHandle(curHandle);
         curHandle = 0;
     }
-    svcCustomBackdoor((void*)invalidate_mmu_cache);
+    ctr_dsb();
+    ctr_isb();
     return -1;
 }
 
@@ -308,32 +311,45 @@ static u16 getVictimPageSlot(u32 incomingPageIdx) {
         return 0;
     }
 
-    // 1. If any slot is currently unmapped, use it immediately
-    for (u16 i = 1; i < HeapCtx.maxLoadedPages; i++) {
+    const u16 color = (u16)(incomingPageIdx & 1);
+    const u16 startSlot = (color == 0 ? 2 : 1); // Slot 0 is permanently pinned for TLSF control
+
+    // 1. If any slot matching this color is currently unmapped, use it immediately
+    for (u16 i = startSlot; i < HeapCtx.maxLoadedPages; i += 2) {
         if (!HeapCtx.mappedPages[i].mapped) {
             return i;
         }
     }
 
-    // 2. Select victim using LRU with foundation protection & anti-thrashing recency window
+    // 2. Select victim using pageMissCount and LRU among slots with matching color
     u64 bestScore = 0xFFFFFFFFFFFFFFFFULL;
-    u16 victimSlot = 1;
+    u16 victimSlot = startSlot;
 
-    for (u16 i = 1; i < HeapCtx.maxLoadedPages; i++) {
+    for (u16 i = startSlot; i < HeapCtx.maxLoadedPages; i += 2) {
         if (HeapCtx.mappedPages[i].idx == incomingPageIdx) {
             continue;
         }
 
         const u32 pIdx = HeapCtx.mappedPages[i].idx;
+        if (pIdx == 0) {
+            continue; // Slot 0 is pinned
+        }
+
         // Protect foundation pages (0-3: TLSF control metadata and initial root Lua state)
-        const u64 foundationPenalty = (pIdx < 4) ? 1000000000ULL : 0ULL;
+        const u64 foundationPenalty = (pIdx < 4) ? 0x100000000000ULL : 0ULL;
 
-        // Anti-thrashing grace period: protect recently accessed pages from immediate eviction
+        // Anti-thrashing recency window: protect pages loaded very recently
         const u32 age = (u32)(g_lruCounter - HeapCtx.mappedPages[i].lastAccess);
-        const u64 recencyPenalty = (age < 8) ? 500000000ULL : 0ULL;
+        const u64 recencyPenalty = (age < 4) ? 0x010000000000ULL : 0ULL;
 
-        // True LRU: smaller lastAccess means accessed longer ago -> lower score -> chosen first
-        const u64 score = foundationPenalty + recencyPenalty + (u64)HeapCtx.mappedPages[i].lastAccess;
+        // Scoring: Lower score = candidate for eviction.
+        // High pageMissCount (hot pages) -> high score -> retained in memory!
+        // Low pageMissCount (cold pages) -> low score -> chosen for eviction first!
+        // LRU lastAccess acts as fine-grained tie-breaker for pages with identical miss frequency.
+        const u64 missWeight = 100000ULL;
+        const u64 score = foundationPenalty + recencyPenalty + 
+                          ((u64)HeapCtx.pageMissCount[pIdx] * missWeight) + 
+                          (u64)HeapCtx.mappedPages[i].lastAccess;
 
         if (score < bestScore) {
             bestScore = score;
@@ -372,16 +388,22 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
     if (pageIdx > 0) HeapCtx.pageMissCount[pageIdx - 1]++;
     if (pageIdx + 1 < HeapCtx.maxPages) HeapCtx.pageMissCount[pageIdx + 1]++;
 
-    // 3. Select a victim slot using LRU (slot 0 is permanently pinned for TLSF control)
+    // Periodic aging / decay of miss counts to keep them relevant to the current phase
+    if ((g_lruCounter & 0x1FF) == 0) {
+        for (u32 p = 0; p < HeapCtx.maxPages; p++) {
+            HeapCtx.pageMissCount[p] >>= 1;
+        }
+    }
+
+    // 3. Select a victim slot matching the incoming page's color
     const u16 minMappedIdx = getVictimPageSlot(pageIdx);
     PageMapInfo& pageInfo = HeapCtx.mappedPages[minMappedIdx];
 
     // 4. Save victim page to swapfile if it was mapped
     if (pageInfo.mapped) {
-        // Ensure dirty cache lines are written back to RAM before saving to SD
+        // Clean dirty cache lines to physical RAM and invalidate them before SDMMC DMA write
         svcFlushProcessDataCache(CUR_PROCESS_HANDLE, pageInfo.dstAddr, PAGE_SIZE);
-        svcFlushProcessDataCache(CUR_PROCESS_HANDLE, pageInfo.srcAddr, PAGE_SIZE);
-        svcFlushEntireDataCache();
+        ctr_dsb();
 
         writePageContent(pageInfo.dstAddr);
         HeapCtx.pageWrittenToSwap[pageInfo.idx] = 1;
@@ -395,7 +417,8 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
         pageInfo.mapped = false;
     }
 
-    svcCustomBackdoor((void*)invalidate_mmu_cache);
+    ctr_dsb();
+    ctr_isb();
 
     // 5. Verify the destination virtual address is free
     MemInfo info;
@@ -420,20 +443,27 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
     pageInfo.idx = pageIdx;
     pageInfo.lastAccess = ++g_lruCounter;
 
-    svcCustomBackdoor((void*)invalidate_mmu_cache);
+    ctr_dsb();
+    ctr_isb();
 
     // 7. Now that pageStart is mapped in application memory, load content into it or zero-initialize if new
     if (HeapCtx.pageWrittenToSwap[pageIdx]) {
+        // Invalidate D-cache before SDMMC DMA read so no stale/dirty lines exist
+        svcInvalidateProcessDataCache(CUR_PROCESS_HANDLE, pageStart, PAGE_SIZE);
+        ctr_dsb();
+
         loadPageContent(pageStart);
+
+        // Invalidate D-cache and I-cache after SDMMC DMA read so CPU fetches freshly read data from RAM.
+        // DO NOT FLUSH/CLEAN! A clean would overwrite RAM with stale cache data!
+        svcInvalidateProcessDataCache(CUR_PROCESS_HANDLE, pageStart, PAGE_SIZE);
+        svcInvalidateEntireInstructionCache();
+        ctr_dsb();
+        ctr_isb();
     } else {
         memset((void*)pageStart, 0, PAGE_SIZE);
+        ctr_dsb();
     }
-
-    // Invalidate D-cache for the freshly loaded page so CPU fetches the new data from RAM, and invalidate instruction cache
-    svcFlushProcessDataCache(CUR_PROCESS_HANDLE, pageStart, PAGE_SIZE);
-    svcInvalidateProcessDataCache(CUR_PROCESS_HANDLE, pageStart, PAGE_SIZE);
-    svcFlushEntireDataCache();
-    svcInvalidateEntireInstructionCache();
 
     HeapCtx_mutex.unlock();
     return 0;

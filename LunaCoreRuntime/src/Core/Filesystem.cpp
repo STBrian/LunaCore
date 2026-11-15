@@ -589,12 +589,6 @@ Result Core::FsInit() {
     currentInfo.perms = DEVICEACCESS_READ; 
     gl_Devices.push_back(currentInfo);
 
-    // Only for internal usage
-    currentInfo.name = "lcfs";
-    currentInfo.mountPoint = PLUGIN_FOLDER;
-    currentInfo.perms = DEVICEACCESS_READ|DEVICEACCESS_WRITE;
-    gl_Devices.push_back(currentInfo);
-
     currentInfo.name = "data";
     currentInfo.mountPoint = PLUGIN_FOLDER "/data";
     currentInfo.perms = DEVICEACCESS_READ|DEVICEACCESS_WRITE;
@@ -614,6 +608,12 @@ Result Core::FsInit() {
     currentInfo.create_directory = fslib_create_directory;
     currentInfo.directory_exists = fslib_directory_exists;
     currentInfo.get_directory_elements = fslib_get_directory_elements;
+
+    // Only for internal usage
+    currentInfo.name = "lcfs";
+    currentInfo.mountPoint = PLUGIN_FOLDER;
+    currentInfo.perms = DEVICEACCESS_READ|DEVICEACCESS_WRITE;
+    gl_Devices.push_back(currentInfo);
 
     if (fslib::open_extra_data(u"extdata", static_cast<uint32_t>(titleId >> 8 & 0x00FFFFFF))) {
         currentInfo.name = "extdata";

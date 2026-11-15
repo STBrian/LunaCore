@@ -11,11 +11,7 @@
 
 #define PAGE_SIZE (0x1000) // 4KB (1 physical pages)
 #define START_EXTHEAP_ADDR 0x02000000
-#define MAX_LOADED_PAGES 32 // 96 * 4KB = 384KB (well within the 1024KB free CTRPF heap)
-
-namespace CTRPluginFramework::ProcessImpl {
-    void    UpdateMemRegions(bool ignoreLock);
-}
+#define MAX_LOADED_PAGES 50 // 96 * 4KB = 384KB (well within the 1024KB free CTRPF heap)
 
 namespace CTRPluginFramework::Heap {
     u32 SpaceFree(void);
@@ -45,7 +41,7 @@ static ExtHeapCtx HeapCtx;
 static bool isEmulator = false;
 static Handle curHandle = 0;
 Core::Mutex HeapCtx_mutex;
-static u32 g_lruCounter = MAX_LOADED_PAGES;
+static u32 g_lruCounter = 1000;
 
 static u32 alignToPageStart(u32 addr) {
     return addr - (addr & (PAGE_SIZE - 1));
@@ -76,6 +72,14 @@ static void invalidate_mmu_cache() {
     );
 }
 
+static inline void ctr_dsb(void) {
+    asm volatile("mcr p15, 0, %0, c7, c10, 4" :: "r" (0) : "memory");
+}
+
+static inline void ctr_isb(void) {
+    asm volatile("mcr p15, 0, %0, c7, c5, 4" :: "r" (0) : "memory");
+}
+
 static Result mapPageMemory(u32 dst, u32 src) {
     if (isEmulator) {
         Result res = svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, dst, CUR_PROCESS_HANDLE, src, PAGE_SIZE);
@@ -97,39 +101,35 @@ static Result unmapPageMemory(u32 dst, u32 src) {
 }
 
 namespace CTRPluginFramework::ProcessImpl {
-    extern u32 exceptionCount;
-
     void ReturnFromException(CpuRegisters* regs);
-
-     void    UnlockGameThreads(void);
 }
 
-namespace CTRPluginFrameworkImpl::Services::GSP {
-    void    PauseInterruptReceiver(void);
-}
+typedef void (*CTRPF_ExceptionHandler)(ERRF_ExceptionInfo* excep, CpuRegisters* regs);
+static CTRPF_ExceptionHandler g_originalExceptionHandler = nullptr;
 
-namespace CTRPluginFramework::ScreenImpl {
-    void    SwitchFrameBuffers(bool game);
+static void ExtendedHeapFastExceptionHandler(ERRF_ExceptionInfo* excep, CpuRegisters* regs) {
+    if (excep != nullptr && regs != nullptr && excep->type == ERRF_EXCEPTION_DATA_ABORT) {
+        u32 status = (excep->fsr & 0xF) | ((excep->fsr >> 6) & 0x10);
+        if ((status == 0x05 || status == 0x07) && ExtendedHeapIsAddressInHeap(excep->far)) {
+            LOGDEBUG("Page fault reached at: %08X", excep->far);
+            Result res = ExtendedHeapAttemptLoadPage(excep->far);
+            if (R_SUCCEEDED(res)) {
+                LOGDEBUG("Resuming to PC: %08X", regs->pc);
+                CTRPluginFramework::ProcessImpl::ReturnFromException(regs);
+            }
+            Core::Debug::LogErrorf("ExtendedHeap: Page swap failed for address %08X, code: %08X", excep->far, res);
+        }
+    }
+
+    if (g_originalExceptionHandler != nullptr) {
+        g_originalExceptionHandler(excep, regs);
+    }
 }
 
 static const char* CrashHandlerExtendedHeapCallback(ERRF_ExceptionInfo* excep, CpuRegisters* regs) {
-    const bool manuallyCalled = excep == nullptr || regs == nullptr;
-    if (!manuallyCalled && excep->type == ERRF_ExceptionType::ERRF_EXCEPTION_DATA_ABORT) {
-        u32 status = (excep->fsr & 0xF) | ((excep->fsr >> 6) & 0x10);
-        if ((status == 0x05 || status == 0x07) && ExtendedHeapIsAddressInHeap(excep->far)) { // Section | Page translation fault
-            LOGDEBUG("Page fault reached at: %08X", excep->far);
-            CTRPF::ScreenImpl::SwitchFrameBuffers(true);
-            Result status = ExtendedHeapAttemptLoadPage(excep->far);
-            if (R_FAILED(status)) {
-                return "Page swap failed";
-            } else {
-                AtomicPostDecrement(&CTRPF::ProcessImpl::exceptionCount);
-                CTRPluginFrameworkImpl::Services::GSP::PauseInterruptReceiver(); 
-                CTRPF::ProcessImpl::UnlockGameThreads();
-                LOGDEBUG("Resuming to PC: %08X", regs->pc);
-                //svcSleepThread(1000000LL);
-                CTRPF::ProcessImpl::ReturnFromException(regs);
-            }
+    if (excep != nullptr && regs != nullptr && excep->type == ERRF_EXCEPTION_DATA_ABORT) {
+        if (ExtendedHeapIsAddressInHeap(excep->far)) {
+            return "ExtendedHeap: Page swap failure or out of memory";
         }
     }
     return nullptr;
@@ -195,7 +195,7 @@ Result ExtendedHeapInit(size_t heapsize) {
         }
         mappedPages[i].idx = i;
         mappedPages[i].dstAddr = START_EXTHEAP_ADDR + PAGE_SIZE * i;
-        mappedPages[i].lastAccess = (u32)(maxLoadedPages - i);
+        mappedPages[i].lastAccess = (u32)(100 + i);
         mappedPages[i].mapped = false;
         memset((void*)mappedPages[i].srcAddr, 0, PAGE_SIZE);
     }
@@ -215,6 +215,33 @@ Result ExtendedHeapInit(size_t heapsize) {
 
     LOGDEBUG("Creating allocator");
     Core::CrashHandler::SetCallback(CrashHandlerExtendedHeapCallback);
+
+    // Install fast page fault exception handler at TLS level to avoid CTRPF GSP/threading side effects
+    {
+        u32 mainTls = CTRPluginFramework::Process::GetMainThreadTLS();
+        if (mainTls != 0) {
+            u32* handlerSlot = (u32*)(mainTls + 0x40);
+            if (*handlerSlot != (u32)ExtendedHeapFastExceptionHandler) {
+                g_originalExceptionHandler = (CTRPF_ExceptionHandler)(*handlerSlot);
+                *handlerSlot = (u32)ExtendedHeapFastExceptionHandler;
+            }
+        }
+        u32 curTls = (u32)getThreadLocalStorage();
+        if (curTls != 0) {
+            u32* curHandlerSlot = (u32*)(curTls + 0x40);
+            if (*curHandlerSlot != (u32)ExtendedHeapFastExceptionHandler) {
+                if (g_originalExceptionHandler == nullptr && *curHandlerSlot != 0) {
+                    g_originalExceptionHandler = (CTRPF_ExceptionHandler)(*curHandlerSlot);
+                }
+                *curHandlerSlot = (u32)ExtendedHeapFastExceptionHandler;
+                *(u32*)(curTls + 0x44) = 1;
+                *(u32*)(curTls + 0x48) = 1;
+            }
+        }
+        ctr_dsb();
+        ctr_isb();
+    }
+
     HeapCtx.allocator = tlsf_create_with_pool((void*)START_EXTHEAP_ADDR, heapsize_b);
     if (!HeapCtx.allocator) {
         Core::Debug::LogError("ExtendedHeap: Failed to create tlsf allocator");
@@ -265,7 +292,7 @@ static void writePageContent(u32 addr) {
     const size_t fileOffset = addr - START_EXTHEAP_ADDR;
     HeapCtx.swapfile.seek(fileOffset, SEEK_SET);
     int status = HeapCtx.swapfile.write((void*)addr, PAGE_SIZE);
-    if (status != PAGE_SIZE) Core::Abort("Failed to write page to swapfile");
+    if (status != PAGE_SIZE) Core::Abort(CTRPF::Utils::Format("Failed to write page to swapfile from %08X! %08X", addr, status).c_str());
     HeapCtx.swapfile.flush();
 }
 
@@ -273,7 +300,7 @@ static void loadPageContent(u32 addr) {
     const size_t fileOffset = addr - START_EXTHEAP_ADDR;
     HeapCtx.swapfile.seek(fileOffset, SEEK_SET);
     int status = HeapCtx.swapfile.read((void*)addr, PAGE_SIZE);
-    if (status != PAGE_SIZE) Core::Abort(CTRPF::Utils::Format("Failed to read swap page! %08X", status).c_str());
+    if (status != PAGE_SIZE) Core::Abort(CTRPF::Utils::Format("Failed to read swap page @ %08X! %08X", addr, status).c_str());
 }
 
 static u16 getVictimPageSlot(u32 incomingPageIdx) {
@@ -288,7 +315,7 @@ static u16 getVictimPageSlot(u32 incomingPageIdx) {
         }
     }
 
-    // 2. Select victim using frequency + foundation protection + recency
+    // 2. Select victim using LRU with foundation protection & anti-thrashing recency window
     u64 bestScore = 0xFFFFFFFFFFFFFFFFULL;
     u16 victimSlot = 1;
 
@@ -298,12 +325,15 @@ static u16 getVictimPageSlot(u32 incomingPageIdx) {
         }
 
         const u32 pIdx = HeapCtx.mappedPages[i].idx;
-        // Protect early foundation pages (0-15 contain TLSF control headers and initial Lua state)
-        const u64 foundationPenalty = (pIdx < 16) ? 1000000000ULL : 0ULL;
-        // High miss count indicates a hot working-set page that must be kept in memory
-        const u64 missPenalty = (u64)HeapCtx.pageMissCount[pIdx] * 1000000ULL;
-        // Recency tie-breaker
-        const u64 score = foundationPenalty + missPenalty + HeapCtx.mappedPages[i].lastAccess;
+        // Protect foundation pages (0-3: TLSF control metadata and initial root Lua state)
+        const u64 foundationPenalty = (pIdx < 4) ? 1000000000ULL : 0ULL;
+
+        // Anti-thrashing grace period: protect recently accessed pages from immediate eviction
+        const u32 age = (u32)(g_lruCounter - HeapCtx.mappedPages[i].lastAccess);
+        const u64 recencyPenalty = (age < 8) ? 500000000ULL : 0ULL;
+
+        // True LRU: smaller lastAccess means accessed longer ago -> lower score -> chosen first
+        const u64 score = foundationPenalty + recencyPenalty + (u64)HeapCtx.mappedPages[i].lastAccess;
 
         if (score < bestScore) {
             bestScore = score;
@@ -348,7 +378,11 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
 
     // 4. Save victim page to swapfile if it was mapped
     if (pageInfo.mapped) {
+        // Ensure dirty cache lines are written back to RAM before saving to SD
+        svcFlushProcessDataCache(CUR_PROCESS_HANDLE, pageInfo.dstAddr, PAGE_SIZE);
+        svcFlushProcessDataCache(CUR_PROCESS_HANDLE, pageInfo.srcAddr, PAGE_SIZE);
         svcFlushEntireDataCache();
+
         writePageContent(pageInfo.dstAddr);
         HeapCtx.pageWrittenToSwap[pageInfo.idx] = 1;
 
@@ -373,7 +407,7 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
         return -4;
     }
 
-    // 6. Map the physical buffer to the new page address
+    // 6. Map the physical buffer to the new page address FIRST
     status = mapPageMemory(pageStart, pageInfo.srcAddr);
     if (R_FAILED(status)) {
         Core::Debug::LogErrorf("Failed to map memory page %08X, code: %08X", pageStart, status);
@@ -387,15 +421,17 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
     pageInfo.lastAccess = ++g_lruCounter;
 
     svcCustomBackdoor((void*)invalidate_mmu_cache);
-    CTRPluginFramework::ProcessImpl::UpdateMemRegions(true);
 
-    // 7. Load page content if it was previously written, or zero-initialize if new
+    // 7. Now that pageStart is mapped in application memory, load content into it or zero-initialize if new
     if (HeapCtx.pageWrittenToSwap[pageIdx]) {
-        loadPageContent(pageInfo.dstAddr);
+        loadPageContent(pageStart);
     } else {
-        memset((void*)pageInfo.dstAddr, 0, PAGE_SIZE);
+        memset((void*)pageStart, 0, PAGE_SIZE);
     }
 
+    // Invalidate D-cache for the freshly loaded page so CPU fetches the new data from RAM, and invalidate instruction cache
+    svcFlushProcessDataCache(CUR_PROCESS_HANDLE, pageStart, PAGE_SIZE);
+    svcInvalidateProcessDataCache(CUR_PROCESS_HANDLE, pageStart, PAGE_SIZE);
     svcFlushEntireDataCache();
     svcInvalidateEntireInstructionCache();
 
@@ -417,6 +453,19 @@ void ExtendedHeapFree(void* p) {
 
 void ExtendedHeapExit(void) {
     HeapCtx_mutex.lock();
+    if (g_originalExceptionHandler != nullptr) {
+        u32 mainTls = CTRPluginFramework::Process::GetMainThreadTLS();
+        if (mainTls != 0) {
+            *(u32*)(mainTls + 0x40) = (u32)g_originalExceptionHandler;
+        }
+        u32 curTls = (u32)getThreadLocalStorage();
+        if (curTls != 0) {
+            *(u32*)(curTls + 0x40) = (u32)g_originalExceptionHandler;
+        }
+        ctr_dsb();
+        ctr_isb();
+        g_originalExceptionHandler = nullptr;
+    }
     if (HeapCtx.swapfile.isOpen()) {
         HeapCtx.swapfile.flush();
         HeapCtx.swapfile.close();

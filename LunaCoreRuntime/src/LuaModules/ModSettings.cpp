@@ -112,6 +112,32 @@ void ModSettingsManager::triggerButton(int callbackRef) {
     Lua_Global_Mut.unlock();
 }
 
+void ModSettingsManager::registerActiveScreen(IModSettingsScreen* screen) {
+    mActiveScreen = screen;
+}
+
+void ModSettingsManager::unregisterActiveScreen(IModSettingsScreen* screen) {
+    if (mActiveScreen == screen) {
+        mActiveScreen = nullptr;
+    }
+}
+
+void ModSettingsManager::notifySettingChanged(const std::string& modId) {
+    if (!mActiveScreen) {
+        return;
+    }
+
+    std::string activeMod = mActiveScreen->getModId();
+    Core::Utils::toLower(activeMod);
+
+    std::string targetMod = modId;
+    Core::Utils::toLower(targetMod);
+
+    if (activeMod == targetMod) {
+        mActiveScreen->refreshUI();
+    }
+}
+
 // ----------------------------------------------------------------------------
 // Lua bindings for ModSettings instance
 // ----------------------------------------------------------------------------
@@ -316,6 +342,8 @@ static int l_ModSettings_set(lua_State* L) {
             break;
     }
 
+    ModSettingsManager::getInstance().notifySettingChanged(obj->modId);
+
     lua_pushvalue(L, 1);
     return 1;
 }
@@ -333,7 +361,7 @@ static int l_ModSettings_createSettings(lua_State* L) {
     }
 
     if (modId.empty()) {
-        return luaL_error(L, "Mod name could not be determined for ModSettings");
+        return luaL_error(L, "Mod name could not be determined for ModSettings. Please provide the modid manually");
     }
 
     ModSettingsConfig* cfg = ModSettingsManager::getInstance().getOrCreateConfig(modId);
@@ -347,6 +375,10 @@ static int l_ModSettings_getSettings(lua_State* L) {
         modId = lua_tostring(L, 1);
     } else {
         modId = currentLoadingMod;
+    }
+
+    if (modId.empty()) {
+        return luaL_error(L, "Mod name could not be determined for ModSettings. Please provide the modid manually");
     }
 
     ModSettingsConfig* cfg = ModSettingsManager::getInstance().getConfig(modId);
@@ -377,7 +409,6 @@ static const luaL_Reg mod_settings_functions[] =
     {"createSettings", l_ModSettings_createSettings},
     {"create", l_ModSettings_createSettings},
     {"getSettings", l_ModSettings_getSettings},
-    {"get", l_ModSettings_getSettings},
     {"hasSettings", l_ModSettings_hasSettings},
     {NULL, NULL}
 };

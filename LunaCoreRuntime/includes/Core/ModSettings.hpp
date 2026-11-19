@@ -53,6 +53,13 @@ namespace Core {
         }
     };
 
+    class IModSettingsScreen {
+    public:
+        virtual ~IModSettingsScreen() = default;
+        virtual const std::string& getModId() const = 0;
+        virtual void refreshUI() = 0;
+    };
+
     class ModSettingsManager {
     public:
         static ModSettingsManager& getInstance();
@@ -64,7 +71,12 @@ namespace Core {
         void notifyClose(const std::string& modId);
         void triggerButton(int callbackRef);
 
+        void registerActiveScreen(IModSettingsScreen* screen);
+        void unregisterActiveScreen(IModSettingsScreen* screen);
+        void notifySettingChanged(const std::string& modId);
+
     private:
         std::unordered_map<std::string, ModSettingsConfig> mConfigs;
+        IModSettingsScreen* mActiveScreen = nullptr;
     };
 }

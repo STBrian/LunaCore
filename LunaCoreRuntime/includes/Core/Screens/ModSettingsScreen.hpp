@@ -29,7 +29,7 @@ namespace Core {
     namespace MC3DSPF = MC3DSPluginFramework;
     using MC3DSPF::GuiButton;
 
-    class LunaCoreModSettingsScreen : public MC3DSPF::Screen
+    class LunaCoreModSettingsScreen : public MC3DSPF::Screen, public IModSettingsScreen
     {
         USE_GAME_ALLOCATOR
     private:
@@ -45,6 +45,7 @@ namespace Core {
         std::string mModId;
         std::string mModTitle;
         int mCurrentPage;
+        bool mNeedRebuild;
 
         MC3DSPF::gstd::unique_ptr<MC3DSPF::NinePatchLayer> mBackgroundFrame;
         MC3DSPF::gstd::unique_ptr<MC3DSPF::NinePatchLayer> mBackground;
@@ -67,9 +68,25 @@ namespace Core {
     public:
         LunaCoreModSettingsScreen(MC3DSPF::MinecraftGame *mg, MC3DSPF::ClientInstance *ci,
                                   const std::string& modId, const std::string& modTitle) :
-            Screen(mg, ci), mModId(modId), mModTitle(modTitle), mCurrentPage(0) {}
+            Screen(mg, ci), mModId(modId), mModTitle(modTitle), mCurrentPage(0), mNeedRebuild(false)
+        {
+            ModSettingsManager::getInstance().registerActiveScreen(this);
+        }
 
-        ~LunaCoreModSettingsScreen() override = default;
+        ~LunaCoreModSettingsScreen() override
+        {
+            ModSettingsManager::getInstance().unregisterActiveScreen(this);
+        }
+
+        const std::string& getModId() const override
+        {
+            return mModId;
+        }
+
+        void refreshUI() override
+        {
+            mNeedRebuild = true;
+        }
 
         void setupComponents() override
         {
@@ -212,6 +229,10 @@ namespace Core {
                         break;
                     case SettingType::Button:
                         ModSettingsManager::getInstance().triggerButton(item.luaCallbackRef);
+                        if (mNeedRebuild) {
+                            mNeedRebuild = false;
+                            rebuildComponents();
+                        }
                         break;
                     case SettingType::Slider:
                         if (subId == 1) { // Minus
@@ -253,6 +274,12 @@ namespace Core {
         {
             if (useScreen & MC3DSPF::UseScreen::Bottom)
             {
+                if (mNeedRebuild)
+                {
+                    mNeedRebuild = false;
+                    rebuildComponents();
+                }
+
                 mBackgroundFrame->draw(MC3DSPF::Tessellator::instance, 0, 0);
                 mBackground->draw(MC3DSPF::Tessellator::instance, 6, 30);
 

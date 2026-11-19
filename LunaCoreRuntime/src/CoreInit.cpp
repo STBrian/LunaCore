@@ -22,7 +22,9 @@
 #include "CoreConstants.hpp"
 #include "CoreGlobals.hpp"
 #include "CoreTools.hpp"
-#include "ExtendedHeap.hpp"
+// #include "ExtendedHeap.hpp"
+
+#include "tlsf.h"
 
 using json = nlohmann::ordered_json;
 namespace CTRPF = CTRPluginFramework;
@@ -30,33 +32,55 @@ using namespace Core;
 
 CTRPF::Clock timeoutLoadClock;
 
-#define HEAP_PLUGIN 0
-#define HEAP_GAME_APP 1
-#define HEAP_GAME_LINEAR 2
+#define VRAM_BANK_A_START (0x1F200000)
+#define VRAM_BANK_A_SIZE  (1 * 1024 * 1024) // 1 MB (dejando 2 MB para framebuffers de pantalla)
 
-u32 pluginHeapUsage = 0;
-#define PLUGIN_HEAP_MAX (1 * 1024 * 1024) // 1 Mb
+#define VRAM_BANK_B_START (0x1F400000)
+#define VRAM_BANK_B_SIZE  (2 * 1024 * 1024) // 2 MB (dejando 1 MB para el Z-buffer de la GPU)
 
-void* extended_lua_allocator_extended(void* ud, void* ptr, size_t osize, size_t nsize) {
-    if (nsize == 0 && ptr != nullptr) {
-        ExtendedHeapFree(ptr);
-        return NULL;
-    } else {
-        if (ptr == NULL) {
-            return ExtendedHeapMalloc(nsize);
-        } else {
-            return ExtendedHeapRealloc(ptr, nsize);
-        }
+/* Lua heap uses free VRAM memory */
+static tlsf_t g_luaHeapAllocator = nullptr;
+
+Result InitLuaHeap(void) {
+    memset((void*)VRAM_BANK_B_START, 0, VRAM_BANK_B_SIZE);
+
+    g_luaHeapAllocator = tlsf_create_with_pool((void*)VRAM_BANK_B_START, VRAM_BANK_B_SIZE);
+    if (!g_luaHeapAllocator) {
+        // Core::Debug::LogError("Lua Heap: Failed to create TLSF pool in VRAM Bank B");
+        return -1;
     }
+
+    memset((void*)VRAM_BANK_A_START, 0, VRAM_BANK_A_SIZE);
+    if (!tlsf_add_pool(g_luaHeapAllocator, (void*)VRAM_BANK_A_START, VRAM_BANK_A_SIZE)) {
+        // Core::Debug::LogError("Lua Heap: Failed to add TLSF pool in VRAM Bank A");
+        return -1;
+    }
+
+    Core::Debug::LogInfo("Lua Heap initialized with size of 3072 KB");
+    return 0;
+}
+
+void* lua_heap_allocator(void* ud, void* ptr, size_t osize, size_t nsize) {
+    if (nsize == 0) {
+        if (ptr != nullptr) {
+            tlsf_free(g_luaHeapAllocator, ptr);
+        }
+        return NULL;
+    }
+    if (ptr == NULL) {
+        return tlsf_malloc(g_luaHeapAllocator, nsize);
+    }
+    return tlsf_realloc(g_luaHeapAllocator, ptr, nsize);
 }
 
 static void readString(Core::File& file, std::string& line) {
+    line.clear();
     s8 chr;
     while ((chr = file.getByte()) != '\0' && chr != -1) {
         line += chr;
-        file.seek(1, SEEK_CUR);
+        // file.seek(1, SEEK_CUR);
     }
-    file.seek(1, SEEK_CUR);
+    // file.seek(1, SEEK_CUR);
     return;
 }
 
@@ -80,7 +104,6 @@ void Core::GetCoreInfo(std::string& plgTitle, std::string& plgAuthor, std::strin
 }
 
 void Core::InitCore() {
-    u64 titleID = CTRPF::Process::GetTitleID();
     std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
 
     if (!Core::Filesystem::DirectoryExists(LC_FS"/scripts"))
@@ -88,16 +111,20 @@ void Core::InitCore() {
 
     bool loadScripts = G_config.getBool("enable_scripts", true);
     
-    Core::Debug::LogInfo("Loading Lua environment");
     // #ifdef EXPERIMENTAL
-    Result result = ExtendedHeapInit(1000);
-    if (result < 0) Core::Abort("Failed to initialize ExtendedHeap");
-    Lua_global = lua_newstate(extended_lua_allocator_extended, NULL);
+    // Result result = ExtendedHeapInit(1000);
+    // if (result < 0) Core::Abort("Failed to initialize ExtendedHeap");
+    Result result = InitLuaHeap();
+    if (result < 0) Core::Abort("Failed to initialize heap for Lua");
+
+    Core::Debug::LogInfo("Creating Lua environment");
+    Lua_global = lua_newstate(lua_heap_allocator, NULL);
     // #else
     // Lua_global = luaL_newstate();
     // #endif
     if (Lua_global == nullptr)
         Core::Abort("Failed to initialize Lua env");
+    Core::Debug::LogInfo("Loading Lua environment");
     Core::LoadLuaEnv();
 
     std::string region;

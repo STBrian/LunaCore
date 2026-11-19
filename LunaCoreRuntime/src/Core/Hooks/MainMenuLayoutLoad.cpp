@@ -15,6 +15,7 @@
 #include "Core/Debug.hpp"
 #include "Core/Utils/Utils.hpp"
 #include "Core/Hooks/GameHooks.hpp"
+#include "Core/Screens/ModsScreen.hpp"
 #include "Core/Screens/SettingsScreen.hpp"
 
 #include <MC3DSPluginFramework.hpp>
@@ -166,7 +167,7 @@ static void MainMenuCustomButtonsHook(CoreHookContext* ctx) {
         ScreenChooser& screenChosser_ins = Facade::getMinecraftGame()->getScreenChooser();
         MinecraftGame* mg = Facade::getMinecraftGame();
         ClientInstance* ci = Facade::getClient();
-        BoxedPtr::Shared<Core::LunaCoreSettingsScreen> screen_ins(gstd::make_unique<Core::LunaCoreSettingsScreen>(mg, ci));
+        BoxedPtr::Shared<Core::LunaCoreModsScreen> screen_ins(gstd::make_unique<Core::LunaCoreModsScreen>(mg, ci));
         screenChosser_ins._pushScreen(screen_ins);
         // CTRPF::PluginMenu::ForceOpen();
     }

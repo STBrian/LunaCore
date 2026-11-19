@@ -15,8 +15,6 @@
 #include "Core/Debug.hpp"
 #include "Core/Filesystem.hpp"
 
-#include "CrossServer.hpp"
-
 #include "Helpers/TCPConnection.hpp"
 #include "Helpers/Allocation.hpp"
 #include "Helpers/Threads.hpp"

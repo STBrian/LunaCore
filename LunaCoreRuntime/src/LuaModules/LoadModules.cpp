@@ -106,6 +106,8 @@ namespace Core {
         Core::Module::RegisterMemoryModule(L);
         LOGDEBUG("Loading Menu module");
         Core::Module::RegisterMenuModule(L);
+        LOGDEBUG("Loading ModSettings module");
+        Core::Module::RegisterModSettingsModule(L);
         return true;
     }
 }

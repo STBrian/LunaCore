@@ -22,6 +22,7 @@
 #include "CoreConstants.hpp"
 #include "CoreGlobals.hpp"
 #include "CoreTools.hpp"
+#include "Core/ModInfo.hpp"
 // #include "ExtendedHeap.hpp"
 
 #include "tlsf.h"
@@ -549,6 +550,27 @@ bool LoadMod(std::string modName, ModsLoadingContext& context)
     context.removeLoadingMod(modName);
     context.addLoadedMod(modName);
 
+    {
+        ModInfo info;
+        info.id = modName;
+        info.name = j.value("name", modName);
+        info.description = j.value("description", "");
+        info.version = j.value("version", "0.0.0");
+        if (j.contains("dependencies") && j["dependencies"].is_array()) {
+            for (const auto& dep : j["dependencies"]) {
+                if (dep.is_string()) info.dependencies.push_back(dep.get<std::string>());
+            }
+        }
+        if (j.contains("optional_dependencies") && j["optional_dependencies"].is_array()) {
+            for (const auto& dep : j["optional_dependencies"]) {
+                if (dep.is_string()) info.optionalDependencies.push_back(dep.get<std::string>());
+            }
+        }
+        info.folderPath = context.getModFolderPath(modName);
+        Core::LoadedModList.push_back(info);
+        loadedMods = (int)Core::LoadedModList.size();
+    }
+
     return true;
 
     errorDiscard:
@@ -559,6 +581,8 @@ bool LoadMod(std::string modName, ModsLoadingContext& context)
 
 void Core::LoadMods() 
 {
+    Core::LoadedModList.clear();
+    loadedMods = 0;
     ModsLoadingContext context{};
     std::vector<std::string> mods;
     Core::Filesystem::GetDirectoryEntries(PLUGIN_FOLDER "/mods", mods);

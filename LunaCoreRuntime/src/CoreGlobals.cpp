@@ -1,6 +1,9 @@
 #include "CoreGlobals.hpp"
 
 #include "CoreConstants.hpp"
+#include "Core/ModInfo.hpp"
+
+std::vector<Core::ModInfo> Core::LoadedModList;
 
 lua_State *Lua_global = NULL;
 Core::Mutex Lua_Global_Mut;

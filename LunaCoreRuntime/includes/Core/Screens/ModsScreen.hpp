@@ -2,19 +2,22 @@
 
 #include "Api/Facade.hpp"
 #include "Minecraft/Common/Client/Gui/Components/IconButton.hpp"
+#include "Minecraft/Common/Client/Gui/Components/GuiButton.hpp"
 #include "Minecraft/Common/Client/Gui/Components/NinePatch.hpp"
-#include "Minecraft/Common/Client/Gui/Components/OptionItem.hpp"
-#include "Minecraft/Common/Client/Gui/Components/Slider.hpp"
 #include "Minecraft/Common/Client/Gui/Screens/Screen.hpp"
 #include "Minecraft/Common/Client/Gui/Screens/ScreenStack.hpp"
-#include "Minecraft/Common/Client/Gui/Screens/SystemMessagesScreen.hpp"
+#include "Minecraft/Common/Client/Gui/Screens/ScreenChooser.hpp"
 #include "Minecraft/Common/Platform/AppPlatform.hpp"
-#include <Minecraft/Common/Client/Gui/Screens/ScreenChooser.hpp>
 #include <CTRPluginFramework.hpp>
 
 #include "GameAPI.hpp"
-
+#include "Core/ModInfo.hpp"
 #include "ModScreen.hpp"
+#include "SettingsScreen.hpp"
+
+#include <string>
+#include <vector>
+#include <algorithm>
 
 #ifndef STRINGIFY_MACRO
 #define STRINGIFY_MACRO(x) STRINGIFY_MACRO_HELPER(x)
@@ -24,74 +27,191 @@
 namespace Core {
     namespace CTRPF = CTRPluginFramework;
     namespace MC3DSPF = MC3DSPluginFramework;
-    
+    using MC3DSPF::GuiButton;
+
+    class ModListItemButton : public MC3DSPF::GuiButton
+    {
+        USE_GAME_ALLOCATOR
+    public:
+        ModListItemButton(MC3DSPF::MinecraftGame* game, int id, int x, int y, int w, int h,
+                          const std::string& title, const std::string& desc) :
+            GuiButton(game, id, x, y, w, h, "", false, INT_MAX),
+            mTitle(title), mDesc(desc) {}
+
+        ~ModListItemButton() override = default;
+
+        void drawLabel(int touchX, int touchY) override
+        {
+            if (!mMinecraftGame) return;
+            MC3DSPF::Font& font = mMinecraftGame->getDefaultFont();
+
+            int textX = mX + 8;
+            int titleY = mY + 8;
+            int descY = mY + 22;
+
+            if (FUN_005e6338(touchX, touchY)) {
+                titleY += 1;
+                descY += 1;
+            }
+
+            font.drawWithShadow((int)textX + 1, titleY + 1, 1, mTitle.c_str(), MC3DSPF::Color(0.45f, 0.45f, 0.45f), 0, -1);
+            font.drawWithShadow((int)textX, titleY, 1, mTitle.c_str(), MC3DSPF::Color(1, 1, 1), 0, -1);
+
+            std::string shortDesc = mDesc;
+            if (shortDesc.length() > 42 - 4) {
+                shortDesc = shortDesc.substr(0, 39 - 4) + "...";
+            }
+            font.drawWithShadow(textX, descY, 1, shortDesc.c_str(), MC3DSPF::Color(0.35f, 0.35f, 0.35f), 0, -1);
+        }
+
+    private:
+        std::string mTitle;
+        std::string mDesc;
+    };
+
     class LunaCoreModsScreen : public MC3DSPF::Screen
     {
         USE_GAME_ALLOCATOR
     private:
+        static constexpr int ITEMS_PER_PAGE = 4;
+
         enum ButtonId {
-            BUTTON_EXIT,
-            BUTTON_OPTIONS,
+            BUTTON_EXIT = 1,
+            BUTTON_PREV_PAGE = 2,
+            BUTTON_NEXT_PAGE = 3,
+            BUTTON_ITEM_BASE = 10,
         };
+
+        int mCurrentPage;
+
+        MC3DSPF::gstd::unique_ptr<MC3DSPF::NinePatchLayer> mBackgroundFrame;
+        MC3DSPF::gstd::unique_ptr<MC3DSPF::NinePatchLayer> mBackground;
+
+        int getTotalItems() const {
+            // 1 for LunaCore + loaded mods
+            return 1 + (int)Core::LoadedModList.size();
+        }
+
+        void rebuildComponents() {
+            mButtons.clear();
+            setupComponents();
+        }
 
     public:
         LunaCoreModsScreen(MC3DSPF::MinecraftGame *mg, MC3DSPF::ClientInstance *ci) :
-            Screen(mg, ci) {}
+            Screen(mg, ci), mCurrentPage(0) {}
 
         ~LunaCoreModsScreen() override = default;
 
         void setupComponents() override
         {
-            // IntRectangle uv1(64, 144, 8, 8);
-            // IntRectangle uv2(56, 144, 8, 8);
-            // void *unk = (void *)0xABFD74;
-            // int Y     = 15;
-
-            // BoxedPtr::Shared<IconButton> button1(std::make_unique<IconButton>(mMinecraftGame, 1, 110, Y, 200, 0x1C, "menu.options", false));
-            // button1->setTexture(unk, 224, 144, 16, 16, 0, uv1, uv2, 2, 2, 0);
-            // mButtons.push_back(std::move(button1));
-
             MC3DSPF::NinePatchFactory factory(mMinecraftGame->getTextures(), *(MC3DSPF::ResourceLocation *)0xABFD74);
             mBackgroundFrame = factory.createSymmetrical(MC3DSPF::IntRectangle(56, 160, 8, 8), 2, 2, MC3DSPF::AppPlatform::BOTTOM_SCREEN_WIDTH, MC3DSPF::AppPlatform::BOTTOM_SCREEN_HEIGHT);
             mBackground      = factory.createSymmetrical(MC3DSPF::IntRectangle(80, 176, 8, 8), 3, 3, 308, 204);
 
-            MC3DSPF::ResourceLocation &loc = *(MC3DSPF::ResourceLocation *)0xABFD74;
-            mSprite1              = MC3DSPF::gstd::make_unique<MC3DSPF::Sprite>(mMinecraftGame, 7, 7, 16, 16, loc, 200, 25, 8, 8);
-
             using namespace MinecraftAPI;
 
+            // Close button
             BoxedPtr::Shared<IconButton> exitButton(gstd::make_unique<IconButton>(
                 mMinecraftGame, ButtonId::BUTTON_EXIT, MC3DSPF::AppPlatform::BOTTOM_SCREEN_WIDTH - 7 - 16, 7, 16, 16, "", false));
             exitButton->setTextures(GuiAtlas::EMPTY, GuiAtlas::BUTTON_CLOSE_BG, GuiAtlas::BUTTON_CLOSE_BG_HOVERED, 0, 0);
             mButtons.push_back(std::move(exitButton));
 
-            BoxedPtr::Shared<IconButton> optionsButton(gstd::make_unique<IconButton>(
-                mMinecraftGame, ButtonId::BUTTON_OPTIONS, 16, 40, 28, 28, "Plugin Menu", false));
-            optionsButton->setTextures(GuiAtlas::OPTIONS_ICON, GuiAtlas::BUTTON_BG, GuiAtlas::BUTTON_BG_HOVERED, 2, 2);
-            mButtons.push_back(std::move(optionsButton));
+            int totalItems = getTotalItems();
+            int startIndex = mCurrentPage * ITEMS_PER_PAGE;
+            int endIndex = std::min(startIndex + ITEMS_PER_PAGE, totalItems);
+
+            for (int i = startIndex; i < endIndex; i++) {
+                int slot = i - startIndex;
+                int itemY = 38 + slot * 40;
+                int btnId = BUTTON_ITEM_BASE + slot;
+
+                std::string itemTitle;
+                std::string itemDesc;
+
+                if (i == 0) {
+                    // First item is always LunaCore (special, but visually identical to others)
+                    itemTitle = "LunaCore";
+                    itemDesc = "LunaCore plugin runtime & settings";
+                } else {
+                    int modIdx = i - 1;
+                    if (modIdx < (int)Core::LoadedModList.size()) {
+                        itemTitle = Core::LoadedModList[modIdx].name;
+                        itemDesc = Core::LoadedModList[modIdx].description;
+                        if (itemDesc.empty()) itemDesc = "No description provided.";
+                    }
+                }
+
+                BoxedPtr::Shared<ModListItemButton> btn(gstd::make_unique<ModListItemButton>(
+                    mMinecraftGame, btnId, 15, itemY, 290, 36, itemTitle, itemDesc));
+                btn->buildBackground();
+                mButtons.push_back(std::move(btn));
+            }
+
+            // Pagination controls
+            if (totalItems > ITEMS_PER_PAGE) {
+                if (mCurrentPage > 0) {
+                    BoxedPtr::Shared<GuiButton> prevBtn(gstd::make_unique<GuiButton>(
+                        mMinecraftGame, ButtonId::BUTTON_PREV_PAGE, 15, 200, 60, 24, "< Prev", false, INT_MAX));
+                    prevBtn->buildBackground();
+                    mButtons.push_back(std::move(prevBtn));
+                }
+                if (endIndex < totalItems) {
+                    BoxedPtr::Shared<GuiButton> nextBtn(gstd::make_unique<GuiButton>(
+                        mMinecraftGame, ButtonId::BUTTON_NEXT_PAGE, 245, 200, 60, 24, "Next >", false, INT_MAX));
+                    nextBtn->buildBackground();
+                    mButtons.push_back(std::move(nextBtn));
+                }
+            }
         }
 
         void buttonPressed(MC3DSPF::BaseButton &b) override
         {
-            switch (b.getId())
+            int id = b.getId();
+            switch (id)
             {
-                default: break;
                 case ButtonId::BUTTON_EXIT:
                     MC3DSPF::Facade::getMinecraftGame()->getScreenStack().schedulePopScreen(1);
-                    break;
-                case ButtonId::BUTTON_OPTIONS:
-                    CTRPF::PluginMenu::ForceOpen();
-                    break;
+                    return;
+                case ButtonId::BUTTON_PREV_PAGE:
+                    if (mCurrentPage > 0) {
+                        mCurrentPage--;
+                        rebuildComponents();
+                    }
+                    return;
+                case ButtonId::BUTTON_NEXT_PAGE:
+                    if ((mCurrentPage + 1) * ITEMS_PER_PAGE < getTotalItems()) {
+                        mCurrentPage++;
+                        rebuildComponents();
+                    }
+                    return;
+                default: break;
             }
 
-            if (false) {
-                // Example of how to push a new screen to screen stack. This is only for demostration purposes
-                using namespace MC3DSPluginFramework;
-                ScreenChooser& screenChosser_ins = Facade::getMinecraftGame()->getScreenChooser();
-                MinecraftGame* mg = Facade::getMinecraftGame();
-                ClientInstance* ci = Facade::getClient();
-                BoxedPtr::Shared<Core::LunaCoreModScreen> screen_ins(gstd::make_unique<Core::LunaCoreModScreen>(mg, ci));
-                screenChosser_ins._pushScreen(screen_ins);
+            if (id >= BUTTON_ITEM_BASE && id < BUTTON_ITEM_BASE + ITEMS_PER_PAGE) {
+                int slot = id - BUTTON_ITEM_BASE;
+                int itemIndex = mCurrentPage * ITEMS_PER_PAGE + slot;
+
+                if (itemIndex == 0) {
+                    // LunaCore entry -> open SettingsScreen
+                    MC3DSPF::ScreenChooser& chooser = MC3DSPF::Facade::getMinecraftGame()->getScreenChooser();
+                    MC3DSPF::MinecraftGame* mg = MC3DSPF::Facade::getMinecraftGame();
+                    MC3DSPF::ClientInstance* ci = MC3DSPF::Facade::getClient();
+                    MC3DSPF::BoxedPtr::Shared<LunaCoreSettingsScreen> screen(
+                        MC3DSPF::gstd::make_unique<LunaCoreSettingsScreen>(mg, ci));
+                    chooser._pushScreen(screen);
+                } else {
+                    int modIdx = itemIndex - 1;
+                    if (modIdx < (int)Core::LoadedModList.size()) {
+                        const ModInfo& info = Core::LoadedModList[modIdx];
+                        MC3DSPF::ScreenChooser& chooser = MC3DSPF::Facade::getMinecraftGame()->getScreenChooser();
+                        MC3DSPF::MinecraftGame* mg = MC3DSPF::Facade::getMinecraftGame();
+                        MC3DSPF::ClientInstance* ci = MC3DSPF::Facade::getClient();
+                        MC3DSPF::BoxedPtr::Shared<LunaCoreModScreen> screen(
+                            MC3DSPF::gstd::make_unique<LunaCoreModScreen>(mg, ci, info));
+                        chooser._pushScreen(screen);
+                    }
+                }
             }
         }
 
@@ -101,125 +221,6 @@ namespace Core {
             return true;
         }
 
-        /*
-        // handleInput?
-        void Unknown82(u32 unknown) override
-        {
-        }
-        */
-
-        // +0x18
-        void Unknown5() override
-        {
-            // MC3DSPF::SystemMessagesScreen::RunningInstance->pushMessage(__func__, 0);
-            return;
-        }
-
-        // 表示したときに呼ばれる
-        // +0x1C
-        void Unknown6() override
-        {
-            // MC3DSPF::SystemMessagesScreen::RunningInstance->pushMessage(__func__, 0);
-            return;
-        }
-
-        void Unknown24(int p1) override
-        {
-            // MC3DSPF::SystemMessagesScreen::RunningInstance->pushMessage(CTRPluginFramework::Utils::ToHex(p1).c_str(), 0);
-            return;
-        }
-
-        // tick?
-        // trueを返すようにしないとバグるっぽい？
-        // LevelRendererで呼ばれてる
-        bool Unknown40() override
-        {
-            return true;
-        }
-
-        // cスティックとスライドパッドを動かすと呼ばれる
-        bool disableCstick() override
-        {
-            return *(bool *)0x918F01;
-        }
-
-        // ZLZR、左右十字でのホットバー操作を受け付けるか
-        bool allowsHotbarInput() override
-        {
-            return false;
-        }
-
-        // 下画面タッチ時に二回呼ばれて、他のボタンを押したあとに下画面タッチすると、再度2回呼ばれる
-        // UIが手前に来た際にも一度呼ばれる
-        bool Unknown45() override
-        {
-            return *(bool *)0x918F03;
-        }
-
-        bool Unknown46() override
-        {
-            // SystemMessagesScreen::RunningInstance->pushMessage(__func__, 0);
-            return *(bool *)0x918F04;
-        }
-
-        // 他のスクリーンよりも手前表示
-        bool isOverlay() override
-        {
-            return true;
-        }
-
-        bool Unknown51() override
-        {
-            // SystemMessagesScreen::RunningInstance->pushMessage(__func__, 0);
-            return *(bool *)0x918F06;
-        }
-
-        // 他スクリーンがあると非表示
-        // isOverlayより優先される
-        bool renderBehind() override
-        {
-            return false;
-        }
-
-        // ポーズ中以外の時に呼ばれてる
-        bool Unknown55() override
-        {
-            // SystemMessagesScreen::RunningInstance->pushMessage(__func__, 0);
-            return *(bool *)0x918F08;
-        }
-
-        // 他スクリーンのスティック、XY、Start、Selectが無効化される
-        // もしかしたら、他のスクリーンを開くことができるかのフラグかもしれない
-        /*
-        bool disablesStickInput() const override
-        {
-            // SystemMessagesScreen::RunningInstance->pushMessage(__func__, 0);
-            return *(bool *)0x918F09;
-        }
-        */
-
-        void Unknown86(int p1, float x, float y) override
-        {
-            // Cスティック動かすとunknown3は1、離すとunknown3が3になる。スティックを動かすと0
-            // unknown3はInputHandlerのメンバーから来てる
-
-            // SystemMessagesScreen::RunningInstance->pushMessage(std::to_string(x).c_str(), 0);
-            // SystemMessagesScreen::RunningInstance->pushMessage(std::to_string(y).c_str(), 0);
-            // SystemMessagesScreen::RunningInstance->pushMessage(CTRPluginFramework::Utils::ToHex(unknown3).c_str(), 0);
-        }
-
-        bool Unknown87() override
-        {
-            // MC3DSPF::SystemMessagesScreen::RunningInstance->pushMessage(__func__, 0);
-            return *(bool *)0x918F0A;
-        }
-
-        bool Unknown96() override
-        {
-            // MC3DSPF::SystemMessagesScreen::RunningInstance->pushMessage(__func__, 0);
-            return *(bool *)0x918F0B;
-        }
-
         int getUseScreen() override
         {
             return MC3DSPF::UseScreen::Both;
@@ -227,32 +228,38 @@ namespace Core {
 
         MC3DSPF::gstd::string getName() override
         {
-            return "lunacore_settings_screen";
+            return "lunacore_mods_screen";
         }
 
         void render(int touchX, int touchY, int useScreen, float tick) override
         {
             if (useScreen & MC3DSPF::UseScreen::Top)
             {
-                MC3DSPF::gstd::string str("LunaCore v" STRINGIFY_MACRO(LUNACORE_VER_MAJOR) "." STRINGIFY_MACRO(LUNACORE_VER_MINOR) "." STRINGIFY_MACRO(LUNACORE_VER_PATCH));
-                // int          w = mFont->getTextWidth(str, 0, 1);
-                int          h = mFont->getTextHeight(str, 0, 1);
-                // GuiComponent::drawRect(0, 0, w + 10, h + 10, MC3DSPF::Color(0, 0, 0, 0.5f));
-                mFont->drawWithShadow(10, MC3DSPF::AppPlatform::TOP_SCREEN_HEIGHT - h, 5, str, MC3DSPF::Color(1, 1, 1), 0, -1);
+                std::string footer("LunaCore v" STRINGIFY_MACRO(LUNACORE_VER_MAJOR) "." STRINGIFY_MACRO(LUNACORE_VER_MINOR) "." STRINGIFY_MACRO(LUNACORE_VER_PATCH));
+                int h = mFont->getTextHeight(footer.c_str(), 0, 1);
+                mFont->drawWithShadow(15, MC3DSPF::AppPlatform::TOP_SCREEN_HEIGHT - h - 5, 1.0f, footer.c_str(), MC3DSPF::Color(1.0f, 1.0f, 1.0f), 0, -1);
             }
 
             if (useScreen & MC3DSPF::UseScreen::Bottom)
             {
                 mBackgroundFrame->draw(MC3DSPF::Tessellator::instance, 0, 0);
                 mBackground->draw(MC3DSPF::Tessellator::instance, 6, 30);
-                mSprite1->render();
+
+                int totalCount = getTotalItems();
+                char headerBuf[64];
+                snprintf(headerBuf, sizeof(headerBuf), "Mods (%d)", totalCount);
+                // mFont->drawWithShadow(13, 12, 1.0f, headerBuf, MC3DSPF::Color(0.45f, 0.45f, 0.45f), 0, -1);
+                mFont->drawWithShadow(12, 12, 1.0f, headerBuf, MC3DSPF::Color(0, 0, 0), 0, -1);
+
+                if (totalCount > ITEMS_PER_PAGE) {
+                    int totalPages = (totalCount + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE;
+                    char pageBuf[32];
+                    snprintf(pageBuf, sizeof(pageBuf), "%d / %d", mCurrentPage + 1, totalPages);
+                    mFont->drawWithShadow(145, 202, 1.0f, pageBuf, MC3DSPF::Color(1.0f, 1.0f, 1.0f), 0, -1);
+                }
+
                 Screen::render(touchX, touchY, useScreen, tick);
             }
         }
-
-    private:
-        MC3DSPF::gstd::unique_ptr<MC3DSPF::NinePatchLayer> mBackgroundFrame;
-        MC3DSPF::gstd::unique_ptr<MC3DSPF::NinePatchLayer> mBackground;
-        MC3DSPF::gstd::unique_ptr<MC3DSPF::Sprite>         mSprite1;
     };
 }

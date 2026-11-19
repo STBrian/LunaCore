@@ -11,6 +11,7 @@
 
 #include "GameAPI.hpp"
 #include "Core/ModSettings.hpp"
+#include "Core/Screens/NativeSwitchButton.hpp"
 
 #include <string>
 #include <vector>
@@ -99,10 +100,8 @@ namespace Core {
 
                 switch (item.type) {
                     case SettingType::Toggle: {
-                        std::string label = item.label + ": " + (item.boolValue ? "[ON]" : "[OFF]");
-                        BoxedPtr::Shared<GuiButton> btn(gstd::make_unique<GuiButton>(
-                            mMinecraftGame, baseId, 15, itemY, 290, 34, label.c_str(), false, INT_MAX));
-                        btn->buildBackground();
+                        BoxedPtr::Shared<GuiButton> btn(gstd::make_unique<NativeSwitchButton>(
+                            mMinecraftGame, baseId, 15, itemY, 290, 34, item.label, item.boolValue));
                         mButtons.push_back(std::move(btn));
                         break;
                     }
@@ -202,6 +201,7 @@ namespace Core {
                 switch (item.type) {
                     case SettingType::Toggle:
                         item.boolValue = !item.boolValue;
+                        NativeSwitchButton::playToggleSound(mMinecraftGame);
                         rebuildComponents();
                         break;
                     case SettingType::Dropdown:
@@ -251,17 +251,6 @@ namespace Core {
 
         void render(int touchX, int touchY, int useScreen, float tick) override
         {
-            if (useScreen & MC3DSPF::UseScreen::Top)
-            {
-                std::string titleStr = mModTitle + " Settings";
-                int h = mFont->getTextHeight(titleStr.c_str(), 0, 1);
-                mFont->drawWithShadow(10, 15, 1.0f, titleStr.c_str(), MC3DSPF::Color(1, 1, 0.4f), 0, -1);
-                mFont->drawWithShadow(10, 35, 1.0f, "Configure mod options below", MC3DSPF::Color(0.8f, 0.8f, 0.8f), 0, -1);
-
-                std::string footer("LunaCore v" STRINGIFY_MACRO(LUNACORE_VER_MAJOR) "." STRINGIFY_MACRO(LUNACORE_VER_MINOR) "." STRINGIFY_MACRO(LUNACORE_VER_PATCH));
-                mFont->drawWithShadow(10, MC3DSPF::AppPlatform::TOP_SCREEN_HEIGHT - h - 5, 1.0f, footer.c_str(), MC3DSPF::Color(0.6f, 0.6f, 0.6f), 0, -1);
-            }
-
             if (useScreen & MC3DSPF::UseScreen::Bottom)
             {
                 mBackgroundFrame->draw(MC3DSPF::Tessellator::instance, 0, 0);
@@ -269,7 +258,7 @@ namespace Core {
 
                 std::string header = mModTitle + " Settings";
                 if (header.length() > 28) header = header.substr(0, 25) + "...";
-                mFont->drawWithShadow(12, 10, 1.0f, header.c_str(), MC3DSPF::Color(1, 1, 1), 0, -1);
+                mFont->drawWithShadow(12, 12, 1.0f, header.c_str(), MC3DSPF::Color::BLACK, 0, -1);
 
                 ModSettingsConfig* cfg = ModSettingsManager::getInstance().getConfig(mModId);
                 if (cfg && cfg->items.size() > ITEMS_PER_PAGE) {

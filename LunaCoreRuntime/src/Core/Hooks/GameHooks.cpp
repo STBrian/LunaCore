@@ -397,6 +397,11 @@ static void CoreEventHookCallback(const char* eventName, void* r0) {
             svcSleepThread(500000000ULL);
     }
 
+    // #ifdef DEBUG
+    // s32 processorId = svcGetProcessorID();
+    // Core::Debug::LogInfof("Event callback: %s (Core: %d)", eventName, processorId);
+    // #endif
+
     G_LastCoreEvent = eventName;
     std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
 

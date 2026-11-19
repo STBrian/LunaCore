@@ -2,3 +2,9 @@
 
 *.elf
 *.3gx
+
+/tools/
+/logs/
+
+*.bin
+*.tsv

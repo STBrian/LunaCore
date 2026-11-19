@@ -85,7 +85,9 @@ static void ExtendedHeapFastExceptionHandler(ERRF_ExceptionInfo* excep, CpuRegis
         u32 status = (excep->fsr & 0xF) | ((excep->fsr >> 6) & 0x10);
         if ((status == 0x05 || status == 0x07) && ExtendedHeapIsAddressInHeap(excep->far)) {
             #ifdef DEBUG
-            Core::Debug::LogInfof("Page fault reached at: %08X", excep->far);
+            s32 processorId = svcGetProcessorID();
+            Core::Debug::LogInfof("Page fault reached at: %08X (Core: %d)", excep->far, processorId);
+            if (processorId != 0) Core::Debug::LogWarnf("Page fault on unsupported core: %d", processorId);
             #endif
             Result res = ExtendedHeapAttemptLoadPage(excep->far);
             if (R_SUCCEEDED(res)) {
@@ -126,8 +128,10 @@ Result ExtendedHeapInit(size_t heapsize) {
         }
     }
 
+    s32 processorId = svcGetProcessorID();
     Core::Debug::LogInfof("ExtendedHeap: Initializing (target: %u KB, max loaded: %u KB, isEmulator: %d). Available CTRPF heap: %u KB",
         (u32)(heapsize_b / 1024), (u32)(maxLoadedPages * 4), (int)isEmulator, CTRPluginFramework::Heap::SpaceFree() / 1024);
+    Core::Debug::LogInfof("Executing on core %d", processorId);
 
     if (!Core::Filesystem::DirectoryExists("lcfs:/LunaCore")) {
         Core::Filesystem::CreateDirectory("lcfs:/LunaCore");
@@ -404,6 +408,7 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
         // Clean dirty cache lines to physical RAM and invalidate them before SDMMC DMA write
         svcFlushProcessDataCache(CUR_PROCESS_HANDLE, pageInfo.dstAddr, PAGE_SIZE);
         ctr_dsb();
+        svcSleepThread(1000000LL);
 
         writePageContent(pageInfo.dstAddr);
         HeapCtx.pageWrittenToSwap[pageInfo.idx] = 1;
@@ -448,11 +453,17 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
 
     // 7. Now that pageStart is mapped in application memory, load content into it or zero-initialize if new
     if (HeapCtx.pageWrittenToSwap[pageIdx]) {
+        svcSleepThread(1000000LL);
+
         // Invalidate D-cache before SDMMC DMA read so no stale/dirty lines exist
         svcInvalidateProcessDataCache(CUR_PROCESS_HANDLE, pageStart, PAGE_SIZE);
         ctr_dsb();
 
+        svcSleepThread(1000000LL);
+
         loadPageContent(pageStart);
+
+        svcSleepThread(1000000LL);
 
         // Invalidate D-cache and I-cache after SDMMC DMA read so CPU fetches freshly read data from RAM.
         // DO NOT FLUSH/CLEAN! A clean would overwrite RAM with stale cache data!
@@ -460,6 +471,7 @@ Result ExtendedHeapAttemptLoadPage(u32 addr) {
         svcInvalidateEntireInstructionCache();
         ctr_dsb();
         ctr_isb();
+        svcSleepThread(1000000LL);
     } else {
         memset((void*)pageStart, 0, PAGE_SIZE);
         ctr_dsb();

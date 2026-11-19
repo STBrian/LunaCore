@@ -254,9 +254,10 @@ namespace Core {
                 Core::Debug::LogRawf("\t\tCurrent Core event: %s\n", G_ActiveCoreEvent);
             if (!manuallyCalled) {
                 Core::Debug::LogRawf("\t%s\n", extrainfo);
+                s32 processorId = svcGetProcessorID();
                 Core::Debug::LogRawf("\tException type: %s\n", exceptionStr[excep->type]);
                 Core::Debug::LogRawf("\tException at address: %08X\n", regs->pc);
-                Core::Debug::LogRawf("\tThread ID: %d\n", threadId);
+                Core::Debug::LogRawf("\tThread ID: %d (Core %d)\n", threadId, (int)processorId);
                 Core::Debug::LogRawf("\n\tLR: %08X\n", regs->lr);
                 Core::Debug::LogRawf("\tSP: %08X\n", regs->sp);
                 Core::Debug::LogRawf("\tCPSR: %08X\n", regs->cpsr);
@@ -270,7 +271,9 @@ namespace Core {
                 stackDump(regs->sp);
                 Core::Debug::LogRawf("\n");
             } else {
+                s32 processorId = svcGetProcessorID();
                 Core::Debug::LogRawf("\n\tException type: Core abort\n");
+                Core::Debug::LogRawf("\tThread ID: %d (Core %d)\n", threadId, (int)processorId);
                 if (coreAbort) {
                     Core::Debug::LogRawf("\tAbort message:\n");
                     Core::Debug::LogRawf("\t\t%s\n", coreAbortMsg);

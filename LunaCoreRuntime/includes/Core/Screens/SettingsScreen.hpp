@@ -219,14 +219,14 @@ namespace Core {
 
         void render(int touchX, int touchY, int useScreen, float tick) override
         {
-            if (useScreen & MC3DSPF::UseScreen::Top)
-            {
-                MC3DSPF::gstd::string str("LunaCore v" STRINGIFY_MACRO(LUNACORE_VER_MAJOR) "." STRINGIFY_MACRO(LUNACORE_VER_MINOR) "." STRINGIFY_MACRO(LUNACORE_VER_PATCH));
+            // if (useScreen & MC3DSPF::UseScreen::Top)
+            // {
+                // MC3DSPF::gstd::string str("LunaCore v" STRINGIFY_MACRO(LUNACORE_VER_MAJOR) "." STRINGIFY_MACRO(LUNACORE_VER_MINOR) "." STRINGIFY_MACRO(LUNACORE_VER_PATCH));
                 // int          w = mFont->getTextWidth(str, 0, 1);
-                int          h = mFont->getTextHeight(str, 0, 1);
+                // int          h = mFont->getTextHeight(str, 0, 1);
                 // GuiComponent::drawRect(0, 0, w + 10, h + 10, MC3DSPF::Color(0, 0, 0, 0.5f));
-                mFont->drawWithShadow(10, MC3DSPF::AppPlatform::TOP_SCREEN_HEIGHT - h, 5, str, MC3DSPF::Color(1, 1, 1), 0, -1);
-            }
+                // mFont->drawWithShadow(10, MC3DSPF::AppPlatform::TOP_SCREEN_HEIGHT - h, 5, str, MC3DSPF::Color(1, 1, 1), 0, -1);
+            // }
 
             if (useScreen & MC3DSPF::UseScreen::Bottom)
             {

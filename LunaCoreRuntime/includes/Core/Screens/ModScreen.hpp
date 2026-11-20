@@ -44,6 +44,19 @@ namespace Core {
         MC3DSPF::gstd::unique_ptr<MC3DSPF::NinePatchLayer> mBackgroundFrame;
         MC3DSPF::gstd::unique_ptr<MC3DSPF::NinePatchLayer> mBackground;
 
+        MC3DSPF::gstd::unique_ptr<MC3DSPF::NinePatchLayer> mTopBackgroundFrame;
+        MC3DSPF::gstd::unique_ptr<MC3DSPF::NinePatchLayer> mTopBackground;
+
+        static constexpr float TOP_WINDOW_WIDTH  = 320.0f;
+        static constexpr float TOP_WINDOW_HEIGHT = 200.0f;
+        static constexpr float TOP_WINDOW_X      = 40.0f; // (400 - 320) / 2
+        static constexpr float TOP_WINDOW_Y      = 20.0f; // (240 - 200) / 2
+
+        static constexpr float TOP_INNER_WIDTH   = 308.0f; // 320 - 12
+        static constexpr float TOP_INNER_HEIGHT  = 164.0f; // 200 - 36
+        static constexpr float TOP_INNER_X       = 46.0f;  // 40 + 6
+        static constexpr float TOP_INNER_Y       = 50.0f;  // 20 + 30
+
         MC3DSPF::TexturePtr mIconTexture;
         bool mHasIcon = false;
         int mIconWidth = 0;
@@ -90,6 +103,10 @@ namespace Core {
             MC3DSPF::NinePatchFactory factory(mMinecraftGame->getTextures(), *(MC3DSPF::ResourceLocation *)0xABFD74);
             mBackgroundFrame = factory.createSymmetrical(MC3DSPF::IntRectangle(56, 160, 8, 8), 2, 2, MC3DSPF::AppPlatform::BOTTOM_SCREEN_WIDTH, MC3DSPF::AppPlatform::BOTTOM_SCREEN_HEIGHT);
             mBackground      = factory.createSymmetrical(MC3DSPF::IntRectangle(80, 176, 8, 8), 3, 3, 308, 204);
+
+            // Window on top screen with margins (partially covering top screen background)
+            mTopBackgroundFrame = factory.createSymmetrical(MC3DSPF::IntRectangle(56, 160, 8, 8), 2, 2, TOP_WINDOW_WIDTH, TOP_WINDOW_HEIGHT);
+            mTopBackground      = factory.createSymmetrical(MC3DSPF::IntRectangle(80, 176, 8, 8), 3, 3, TOP_INNER_WIDTH, TOP_INNER_HEIGHT);
 
             // Load mod icon texture from SDMC (<mod_folder>/icon.3dst)
             // Reuses the single "lunacore:active_mod_icon" texture slot in TextureGroup
@@ -156,6 +173,18 @@ namespace Core {
         {
             if (useScreen & MC3DSPF::UseScreen::Top)
             {
+                // Draw top screen window frame and inner background
+                if (mTopBackgroundFrame) {
+                    mTopBackgroundFrame->draw(MC3DSPF::Tessellator::instance, TOP_WINDOW_X, TOP_WINDOW_Y);
+                }
+                if (mTopBackground) {
+                    mTopBackground->draw(MC3DSPF::Tessellator::instance, TOP_INNER_X, TOP_INNER_Y);
+                }
+
+                // Window title header
+                MC3DSPF::GuiComponent::drawCenteredString(
+                    mFont, mModInfo.name.c_str(), (int)(MC3DSPF::AppPlatform::TOP_SCREEN_WIDTH / 2), (int)(TOP_WINDOW_Y + 11.0f), MC3DSPF::Color::BLACK, false);
+
                 if (mHasIcon && mIconWidth > 0 && mIconHeight > 0)
                 {
                     float drawW = (float)mIconWidth;
@@ -166,14 +195,15 @@ namespace Core {
                         float scale = 64.0f / drawW;
                         drawW *= scale;
                         drawH *= scale;
-                    } else if (drawH > 140.0f) {
-                        float scale = 140.0f / drawH;
+                    } else if (drawH > 120.0f) {
+                        float scale = 120.0f / drawH;
                         drawW *= scale;
                         drawH *= scale;
                     }
 
-                    float iconX = (MC3DSPF::AppPlatform::TOP_SCREEN_WIDTH - drawW) / 2.0f;
-                    float iconY = (MC3DSPF::AppPlatform::TOP_SCREEN_HEIGHT - drawH) / 2.0f;
+                    // Center icon inside the top window inner area
+                    float iconX = TOP_INNER_X + (TOP_INNER_WIDTH - drawW) / 2.0f;
+                    float iconY = TOP_INNER_Y + (TOP_INNER_HEIGHT - drawH) / 2.0f;
 
                     MC3DSPF::Tessellator& t = MC3DSPF::Tessellator::instance;
                     t.begin(4);

@@ -260,6 +260,11 @@ namespace Core {
             return true;
         }
 
+        bool Unknown55() override
+        {
+            return true;
+        }
+
         int getUseScreen() override
         {
             return MC3DSPF::UseScreen::Both;

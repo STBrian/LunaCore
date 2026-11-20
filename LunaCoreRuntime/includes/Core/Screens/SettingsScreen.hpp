@@ -53,7 +53,12 @@ namespace Core {
             mBackground      = factory.createSymmetrical(MC3DSPF::IntRectangle(80, 176, 8, 8), 3, 3, 308, 204);
 
             MC3DSPF::ResourceLocation &loc = *(MC3DSPF::ResourceLocation *)0xABFD74;
-            mSprite1              = MC3DSPF::gstd::make_unique<MC3DSPF::Sprite>(mMinecraftGame, 7, 7, 16, 16, loc, 200, 25, 8, 8);
+            mSprite1              = MC3DSPF::gstd::make_unique<MC3DSPF::Sprite>(mMinecraftGame, 7, 7, 16, 16, loc, 
+                MinecraftAPI::GuiAtlas::OPTIONS_ICON.region.mX, 
+                MinecraftAPI::GuiAtlas::OPTIONS_ICON.region.mY, 
+                MinecraftAPI::GuiAtlas::OPTIONS_ICON.region.mWidth, 
+                MinecraftAPI::GuiAtlas::OPTIONS_ICON.region.mHeight
+            );
 
             using namespace MinecraftAPI;
 
@@ -223,7 +228,7 @@ namespace Core {
             {
                 std::string footer("LunaCore v" STRINGIFY_MACRO(LUNACORE_VER_MAJOR) "." STRINGIFY_MACRO(LUNACORE_VER_MINOR) "." STRINGIFY_MACRO(LUNACORE_VER_PATCH));
                 int h = mFont->getTextHeight(footer.c_str(), 0, 1);
-                mFont->drawWithShadow(10, MC3DSPF::AppPlatform::TOP_SCREEN_HEIGHT - h - 5, 1.0f, footer.c_str(), MC3DSPF::Color(0.6f, 0.6f, 0.6f), 0, -1);
+                mFont->drawWithShadow(15, MC3DSPF::AppPlatform::TOP_SCREEN_HEIGHT - h - 5, 1.0f, footer.c_str(), MC3DSPF::Color(1.0f, 1.0f, 1.0f), 0, -1);
             }
 
             if (useScreen & MC3DSPF::UseScreen::Bottom)

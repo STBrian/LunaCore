@@ -106,8 +106,8 @@ namespace Core {
         void setupComponents() override
         {
             MC3DSPF::NinePatchFactory factory(mMinecraftGame->getTextures(), *(MC3DSPF::ResourceLocation *)0xABFD74);
-            mBackgroundFrame = factory.createSymmetrical(MC3DSPF::IntRectangle(56, 160, 8, 8), 2, 2, MC3DSPF::AppPlatform::BOTTOM_SCREEN_WIDTH, MC3DSPF::AppPlatform::BOTTOM_SCREEN_HEIGHT);
-            mBackground      = factory.createSymmetrical(MC3DSPF::IntRectangle(80, 176, 8, 8), 3, 3, 308, 204);
+            mBackgroundFrame = factory.createSymmetrical(MC3DSPF::IntRectangle(56, 160, 8, 8), 2, 2, MC3DSPF::AppPlatform::BOTTOM_SCREEN_WIDTH, 30);
+            mBackground      = factory.createSymmetrical(MC3DSPF::IntRectangle(80, 176, 8, 8), 2, 2, MC3DSPF::AppPlatform::BOTTOM_SCREEN_WIDTH + 4, MC3DSPF::AppPlatform::BOTTOM_SCREEN_HEIGHT);
 
             using namespace MinecraftAPI;
 
@@ -242,8 +242,8 @@ namespace Core {
 
             if (useScreen & MC3DSPF::UseScreen::Bottom)
             {
+                mBackground->draw(MC3DSPF::Tessellator::instance, -2, 2);
                 mBackgroundFrame->draw(MC3DSPF::Tessellator::instance, 0, 0);
-                mBackground->draw(MC3DSPF::Tessellator::instance, 6, 30);
 
                 int totalCount = getTotalItems();
                 char headerBuf[64];

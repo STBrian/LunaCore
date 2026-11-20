@@ -13,6 +13,7 @@
 #include "GameAPI.hpp"
 #include "Core/ModInfo.hpp"
 #include "Core/ModSettings.hpp"
+#include "Core/TextureLoader.hpp"
 #include "ModSettingsScreen.hpp"
 
 #include <string>
@@ -43,6 +44,13 @@ namespace Core {
         MC3DSPF::gstd::unique_ptr<MC3DSPF::NinePatchLayer> mBackgroundFrame;
         MC3DSPF::gstd::unique_ptr<MC3DSPF::NinePatchLayer> mBackground;
 
+        MC3DSPF::TexturePtr mIconTexture;
+        bool mHasIcon = false;
+        int mIconWidth = 0;
+        int mIconHeight = 0;
+        float mIconUMax = 1.0f;
+        float mIconVMax = 1.0f;
+
         static std::vector<std::string> wrapText(const std::string& text, size_t maxCharsPerLine) {
             std::vector<std::string> lines;
             std::istringstream words(text);
@@ -65,17 +73,31 @@ namespace Core {
             return lines;
         }
 
+        static constexpr const char* MOD_ICON_RES_NAME = "lunacore:active_mod_icon";
+
     public:
         LunaCoreModScreen(MC3DSPF::MinecraftGame *mg, MC3DSPF::ClientInstance *ci, const ModInfo& modInfo) :
             Screen(mg, ci), mModInfo(modInfo) {}
 
-        ~LunaCoreModScreen() override = default;
+        ~LunaCoreModScreen() override {
+            if (mHasIcon) {
+                Core::TextureLoader::UnloadTexture(mMinecraftGame, MOD_ICON_RES_NAME);
+            }
+        }
 
         void setupComponents() override
         {
             MC3DSPF::NinePatchFactory factory(mMinecraftGame->getTextures(), *(MC3DSPF::ResourceLocation *)0xABFD74);
             mBackgroundFrame = factory.createSymmetrical(MC3DSPF::IntRectangle(56, 160, 8, 8), 2, 2, MC3DSPF::AppPlatform::BOTTOM_SCREEN_WIDTH, MC3DSPF::AppPlatform::BOTTOM_SCREEN_HEIGHT);
             mBackground      = factory.createSymmetrical(MC3DSPF::IntRectangle(80, 176, 8, 8), 3, 3, 308, 204);
+
+            // Load mod icon texture from SDMC (<mod_folder>/icon.3dst)
+            // Reuses the single "lunacore:active_mod_icon" texture slot in TextureGroup
+            std::string iconPath = mModInfo.folderPath + "/icon.3dst";
+            mHasIcon = Core::TextureLoader::Load3DSTTexture(
+                mMinecraftGame, iconPath, MOD_ICON_RES_NAME, mIconTexture, mIconWidth, mIconHeight, mIconUMax, mIconVMax
+            );
+
 
             using namespace MinecraftAPI;
 
@@ -132,6 +154,37 @@ namespace Core {
 
         void render(int touchX, int touchY, int useScreen, float tick) override
         {
+            if (useScreen & MC3DSPF::UseScreen::Top)
+            {
+                if (mHasIcon && mIconWidth > 0 && mIconHeight > 0)
+                {
+                    float drawW = (float)mIconWidth;
+                    float drawH = (float)mIconHeight;
+
+                    // Scale up small icons nicely (e.g. 16x16 or 32x32 -> 64x64)
+                    if (drawW <= 32.0f && drawW > 0.0f) {
+                        float scale = 64.0f / drawW;
+                        drawW *= scale;
+                        drawH *= scale;
+                    } else if (drawH > 140.0f) {
+                        float scale = 140.0f / drawH;
+                        drawW *= scale;
+                        drawH *= scale;
+                    }
+
+                    float iconX = (MC3DSPF::AppPlatform::TOP_SCREEN_WIDTH - drawW) / 2.0f;
+                    float iconY = (MC3DSPF::AppPlatform::TOP_SCREEN_HEIGHT - drawH) / 2.0f;
+
+                    MC3DSPF::Tessellator& t = MC3DSPF::Tessellator::instance;
+                    t.begin(4);
+                    t.vertexUV(iconX, iconY + drawH, 0.0f, 0.0f, mIconVMax);
+                    t.vertexUV(iconX + drawW, iconY + drawH, 0.0f, mIconUMax, mIconVMax);
+                    t.vertexUV(iconX + drawW, iconY, 0.0f, mIconUMax, 0.0f);
+                    t.vertexUV(iconX, iconY, 0.0f, 0.0f, 0.0f);
+                    t.draw(MC3DSPF::GuiComponent::Materials::ui_textured, mIconTexture);
+                }
+            }
+
             if (useScreen & MC3DSPF::UseScreen::Bottom)
             {
                 mBackgroundFrame->draw(MC3DSPF::Tessellator::instance, 0, 0);

@@ -29,6 +29,7 @@
 
 #include "Helpers/Allocation.hpp"
 #include "Core/Utils/ResourcesInjector.hpp"
+#include "Core/Utils/IpsPatcher.hpp"
 
 #include "game/Minecraft.hpp"
 #include "ExtendedHeap.hpp"
@@ -163,6 +164,34 @@ namespace CTRPluginFramework
             // *reinterpret_cast<u32*>(0x00228a7c) = 0xe320f000;
             // *reinterpret_cast<u32*>(0x002289c4) = 0xe320f000;
             // *reinterpret_cast<u32*>(0x00228e54) = 0xe320f000;
+
+            if (Core::Utils::ApplyIpsPatch(PLUGIN_FOLDER "/LunaCore/patches.ips")) {
+                Debug::LogInfo("LunaCore patches loaded");
+            }
+
+            std::string userPatchesDir = PLUGIN_FOLDER "/patches";
+            if (Core::Filesystem::DirectoryExists(userPatchesDir)) {
+                std::vector<std::string> entries;
+                Core::Filesystem::GetDirectoryEntries(userPatchesDir, entries);
+
+                int userPatchesLoaded = 0;
+                for (const std::string& entry : entries) {
+                    if (entry.length() >= 4) {
+                        std::string ext = entry.substr(entry.length() - 4);
+                        for (char& c : ext) c = std::tolower(c);
+                        if (ext == ".ips") {
+                            std::string patchPath = userPatchesDir + "/" + entry;
+                            if (Core::Utils::ApplyIpsPatch(patchPath)) {
+                                userPatchesLoaded++;
+                            }
+                        }
+                    }
+                }
+
+                if (userPatchesLoaded > 0) {
+                    Debug::LogInfo("User patches loaded");
+                }
+            }
         }
     }
 

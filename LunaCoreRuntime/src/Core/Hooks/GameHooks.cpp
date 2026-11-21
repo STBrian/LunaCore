@@ -444,16 +444,6 @@ void CoreHooksInit() {
     #endif
     gGamePanicCallback = gamePanicCallback;
 
-    // Patch 0x0071dbbc to guard against NULL pointer dereference.
-    // If r0 == nullptr or type == 0 (custom skin), returns 1 (triggering texture validation / fallback to default skin if missing).
-    // If type >= 1 (builtin / skinpack), returns 0 (valid skin, no reset).
-    u32* patchSkinIsLoaded = reinterpret_cast<u32*>(0x0071dbbc);
-    patchSkinIsLoaded[0] = 0xE3500000; // cmp r0, #0
-    patchSkinIsLoaded[1] = 0x15D00030; // ldrbne r0, [r0, #48]
-    patchSkinIsLoaded[2] = 0xE2700001; // rsbs r0, r0, #1
-    patchSkinIsLoaded[3] = 0x33A00000; // movcc r0, #0
-    patchSkinIsLoaded[4] = 0xE12FFF1E; // bx lr
-
     // Patch Heap allocator behavior
     u32* badCode = reinterpret_cast<u32*>(0x00114a90);
     *(badCode + 0) = 0xE3A00000; // mov r0, #0

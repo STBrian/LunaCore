@@ -1,0 +1,15 @@
+// If the player had a skin from a custom skin pack that is no longer available, the game will crash because
+// it will still try to read data from a nullptr despite the game having a returnToDefaultSkin function
+
+// Patch 0x0071dbbc to guard against NULL pointer dereference.
+// If r0 == nullptr or type == 0 (custom skin), returns 1 (triggering texture validation / fallback to default skin if missing).
+// If type >= 1 (builtin / skinpack), returns 0 (valid skin, no reset).
+
+INS_PATCH ARM
+AT PC 0x0071dbbc
+    cmp r0, #0
+    ldrbne r0, [r0, #48]
+    rsbs r0, r0, #1
+    movcc r0, #0
+    bx lr
+END_INS_PATCH

@@ -5,6 +5,9 @@
 
 /tools/
 /logs/
+/out/
+/dist/
+*.ips
 
 *.bin
 *.tsv

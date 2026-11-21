@@ -1,5 +1,6 @@
 # Variables
 RUNTIME_DIR ?= LunaCoreRuntime
+PATCHES_DIR ?= patches
 DIST_DIR    ?= dist
 
 # Build configuration: default to debug mode unless specified or target is release
@@ -11,14 +12,17 @@ ifeq ($(RELEASE), 1)
 DEBUG := 0
 endif
 
-.PHONY: all build release debug clean clean_all re
+.PHONY: all build patches release debug clean clean_all re
 
 all: build
 
-build:
+build: patches
 	$(MAKE) -C $(RUNTIME_DIR) DEBUG=$(DEBUG) EXPERIMENTAL=$(EXPERIMENTAL) BUILD_JIT=$(BUILD_JIT)
 	@mkdir -p $(DIST_DIR)
 	@find $(RUNTIME_DIR) -maxdepth 1 -type f \( -name "*.3gx" -o -name "*.elf" \) -exec cp -v {} $(DIST_DIR)/ \;
+
+patches:
+	$(MAKE) -C $(PATCHES_DIR)
 
 release:
 	$(MAKE) build DEBUG=0
@@ -28,10 +32,12 @@ debug:
 
 clean:
 	$(MAKE) -C $(RUNTIME_DIR) clean
+	$(MAKE) -C $(PATCHES_DIR) clean
 	@rm -rf $(DIST_DIR)
 
 clean_all:
 	$(MAKE) -C $(RUNTIME_DIR) clean_all
+	$(MAKE) -C $(PATCHES_DIR) clean
 	@rm -rf $(DIST_DIR)
 
 re: clean all

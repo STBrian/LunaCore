@@ -17,6 +17,7 @@ static void* internalAbortLr = nullptr;
 
 extern "C" void __wrap_abort() {
     internalAbortLr = __builtin_return_address(0);
+    Core::Debug::LogErrorf("abort() called! Return address (LR): %p", internalAbortLr);
     if (!reservedMemory || internalAbort) {
         PLGLDR__DisplayErrMessage("Critical exception", "An unhandled critical exception ocurred", 0);
         //CTRPF::System::Reboot();

@@ -117,8 +117,7 @@ namespace CTRPluginFramework
     }
 
     // This function is called before main and before the game starts
-    // Useful to do code edits safely
-    void    PatchProcess(FwkSettings &settings)
+    static void RealPatchProcess(FwkSettings &settings)
     {
         if (!Core::Utils::checkTitle())
             return;
@@ -134,6 +133,7 @@ namespace CTRPluginFramework
         Core::GetCoreInfo(plgTitle, plgAuthor, plgSummary, plgDescription);
         
         Debug::LogInfof("LunaCore version: %d.%d.%d", LUNACORE_VER_MAJOR, LUNACORE_VER_MINOR, LUNACORE_VER_PATCH);
+        Debug::LogInfof("IsEmulator: %s", System::IsCitra() ? "true" : "false");
         Debug::LogInfof("Loading config file '%s'", Core::Filesystem::GetRealPath(CONFIG_FILE).c_str());
         G_config = LoadConfig(CONFIG_FILE);
         if (!G_config.isLoaded()) {
@@ -193,6 +193,34 @@ namespace CTRPluginFramework
                 }
             }
         }
+        Debug::LogInfo("PatchProcess finished successfully");
+    }
+
+    alignas(8) static u8 s_patchProcessStack[32 * 1024];
+
+    // This function is called before main and before the game starts
+    // Useful to do code edits safely.
+    // CTRPF's KeepThreadMain provides only a tiny 4KB stack (keepThreadStack).
+    // Complex initialization (JSON parsing, hooks, files, patches) can easily overflow it
+    // and corrupt adjacent CTRPF globals (_sdmcArchive, g_gameHidHook, etc.).
+    // We switch to a dedicated 32KB stack for the duration of PatchProcess.
+    void    PatchProcess(FwkSettings &settings)
+    {
+        register FwkSettings* r0_settings asm("r0") = &settings;
+        register void* r1_stack asm("r1") = s_patchProcessStack + sizeof(s_patchProcessStack);
+        register void (*r2_func)(FwkSettings&) asm("r2") = RealPatchProcess;
+
+        asm volatile(
+            "push {r4, lr}\n"
+            "mov r4, sp\n"
+            "mov sp, %1\n"
+            "blx %2\n"
+            "mov sp, r4\n"
+            "pop {r4, lr}\n"
+            : "+r"(r0_settings), "+r"(r1_stack), "+r"(r2_func)
+            :
+            : "r3", "r4", "ip", "memory"
+        );
     }
 
     // This function is called when the process exits
@@ -214,6 +242,7 @@ namespace CTRPluginFramework
 
     int main()
     {
+        Debug::LogInfo("main() started");
         CrashHandler::plg_state = CrashHandler::PLUGIN_MAIN;
         MenuModsFolder = alloc<MenuFolder>("Mods");
         if (!Core::Utils::checkTitle())

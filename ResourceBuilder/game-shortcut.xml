@@ -1,0 +1,5 @@
+<shortcut>
+    <executable>/Minecraft 3DS/tools/ResourceBuilder.3dsx</executable>
+    <arg>001B8700 sdmc</arg>
+    <name>ResourceBuilder USA SD</name>
+</shortcut>

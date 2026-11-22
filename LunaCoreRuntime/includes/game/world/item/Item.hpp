@@ -31,9 +31,11 @@ namespace Minecraft {
         u8 blockID; // 0x28
         bool canEat; // 0x29
 
-        virtual void unkFunc1();
-        virtual void unkFunc2();
-        virtual void setTexture(u32 texnameHash, u32 idx);
+        // virtual void unkFunc1();
+        // virtual void unkFunc2();
+        virtual ~ItemImpl() = default;
+
+        virtual void setTexture(u32 texnameHash, u32 idx) = 0;
     };
 
     class Item : public ItemImpl {
@@ -60,6 +62,12 @@ namespace Minecraft {
         inline static Item** mItems = reinterpret_cast<Item**>(0x00b0cef0);
 
         inline static void (*registerItems)() = reinterpret_cast<void(*)()>(0x00563db0);
+        
+        /* just added to avoid linker errors but you shouldn't need to call this explicit function.
+        In a normal scenario you will always have the game's virtual table rather than this artificial vtable
+        Thanks to the constructor that calls the game's constructor
+        */
+        void setTexture(u32 texnameHash, u32 idx) {} 
 
         /* Item.itemId = itemId + 0x100 */
         Item(const gstd::string& nameId, short itemId) {
@@ -253,14 +261,83 @@ namespace Minecraft {
 
         inline static Item*& mChorusFruit = mItemTable[186];
         inline static Item*& mChorusFruitPopped = mItemTable[187];
+        
+        class StringKeyedRegistry {
+            public:
+            Item** getOrInsert(const gstd::string& nameId) {
+                return reinterpret_cast<Item**(*)(StringKeyedRegistry*, const gstd::string&)>(0x008dfaa4)(this, nameId);
+            }
+    
+            void set(const gstd::string& nameId, Item* item) {
+                Item** entry = this->getOrInsert(nameId);
+                Item* old = *entry;
+                *entry = item;
+                if (old) {
+                    delete old;
+                }
+            }
+        };
+    
+        inline static StringKeyedRegistry& mRegistryByStringName = *reinterpret_cast<StringKeyedRegistry*>(0x00b0d70c);
+
+        class NameHashItemRegistry {
+            public:
+            void registerRegular(const gstd::string& nameId, Item* item) {
+                reinterpret_cast<void(*)(NameHashItemRegistry*, const gstd::string&, Item*)>(0x004d1158)(this, nameId, item);
+            }
+
+            void registerRegular(const gstd::string& nameId, Item* item, const char* namesp) {
+                
+            }
+        };
+
+        inline static NameHashItemRegistry& mRegistryByNameHash = *reinterpret_cast<NameHashItemRegistry*>(0x00b0d728);
     };
 
     ASSERT_SIZE(Item, Item::SIZEOF);
 
+    /*
+    nameId - Item name
+    itemId - Item ID value
+    namesp - Item namespace
+    */ 
+    inline Item* registerRegularItem(const char* nameId, short itemId, const char* namesp = nullptr) {
+        Item* obj = (Item*)gstd::malloc(sizeof(Item));
+        if (obj) {
+            obj = new(obj) Item(nameId, itemId);
+            gstd::string nameIdLower;
+            gstd::string::toLower(nameIdLower, obj->nameId);
+            if (obj->itemId > 0x200) {
+                // Invalid ID value advice
+                gstd::free(obj);
+                return nullptr;
+            }
+            if (obj->descriptionId.empty()) {
+                // Item missing a name advice
+            }
+            if (Item::mItems[obj->itemId] != nullptr) {
+                // ID already taken advice
+                gstd::free(obj);
+                return nullptr;
+            }
+            Item::mItems[obj->itemId] = obj;
+            Item::mRegistryByStringName.set(nameIdLower, obj);
+            if (!namesp)
+                Item::mRegistryByNameHash.registerRegular(nameIdLower, obj);
+            else {
+                obj->descriptionId.set(("item." + std::string(namesp) + "." + std::string(obj->nameId)).c_str());
+                Item::mRegistryByNameHash.registerRegular(nameIdLower, obj);
+            }
+            return obj;
+        }
+        return nullptr;
+    }
+
     template<typename T> 
     inline T* registerItem(const char* nameId, const short& itemId) {
         if constexpr (std::is_same<T, Item>::value) {
-            return reinterpret_cast<Item*(*)(const char*, const short&)>(0x7ccd38)(nameId, itemId);
+            return registerRegularItem(nameId, itemId);
+            // return reinterpret_cast<Item*(*)(const char*, const short&)>(0x7ccd38)(nameId, itemId);
         } else {
             T* obj = (T*)gstd::malloc(sizeof(T));
             if (obj) {

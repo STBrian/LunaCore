@@ -1,5 +1,26 @@
 ---@diagnostic disable: missing-return, duplicate-set-field, missing-fields
 
+---Global Game entry point related to all game functions
+Game = {}
+
+---Global Core table
+Core = {}
+
+---Returns the full path that corresponds to the modname if registered
+---@param modname string
+---@return string?
+function Core.getModpath(modname) end
+
+---Returns the mod that is currently being loaded
+---@return string
+function Core.getCurrentModname() end
+
+---Returns the title id formated in a hex string
+---@return string
+function Core.getTitleId() end
+
+Core._VERSION = "LunaCore 0.15.0"
+
 Async = {}
 
 ---@class AsyncTask
@@ -19,27 +40,7 @@ function Async.run(func) end
 ---@return boolean
 function Async.wait(seconds) end
 
-Game = {}
-
-Core = {}
-
----Returns the full path that corresponds to the modname if registered
----@param modname string
----@return string?
-function Core.getModpath(modname) end
-
----Returns the mod that is currently being loaded
----@return string
-function Core.getCurrentModname() end
-
----Returns the title id formated in a hex string
----@return string
-function Core.getTitleId() end
-
-Core._VERSION = "LunaCore 0.15.0"
-
 Core.Event = {}
-
 ---@class EventClass
 local EventClass = {}
 
@@ -65,7 +66,6 @@ Core.Event.OnGameEntitySpawnStart = {}
 Core.Event.OnGameEntitySpawn = {}
 
 Core.Graphics = {}
-
 ---@class Drawable
 local Drawable = {}
 
@@ -197,6 +197,7 @@ function GLabel:setText(text) end
 ---@class OnNewFrame: EventClass
 Core.Graphics.OnNewFrame = {}
 
+---Debugging and logging utilities
 Core.Debug = {}
 
 ---Displays a notification on screen
@@ -216,12 +217,22 @@ function Core.Debug.logerror(msg) end
 ---@param msg string
 function Core.Debug.error(msg) end
 
+---Represents an entity in the game world
 ---@class GameEntity
+---@field X number
+---@field Y number
+---@field Z number
+---@field EntityID integer
 local GameEntity = {}
 
+---Coordinates used for spawning entities
 ---@class GameSpawnCoords
+---@field X number
+---@field Y number
+---@field Z number
 local GameSpawnCoords = {}
 
+---Game Entity module
 Game.Entity = {}
 
 GameEntity.X = 0.0
@@ -238,13 +249,16 @@ GameSpawnCoords.Y = 0.0
 
 GameSpawnCoords.Z = 0.0
 
+---Enumeration groups module
 Enums = {}
+
 ---@class BaseEnumItem
 ---@field Name string
 ---@field Value integer
 local BaseEnumItem = {}
 
 ---@class EnumItem: BaseEnumItem
+local EnumItem = {}
 
 ---@class EntityState: EnumItem
 EntityState = {}
@@ -325,8 +339,10 @@ Enums.WeatherType.Thunder = {}
 ---@type WeatherType
 Enums.WeatherType.RainThunder = {}
 
+---Filesystem module for reading and writing files and directories
 Core.Filesystem = {}
 
+---File handle returned by Core.Filesystem.open
 ---@class FilesystemFile
 local FilesystemFile = {}
 
@@ -409,9 +425,9 @@ function FilesystemFile:getSize() end
 ---Closes the file
 function FilesystemFile:close() end
 
+---Gamepad input handling module
 Game.Gamepad = {}
-
----@class KeyCode: integer
+---@alias KeyCode integer
 
 ---Returns true if the key is pressed (only counts for the first press, for button held use isDown)
 ---@param keycode KeyCode
@@ -434,7 +450,6 @@ function Game.Gamepad.pressButton(keycode) end
 
 ---Returns touch x and y position
 ---@return number
----@return number
 function Game.Gamepad.getTouch() end
 
 ---@class OnKeyPressed: EventClass
@@ -446,6 +461,7 @@ Game.Gamepad.OnKeyDown = {}
 ---@class OnKeyReleased: EventClass
 Game.Gamepad.OnKeyReleased = {}
 
+---Button and key code constants
 Game.Gamepad.KeyCodes = {}
 
 Game.Gamepad.KeyCodes.A = 1
@@ -506,15 +522,28 @@ Game.Gamepad.KeyCodes.CPAD = 2952790016
 
 Game.Gamepad.KeyCodes.CSTICK = 184549376
 
+---Item management and registration module
 Game.Items = {}
 
+---Represents a registered Minecraft item definition
 ---@class MCItem
+---@field StackSize integer
+---@field ID integer
+---@field NameID string
+---@field DescriptionID string
 local MCItem = {}
 
+---Represents an instance of an item in game
 ---@class MCItemInstance
 local MCItemInstance = {}
 
+---Tool tier definition for mining and durability
 ---@class MCToolTier
+---@field MiningLevel integer
+---@field Durability integer
+---@field MiningEfficiency number
+---@field DamageBonus number
+---@field Enchantability integer
 local MCToolTier = {}
 
 ---Find an item using its ID
@@ -538,10 +567,11 @@ function Game.Items.getCreativePosition(itemID, groupID) end
 function Game.Items.newToolTier() end
 
 ---Creates a new item and stores it in the game's items table. Returns the address to the item
+---@param namespace string
 ---@param itemName string
 ---@param itemId integer
 ---@return MCItem?
-function Game.Items.registerItem(itemName, itemId) end
+function Game.Items.registerItem(namespace, itemName, itemId) end
 
 ---Creates a new sword tool item and registers it in the game. Returns the address to the item
 ---@param itemName string
@@ -579,10 +609,9 @@ function Game.Items.registerPickaxeItem(itemName, itemId, tier) end
 function Game.Items.registerShovelItem(itemName, itemId, tier) end
 
 ---Takes a registered item with Game.Items.registerItem, and sets its texture
----@param item MCItem
 ---@param textureName string
 ---@param textureIndex integer
-function MCItem:setTexture(item, textureName, textureIndex) end
+function MCItem:setTexture(textureName, textureIndex) end
 
 ---Takes a registered item with Game.Items.registerItem, and registers it in creative menu
 ---@param item MCItem
@@ -615,6 +644,7 @@ MCToolTier.DamageBonus = 0
 
 MCToolTier.Enchantability = 0
 
+---Built-in tool tier constants
 Game.Items.ToolTiers = {}
 
 ---@class WOOD: MCToolTier
@@ -641,6 +671,7 @@ Game.Items.OnRegisterItemsTextures = {}
 ---@class OnRegisterCreativeItems: EventClass
 Game.Items.OnRegisterCreativeItems = {}
 
+---Software keyboard input dialogs
 Core.Keyboard = {}
 
 ---Opens the keyboard and returns the user input as string. Returns nil if the user cancels the operation
@@ -668,6 +699,7 @@ function Core.Keyboard.getHex(message) end
 ---@return integer?
 function Core.Keyboard.populate(options) end
 
+---Process memory read and write operations
 Core.Memory = {}
 
 ---Reads an unsigned integer of 32 bits from memory
@@ -786,16 +818,17 @@ function Core.Memory.free(offset, useGameHeap) end
 ---@param foffset integer
 ---@param argstype string
 ---@param returntype string
+---@param ... any
 ---@return number
 function Core.Memory.call(foffset, argstype, returntype, ...) end
 
+---Local player entity state, movement, and camera control
 Game.LocalPlayer = {}
 
+---Local player position management
 Game.LocalPlayer.Position = {}
 
 ---Gets local player position
----@return number
----@return number
 ---@return number
 function Game.LocalPlayer.Position.get() end
 
@@ -811,11 +844,10 @@ function Game.LocalPlayer.Position.set(x, y, z) end
 ---@param z number
 function Game.LocalPlayer.Position.add(x, y, z) end
 
+---Local player velocity management
 Game.LocalPlayer.Velocity = {}
 
 ---Gets local player velocity
----@return number
----@return number
 ---@return number
 function Game.LocalPlayer.Velocity.get() end
 
@@ -886,6 +918,7 @@ Game.LocalPlayer.Loaded = false
 ---@return boolean
 function Game.LocalPlayer.getState(stateId) end
 
+---Local player camera rotation and field-of-view module
 Game.LocalPlayer.Camera = {}
 
 Game.LocalPlayer.Camera.FOV = 0.0
@@ -896,10 +929,10 @@ Game.LocalPlayer.Camera.Pitch = 0.0
 
 Game.LocalPlayer.Inventory = {}
 
----@type table<"hand"|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36,InventorySlot>
+---@type table<"hand"|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36, InventorySlot>
 Game.LocalPlayer.Inventory.Slots = {}
 
----@type table<"helmet"|"chestplate"|"leggings"|"boots"|1|2|3|4,InventorySlot>
+---@type table<"helmet"|"chestplate"|"leggings"|"boots"|1|2|3|4, InventorySlot>
 Game.LocalPlayer.Inventory.ArmorSlots = {}
 
 ---@class InventorySlot
@@ -919,8 +952,10 @@ InventorySlot.ItemCount = 0
 
 InventorySlot.ItemData = 0
 
+---In-game CTRPluginFramework menu integration
 Core.Menu = {}
 
+---Represents a folder item in the in-game plugin menu
 ---@class MenuFolder
 local MenuFolder = {}
 
@@ -951,8 +986,10 @@ function MenuFolder:newFolder(name) end
 ---@param callback function
 function MenuFolder:newEntry(name, callback) end
 
+---Crafting recipes registration module
 Game.Recipes = {}
 
+---Crafting recipes registry table passed to OnRegisterRecipes
 ---@class RecipesTable
 local RecipesTable = {}
 
@@ -970,6 +1007,7 @@ function Game.Recipes.registerShapedRecipe(recipesTable, resultItem, categoryId,
 ---@class OnRegisterRecipes: EventClass
 Game.Recipes.OnRegisterRecipes = {}
 
+---Localization and game resource assets module
 Game.Resources = {}
 
 ---Forces the game to reload the current locale
@@ -979,6 +1017,7 @@ function Game.Resources.reloadLocale() end
 ---@return string?
 function Game.Resources.getLocale() end
 
+---System time and hardware state information
 Core.System = {}
 
 ---Returns UNIX time
@@ -989,6 +1028,7 @@ function Core.System.getTime() end
 ---@return number
 function Core.System.get3DSliderState() end
 
+---World management, blocks, weather and environment module
 Game.World = {}
 
 Game.World.Loaded = false
@@ -998,6 +1038,7 @@ Game.World.Raining = false
 Game.World.Thunderstorm = false
 
 Game.World.CloudsHeight = 0.0
+
 ---@type WeatherType
 Game.World.Weather = {}
 
@@ -1027,12 +1068,17 @@ function Game.World.setBlock(x, y, z, blockId, blockData) end
 ---@param y integer
 ---@param z integer
 ---@return integer
----@return integer
 function Game.World.getBlock(x, y, z) end
 
 ---Gets the current biome ID
 ---@return integer
 function Game.World.getCurrentBiome() end
+
+---Plays a sound globally
+---@param soundId string
+---@param volume number
+---@param pitch number
+function Game.World.playGlobalSound(soundId, volume, pitch) end
 
 ---@class OnWorldJoin: EventClass
 Game.World.OnWorldJoin = {}

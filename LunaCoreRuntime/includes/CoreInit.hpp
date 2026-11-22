@@ -6,8 +6,6 @@
 namespace Core {
     void GetCoreInfo(std::string& plgTitle, std::string& plgAuthor, std::string& plgSummary, std::string& plgDescription);
 
-    void ParseVersion(u32 ver);
-
     void InitCore();
 
     void LoadLuaEnv();

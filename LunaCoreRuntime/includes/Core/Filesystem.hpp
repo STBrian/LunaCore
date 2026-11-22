@@ -8,6 +8,14 @@ namespace Core {
 
     Result FsInit();
 
+    Result FsMountRomfsBase();
+
+    Result FsMountRomfsPatch();
+
+    Result FsUnmountRomfsBase();
+
+    Result FsUnmountRomfsPatch();
+
     namespace Filesystem {
         enum class OpResult {
             SUCCESS = 0,
@@ -44,8 +52,14 @@ namespace Core {
         virtual ~File_impl() = default;
         virtual int read(void* buffer, unsigned int length) = 0;
         virtual int write(const void* data, unsigned int length) = 0;
-        virtual int seek(unsigned int offset, unsigned int origin) = 0;
+        virtual int seek(int offset, unsigned int origin) = 0;
         virtual int tell() = 0;
+        virtual int size() {
+            int lastOffset = this->tell();
+            int size = this->seek(0, 2);
+            this->seek(lastOffset, 0);
+            return size;
+        }
         virtual bool flush() = 0;
         virtual void close() = 0;
         virtual bool isOpen() = 0;
@@ -108,6 +122,10 @@ namespace Core {
             return mFile ? mFile->tell() : 0;
         }
 
+        int getSize() {
+            return mFile ? mFile->size() : 0;
+        }
+
         bool flush() {
             return mFile && mFile->flush();
         }
@@ -117,7 +135,8 @@ namespace Core {
         }
 
         void close() {
-            mFile->close();
+            if (mFile)
+                mFile->close();
         }
 
         char getByte() {

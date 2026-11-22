@@ -13,14 +13,6 @@
 #include "lua_common.h"
 #include "Helpers/Mutex.hpp"
 
-namespace Core {
-struct __core_ver {
-    u8 major, minor, patch;
-};
-
-extern struct __core_ver Version;
-}
-
 extern lua_State *Lua_global;
 extern Core::Mutex Lua_Global_Mut;
 
@@ -28,6 +20,13 @@ extern bool patchEnabled;
 extern bool disableAsyncTimeout;
 extern int loadedScripts;
 extern int loadedMods;
+
+extern const char* G_LastCoreEvent;
+extern const char* G_ActiveCoreEvent;
+
+namespace Core {
+    extern bool Initializated;
+}
 
 #if __STDC_HOSTED__
 extern std::string currentLoadingMod;
@@ -37,9 +36,6 @@ extern std::unordered_map<std::string, std::string> modPaths;
 typedef struct coregamestate_struct {
     std::atomic<bool> MainMenuLoaded = false;
     std::atomic<bool> WorldLoaded = false;
-    std::atomic<bool> LoadingItems = false;
-    std::atomic<bool> SettingItemsTextures = false;
-    std::atomic<bool> LoadingCreativeItems = false;
     std::atomic<bool> LoadingRecipes = false;
     std::atomic<bool> CoreLoaded = false;
 } GameState_s;

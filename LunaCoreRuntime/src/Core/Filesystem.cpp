@@ -1,5 +1,7 @@
 #include "Core/Filesystem.hpp"
 
+#include <cstdio>
+
 #include <CTRPluginFramework.hpp>
 #include <fslib.hpp>
 
@@ -90,7 +92,7 @@ class CTRPF_File : public Core::File_impl {
         return 0;
     }
 
-    int seek(unsigned int offset, unsigned int origin) override {
+    int seek(int offset, unsigned int origin) override {
         if (origin >= 0 && origin <= 2) {
             // It uses values different from the standard library
             CTRPF::File::SeekPos originAdapted = CTRPF::File::SeekPos::SET;
@@ -119,23 +121,41 @@ class CTRPF_File : public Core::File_impl {
         return mFile.IsOpen();
     }
 
-    ~CTRPF_File() {}
+    ~CTRPF_File() override {
+        close();
+    }
 };
 
 static Core::File_impl* ctrpf_fopen(const char* fp, unsigned int mode, unsigned int fileSize) {
     CTRPF_File* filePtr = new(std::nothrow) CTRPF_File;
-    if (filePtr == nullptr)
-        return nullptr;
-
-    int res = CTRPF::File::Open(filePtr->mFile, fp, mode);
-    if (mode & (unsigned int)FS_OPEN_CREATE)
-        filePtr->mFile.Clear();
-    
-    if (res != CTRPF::File::OPResult::SUCCESS) {
-        delete filePtr;
+    if (filePtr == nullptr) {
+        LOGDEBUG("CTRPF File open operation failed: Allocation failed");
         return nullptr;
     }
 
+    bool createRequested = (mode & (unsigned int)FS_OPEN_CREATE) != 0;
+    if (createRequested) {
+        // Ensure parent directory exists before creating file
+        std::string pathStr(fp);
+        size_t lastSlash = pathStr.find_last_of('/');
+        if (lastSlash != std::string::npos) {
+            std::string parentDir = pathStr.substr(0, lastSlash);
+            CTRPF::Directory::Create(parentDir);
+        }
+        CTRPF::File::Create(fp);
+        mode &= ~FS_OPEN_CREATE;
+    }
+
+    int res = CTRPF::File::Open(filePtr->mFile, fp, mode);
+    if (res != CTRPF::File::OPResult::SUCCESS) {
+        delete filePtr;
+        LOGDEBUG("CTRPF File open operation failed: %08X", res);
+        return nullptr;
+    }
+
+    if (createRequested)
+        filePtr->mFile.Clear();
+    
     if (fileSize > 0) {
         FSFILE_SetSize(filePtr->mFile.*get(tag_handle()), fileSize);
     }
@@ -144,11 +164,13 @@ static Core::File_impl* ctrpf_fopen(const char* fp, unsigned int mode, unsigned 
 }
 
 static bool ctrpf_file_exists(const char* fp) {
-    // I don't know why CTRPF::File::Exists function doesn't work
-    // CTRPF::File::Exists(fp)
     CTRPF::File file;
-    CTRPF::File::Open(file, fp, CTRPF::File::READ);
-    return file.IsOpen();
+    int res = CTRPF::File::Open(file, fp, CTRPF::File::READ);
+    bool exists = (res == CTRPF::File::OPResult::SUCCESS && file.IsOpen());
+    if (exists) {
+        file.Close();
+    }
+    return exists;
 }
 
 static bool ctrpf_delete_file(const char* fp) {
@@ -198,7 +220,7 @@ class FsLib_File : public Core::File_impl {
         return res;
     }
 
-    int seek(unsigned int offset, unsigned int origin) override {
+    int seek(int offset, unsigned int origin) override {
         if (origin >= 0 && origin <= 2) // It uses the same values as the standard library
             mFile.seek(offset, (fslib::File::Origin)origin);
         return mFile.tell();
@@ -220,16 +242,21 @@ class FsLib_File : public Core::File_impl {
         return mFile.is_open();
     }
 
-    ~FsLib_File() {}
+    ~FsLib_File() override {
+        close();
+    }
 };
 
 static Core::File_impl* fslib_fopen(const char* fp, unsigned int mode, unsigned int fileSize) {
     FsLib_File* filePtr = new(std::nothrow) FsLib_File;
-    if (filePtr == nullptr)
+    if (filePtr == nullptr) {
+        LOGDEBUG("FsLib File open operation failed: Allocation failed");
         return nullptr;
+    }
 
     filePtr->mFile.open(path_from_string(fp), mode, fileSize);
     if (!filePtr->mFile.is_open()) {
+        LOGDEBUG("FsLib File open operation failed: ", fslib::error::get_string());
         delete filePtr;
         return nullptr;
     }
@@ -238,7 +265,7 @@ static Core::File_impl* fslib_fopen(const char* fp, unsigned int mode, unsigned 
 }
 
 static bool fslib_file_exists(const char* fp) {
-    return fslib::file_exists(path_from_string(fp));
+    return fslib::file_exists(path_from_string(fp)); 
 }
 
 static bool fslib_delete_file(const char* fp) {
@@ -268,6 +295,280 @@ static unsigned int fslib_get_directory_elements(const char* fp, std::vector<std
     return elementsCount;
 }
 
+class STDIO_File : public Core::File_impl {
+    private:
+    bool mWasClosed;
+    FILE* mFile;
+    
+    public:
+    STDIO_File(FILE* handle) : mFile(handle), mWasClosed(false) {}
+
+    int read(void* buffer, unsigned int length) override {
+        int res = fread(buffer, 1, length, this->mFile);
+        return res;
+    }
+
+    int write(const void* data, unsigned int length) override {
+        int res = fwrite(data, length, 1, this->mFile);
+        return res;
+    }
+
+    int seek(int offset, unsigned int origin) override {
+        fseek(this->mFile, offset, origin);
+        return ftell(this->mFile);
+    }
+
+    int tell() override {
+        return ftell(this->mFile);
+    }
+
+    bool flush() override {
+        return fflush(this->mFile);
+    }
+
+    void close() override {
+        if (!this->mWasClosed) {
+            fflush(this->mFile);
+            fclose(this->mFile);
+            this->mWasClosed = true;
+        }
+    }
+
+    bool isOpen() override {
+        return !this->mWasClosed;
+    }
+
+    ~STDIO_File() {
+        if (!mWasClosed) {
+            fflush(mFile);
+            fclose(mFile);
+        }
+    }
+};
+
+static Core::File_impl* STDIO_fopen(const char* fp, unsigned int mode, unsigned int fileSize) {
+    char modeStr[5] = {0};
+    char* dstPos = modeStr;
+    // This only supports basic modes. Fix it?
+    if (mode == (FS_OPEN_READ|FS_OPEN_WRITE)) {
+        modeStr[0] = 'r';
+        modeStr[1] = '+';
+    } else if (mode == (FS_OPEN_READ|FS_OPEN_WRITE|FS_OPEN_CREATE)) {
+        modeStr[0] = 'w';
+        modeStr[1] = '+';
+    } else {
+        if (mode & FS_OPEN_READ) {
+            *dstPos = 'r';
+            dstPos++;
+        }
+        if (mode & FS_OPEN_WRITE) {
+            *dstPos = 'w';
+            dstPos++;
+        }
+        if (mode & FS_OPEN_APPEND) {
+            *dstPos = 'a';
+            dstPos++;
+        }
+    }
+    FILE* stdfilePtr = fopen(fp, modeStr);
+    if (stdfilePtr == nullptr)
+        return nullptr;
+    STDIO_File* filePtr = new(std::nothrow) STDIO_File(stdfilePtr);
+    if (filePtr == nullptr) {
+        fclose(stdfilePtr);
+        return nullptr;
+    }
+    return filePtr;
+}
+
+static bool STDIO_file_exists(const char* fp) {
+    FILE* filePtr = fopen(fp, "r");
+    bool doExist = filePtr != nullptr;
+    return filePtr;
+}
+
+static bool STDIO_delete_file(const char* fp) {
+    return remove(fp) == 0;
+}
+
+static bool STDIO_rename_file(const char* fp1, const char* fp2) {
+    return rename(fp1, fp2) == 0;
+}
+
+static bool STDIO_create_directory(const char* fp) {
+    return false; // stubbed
+}
+
+static bool STDIO_directory_exists(const char* fp) {
+    return false; // stubbed
+}
+
+static unsigned int STDIO_get_directory_elements(const char* fp, std::vector<std::string>* out) {
+    out->clear();
+    return 0; // stubbed
+}
+
+#include "game/gstd/gstd_string.hpp"
+
+class GameRes_File : public Core::File_impl {
+    private:
+    struct Reader {
+        u32 mData[6];
+        bool mAttached;
+        bool mClosed;
+        std::string mPath;
+
+        Reader() : mAttached(false), mClosed(false) {
+            reinterpret_cast<void(*)(void*)>(0x0010CA24)(this);
+        }
+
+        int open(const char* path) {
+            mPath = path;
+            int res = reinterpret_cast<int(*)(void*, const char*)>(0x0010C86C)(this, path);
+            if (res) this->mAttached = true;
+            return res;
+        }
+
+        u32 size() {
+            return reinterpret_cast<u32(*)(void*)>(0x0010C9D8)(this);
+        }
+
+        bool read(void* buffer, u32 size) {
+            return reinterpret_cast<int(*)(void*, void*, u32)>(0x0010C958)(this, buffer, size);
+        }
+
+        bool seek(s64 offset, int origin) {
+            return reinterpret_cast<Result(*)(u32*, s64, int)>(0x004ad7ec)(this->getHandle(), offset, origin) >= 0;
+        }
+
+        void close() {
+            if (this->mAttached) {
+                this->mClosed = true;
+                reinterpret_cast<void(*)(void*)>(0x0010C9A4)(this);
+            }
+        }
+
+        ~Reader() {
+            if (!this->mClosed && this->mAttached) this->close();
+            reinterpret_cast<void(*)(void*)>(0x0010CA5C)(this);
+        }
+
+        bool isReady() const {
+            return !this->mClosed && this->mAttached;
+        }
+
+        u32* getHandle() {
+            return reinterpret_cast<u32*>(this) + 1;
+        }
+    };
+
+    Reader mReader;
+    bool mWasClosed;
+    u64 mOffset;
+    
+    public:
+    GameRes_File(const char* path) : mWasClosed(false), mOffset(0) {
+        this->mReader.open(path);
+    }
+
+    GameRes_File(const GameRes_File&) = delete;
+
+    GameRes_File& operator=(const GameRes_File&) = delete;
+
+    bool isOpen() const {
+        return this->mReader.isReady();
+    }
+
+    int read(void* buffer, unsigned int length) override {
+        if (this->isOpen()) {
+            if (this->mReader.read(buffer, length)) {
+                this->mOffset += length;
+                return length;
+            } else {
+                this->seek(this->mOffset, SEEK_SET);
+            }
+        }
+        return 0;
+    }
+
+    int write(const void* data, unsigned int length) override {
+        return 0; // stubbed
+    }
+
+    int seek(int offset, unsigned int origin) override {
+        if (this->mReader.seek(offset, origin)) {
+            if (origin == SEEK_SET)
+                this->mOffset = offset;
+            else if (origin == SEEK_CUR)
+                this->mOffset += offset;
+            else {
+                u32 size = this->mReader.size();
+                this->mOffset = size + offset;
+            }
+        }
+        return this->mOffset;
+
+    }
+
+    int tell() override {
+        return this->mOffset;
+    }
+
+    int size() override {
+        return this->mReader.size();
+    }
+
+    bool flush() override {
+        return false; // stubbed
+    }
+
+    void close() override {
+        if (!this->mWasClosed) {
+            this->mReader.close();
+            this->mWasClosed = true;
+        }
+    }
+
+    bool isOpen() override {
+        return !this->mWasClosed;
+    }
+
+    ~GameRes_File() {}
+};
+
+static Core::File_impl* GameRes_fopen(const char* fp, unsigned int mode, unsigned int fileSize) {
+    GameRes_File* filePtr = new(std::nothrow) GameRes_File(fp);
+    if (filePtr == nullptr) {
+        return nullptr;
+    }
+    return filePtr;
+}
+
+static bool GameRes_file_exists(const char* fp) {
+    return false; // stubbed
+}
+
+static bool GameRes_delete_file(const char* fp) {
+    return false; // stubbed
+}
+
+static bool GameRes_rename_file(const char* fp1, const char* fp2) {
+    return false; // stubbed
+}
+
+static bool GameRes_create_directory(const char* fp) {
+    return false; // stubbed
+}
+
+static bool GameRes_directory_exists(const char* fp) {
+    return false; // stubbed
+}
+
+static unsigned int GameRes_get_directory_elements(const char* fp, std::vector<std::string>* out) {
+    out->clear();
+    return 0; // stubbed
+}
+
 Result Core::FsInit() {
     MountPointInfo currentInfo;
     Result res = fslib::initialize() ? 0 : -1;
@@ -286,12 +587,6 @@ Result Core::FsInit() {
     currentInfo.name = "sdmc";
     currentInfo.mountPoint = "sdmc:";
     currentInfo.perms = DEVICEACCESS_READ; 
-    gl_Devices.push_back(currentInfo);
-
-    // Only for internal usage
-    currentInfo.name = "lcfs";
-    currentInfo.mountPoint = PLUGIN_FOLDER;
-    currentInfo.perms = DEVICEACCESS_READ|DEVICEACCESS_WRITE;
     gl_Devices.push_back(currentInfo);
 
     currentInfo.name = "data";
@@ -314,6 +609,12 @@ Result Core::FsInit() {
     currentInfo.directory_exists = fslib_directory_exists;
     currentInfo.get_directory_elements = fslib_get_directory_elements;
 
+    // Only for internal usage
+    currentInfo.name = "lcfs";
+    currentInfo.mountPoint = PLUGIN_FOLDER;
+    currentInfo.perms = DEVICEACCESS_READ|DEVICEACCESS_WRITE;
+    gl_Devices.push_back(currentInfo);
+
     if (fslib::open_extra_data(u"extdata", static_cast<uint32_t>(titleId >> 8 & 0x00FFFFFF))) {
         currentInfo.name = "extdata";
         currentInfo.mountPoint = "extdata:";
@@ -321,6 +622,20 @@ Result Core::FsInit() {
         gl_Devices.push_back(currentInfo);
     } else 
         Core::Debug::LogError("Failed to open extdata");
+
+    /* Game based devices */
+    currentInfo.fopen = GameRes_fopen;
+    currentInfo.file_exists = GameRes_file_exists;
+    currentInfo.delete_file = GameRes_delete_file;
+    currentInfo.rename_file = GameRes_rename_file;
+    currentInfo.create_directory = GameRes_create_directory;
+    currentInfo.directory_exists = GameRes_directory_exists;
+    currentInfo.get_directory_elements = GameRes_get_directory_elements;
+
+    currentInfo.name = "rom";
+    currentInfo.mountPoint = "rom:";
+    currentInfo.perms = DEVICEACCESS_READ; 
+    gl_Devices.push_back(currentInfo);
 
     /* Ensure mount points exist */
     if (!CTRPF::Directory::IsExists("sdmc:/luma/titles")) 
@@ -334,7 +649,101 @@ Result Core::FsInit() {
         CTRPF::Directory::Create(PLUGIN_FOLDER);
     if (!CTRPF::Directory::IsExists(PLUGIN_FOLDER "/data"))
         CTRPF::Directory::Create(PLUGIN_FOLDER "/data");
+    CTRPF::Directory::Create(PLUGIN_FOLDER "/LunaCore");
     return 0;
+}
+
+Result romfsMountFromCurrentProcessExt(const char *name, bool isPatch)
+{
+    // Set up FS_Path structures
+    u32 zeros[3] = {0};
+    if (isPatch) zeros[0] = 5;
+    FS_Path archPath = { PATH_EMPTY, 1, "" };
+    FS_Path filePath = { PATH_BINARY, sizeof(zeros), zeros };
+
+    // Open the RomFS file and mount it
+    Handle fd = 0;
+    Result rc = FSUSER_OpenFileDirectly(&fd, ARCHIVE_ROMFS, archPath, filePath, FS_OPEN_READ, 0);
+    if (R_SUCCEEDED(rc))
+        rc = romfsMountFromFile(fd, 0, name);
+
+    return rc;
+}
+
+Result Core::FsMountRomfsBase() {
+    MountPointInfo currentInfo;
+    Result res;
+    res = romfsMountFromCurrentProcessExt("romfs", false);
+    if (R_FAILED(res)) return res;
+
+    /* STDIO based devices */
+    currentInfo.fopen = STDIO_fopen;
+    currentInfo.file_exists = STDIO_file_exists;
+    currentInfo.delete_file = STDIO_delete_file;
+    currentInfo.rename_file = STDIO_rename_file;
+    currentInfo.create_directory = STDIO_create_directory;
+    currentInfo.directory_exists = STDIO_directory_exists;
+    currentInfo.get_directory_elements = STDIO_get_directory_elements;
+
+    currentInfo.name = "romfs";
+    currentInfo.mountPoint = "romfs:";
+    currentInfo.perms = DEVICEACCESS_READ; 
+    gl_Devices.push_back(currentInfo);
+    return 0;
+}
+
+Result Core::FsUnmountRomfsBase() {
+    int idx = -1;
+    int count = 0;
+    for (auto& entry : gl_Devices) {
+        if (strcmp(entry.name, "romfs") == 0) idx = count;
+        count++;
+    }
+
+    if (idx > 0) {
+        romfsUnmount("romfs");
+        gl_Devices.erase(gl_Devices.begin() + idx);
+        return 0;
+    }
+    return -1;
+}
+
+Result Core::FsMountRomfsPatch() {
+    MountPointInfo currentInfo;
+    Result res;
+    res = romfsMountFromCurrentProcessExt("patch", true);
+    if (R_FAILED(res)) return res;
+
+    /* STDIO based devices */
+    currentInfo.fopen = STDIO_fopen;
+    currentInfo.file_exists = STDIO_file_exists;
+    currentInfo.delete_file = STDIO_delete_file;
+    currentInfo.rename_file = STDIO_rename_file;
+    currentInfo.create_directory = STDIO_create_directory;
+    currentInfo.directory_exists = STDIO_directory_exists;
+    currentInfo.get_directory_elements = STDIO_get_directory_elements;
+
+    currentInfo.name = "patch";
+    currentInfo.mountPoint = "patch:";
+    currentInfo.perms = DEVICEACCESS_READ; 
+    gl_Devices.push_back(currentInfo);
+    return 0;
+}
+
+Result Core::FsUnmountRomfsPatch() {
+    int idx = -1;
+    int count = 0;
+    for (auto& entry : gl_Devices) {
+        if (strcmp(entry.name, "patch") == 0) idx = count;
+        count++;
+    }
+
+    if (idx > 0) {
+        romfsUnmount("patch");
+        gl_Devices.erase(gl_Devices.begin() + idx);
+        return 0;
+    }
+    return -1;
 }
 
 /* fp = the path without the device prefix */

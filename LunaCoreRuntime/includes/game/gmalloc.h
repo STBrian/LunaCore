@@ -139,6 +139,7 @@ inline void* custom_glinearReallocAligned(void* p, size_t newsize, int align) {
 #endif
 
 #ifdef __cplusplus
+#ifndef GSTD_EXCLUDE_NAMESPACE
 namespace gstd {
     inline void* malloc(size_t n) {
         return gstd_malloc(n);
@@ -164,4 +165,5 @@ namespace gstd {
         gstd_free(p);
     }
 }
+#endif
 #endif

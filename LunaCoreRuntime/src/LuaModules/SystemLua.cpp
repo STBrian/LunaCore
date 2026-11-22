@@ -5,14 +5,17 @@
 
 // ----------------------------------------------------------------------------
 
-//$Core.System
+/* @doc:v2
+@module Core.System
+@desc System time and hardware state information
+*/
 
 // ----------------------------------------------------------------------------
 
-/*
-- Returns UNIX time
-## return: number
-### Core.System.getTime
+/* @doc:v2
+@func Core.System.getTime(): number
+@desc Returns UNIX time
+@return number
 */
 static int l_System_getTime(lua_State *L)
 {
@@ -20,10 +23,10 @@ static int l_System_getTime(lua_State *L)
     return 1;
 }
 
-/*
-- Returns current state of the 3D Slider
-## return: number
-### Core.System.get3DSliderState
+/* @doc:v2
+@func Core.System.get3DSliderState(): number
+@desc Returns current state of the 3D Slider
+@return number
 */
 static int l_System_get3DSliderState(lua_State* L) {
     float slider = osGet3DSliderState();

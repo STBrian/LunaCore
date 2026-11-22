@@ -4,23 +4,26 @@
 
 // ----------------------------------------------------------------------------
 
-//$Game.Resources
+/* @doc:v2
+@module Game.Resources
+@desc Localization and game resource assets module
+*/
 
 // ----------------------------------------------------------------------------
 
-/*
-- Forces the game to reload the current locale
-### Game.Resources.reloadLocale
+/* @doc:v2
+@func Game.Resources.reloadLocale()
+@desc Forces the game to reload the current locale
 */
 static int l_Resources_reloadLocale(lua_State* L) {
     Minecraft::Lang::reloadLang();
     return 0;
 }
 
-/*
-- Returns the current seleted locale
-## return: string?
-### Game.Resources.getLocale
+/* @doc:v2
+@func Game.Resources.getLocale(): string?
+@desc Returns the current seleted locale
+@return string?
 */
 static int l_Resources_getLocale(lua_State* L) {
     if (Minecraft::Lang::current)

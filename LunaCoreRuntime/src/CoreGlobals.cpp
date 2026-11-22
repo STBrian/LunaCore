@@ -1,10 +1,9 @@
 #include "CoreGlobals.hpp"
 
 #include "CoreConstants.hpp"
+#include "Core/ModInfo.hpp"
 
-namespace Core {
-struct __core_ver Version;
-}
+std::vector<Core::ModInfo> Core::LoadedModList;
 
 lua_State *Lua_global = NULL;
 Core::Mutex Lua_Global_Mut;
@@ -13,7 +12,13 @@ bool patchEnabled = false;
 bool disableAsyncTimeout = false;
 int loadedScripts;
 int loadedMods;
+
+const char* G_LastCoreEvent = nullptr;
+const char* G_ActiveCoreEvent = nullptr;
+
 std::string currentLoadingMod = "";
+
+bool Core::Initializated = false;
 
 Core::Config G_config(CONFIG_FILE); // Just a placeholder, it doesn't load here
 std::unordered_map<std::string, std::string> modPaths;

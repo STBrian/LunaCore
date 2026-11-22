@@ -31,14 +31,18 @@ static float* getCameraFOVPtr() {
 // ----------------------------------------------------------------------------
 
 //!include LunaCoreRuntime/src/LuaModules/Player/Player.cpp
-//$Game.LocalPlayer.Camera
+
+/* @doc:v2
+@module Game.LocalPlayer.Camera
+@desc Local player camera rotation and field-of-view module
+*/
 
 // ----------------------------------------------------------------------------
 
-/*
-=Game.LocalPlayer.Camera.FOV = 0.0
-=Game.LocalPlayer.Camera.Yaw = 0.0
-=Game.LocalPlayer.Camera.Pitch = 0.0
+/* @doc:v2
+@const Game.LocalPlayer.Camera.FOV = 0.0
+@const Game.LocalPlayer.Camera.Yaw = 0.0
+@const Game.LocalPlayer.Camera.Pitch = 0.0
 */
 
 static int l_Camera_index(lua_State *L)

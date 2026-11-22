@@ -1,0 +1,30 @@
+// Fix inventory Quick Move (button X) duplication and underflow glitch.
+//
+// When quick moving an item while holding a stack on cursor ('A'), the game
+// incorrectly used the held item count as the transfer count instead of the
+// hovered slot count, causing subtraction underflow to negative (254) which
+// clamped to maxStackSize (64 items) in ItemInstance_setStackSize.
+//
+// 1. In BaseInventoryScreen::handleQuickMove (vtable[0x1e0]):
+//    Replace conditional jump with unconditional jump so quick move always uses
+//    the hovered slot count regardless of carried cursor state.
+INS_PATCH ARM
+AT PC 0x003ae8f4
+    b . + 0x30
+END_INS_PATCH
+
+// 2. In ContainerInventoryScreen::handleQuickMove (vtable[0x1e0]):
+//    Replace conditional jump with unconditional jump so quick move in chests
+//    always uses the hovered slot count regardless of carried cursor state.
+INS_PATCH ARM
+AT PC 0x0042e648
+    b . + 0x30
+END_INS_PATCH
+
+// 3. In FUN_003adc18 (slot item transfer helper):
+//    Protect source slot remaining count against negative underflow (clamping to 0).
+INS_PATCH ARM
+AT PC 0x003ade0c
+    subs r1, r8, r5
+    movcc r1, #0
+END_INS_PATCH

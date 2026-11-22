@@ -4,7 +4,6 @@
 
 #include "Core/Debug.hpp"
 #include "CoreGlobals.hpp"
-#include "ExtendedHeap.hpp"
 
 namespace CTRPF = CTRPluginFramework;
 
@@ -18,6 +17,7 @@ static void* internalAbortLr = nullptr;
 
 extern "C" void __wrap_abort() {
     internalAbortLr = __builtin_return_address(0);
+    Core::Debug::LogErrorf("abort() called! Return address (LR): %p", internalAbortLr);
     if (!reservedMemory || internalAbort) {
         PLGLDR__DisplayErrMessage("Critical exception", "An unhandled critical exception ocurred", 0);
         //CTRPF::System::Reboot();
@@ -194,7 +194,12 @@ namespace Core {
         Lua_Global_Mut.unlock();
         int lmemusgkb = 0;
         int lmemusgb = 0;
-        if (Lua_global != NULL && threadId == pluginThreadId) {
+        #ifdef DEBUG
+        if (Lua_global != NULL)
+        #else
+        if (Lua_global != NULL && threadId == pluginThreadId) 
+        #endif
+        {
             lmemusgkb = lua_gc(Lua_global, LUA_GCCOUNT, 0);
             lmemusgb = lua_gc(Lua_global, LUA_GCCOUNTB, 0);
             lua_close(Lua_global);
@@ -206,7 +211,6 @@ namespace Core {
         char extrainfobuffer[0x80];
         const char* extrainfo = coreAbortMsg ? coreAbortMsg : "";
         const char* actionmsg = plg_state == PluginState::PLUGIN_MAINLOOP ? "The game will exit now" : "The console will reboot now";
-        if (coreAbortMsg != nullptr) extrainfo = coreAbortMsg;
         if (regs == nullptr || excep == nullptr) {
             errtitle = "Fatal core exception";
         } else {
@@ -243,11 +247,18 @@ namespace Core {
             Core::Debug::LogRawf("\t\tPlugin state: %s\n", pluginStateStr[plg_state]);
             Core::Debug::LogRawf("\t\tLast Core state: %s\n", coreStateStr[core_state]);
             Core::Debug::LogRawf("\t\tGame state: %s\n", gameStateStr[game_state]);
-            Core::Debug::LogRawf("\t\tLua memory usage: %d b", lmemusgkb * 1024 + lmemusgb);
+            if (lmemusgkb * 1024 + lmemusgb > 0)
+                Core::Debug::LogRawf("\t\tLua memory usage: %d b\n", lmemusgkb * 1024 + lmemusgb);
+            if (G_LastCoreEvent && G_ActiveCoreEvent == nullptr)
+                Core::Debug::LogRawf("\t\tLast Core event: %s\n", G_LastCoreEvent);
+            if (G_ActiveCoreEvent)
+                Core::Debug::LogRawf("\t\tCurrent Core event: %s\n", G_ActiveCoreEvent);
             if (!manuallyCalled) {
-                Core::Debug::LogRawf("\n\tException type: %s\n", exceptionStr[excep->type]);
+                Core::Debug::LogRawf("\t%s\n", extrainfo);
+                s32 processorId = svcGetProcessorID();
+                Core::Debug::LogRawf("\tException type: %s\n", exceptionStr[excep->type]);
                 Core::Debug::LogRawf("\tException at address: %08X\n", regs->pc);
-                Core::Debug::LogRawf("\tThread ID: %d\n", threadId);
+                Core::Debug::LogRawf("\tThread ID: %d (Core %d)\n", threadId, (int)processorId);
                 Core::Debug::LogRawf("\n\tLR: %08X\n", regs->lr);
                 Core::Debug::LogRawf("\tSP: %08X\n", regs->sp);
                 Core::Debug::LogRawf("\tCPSR: %08X\n", regs->cpsr);
@@ -261,7 +272,9 @@ namespace Core {
                 stackDump(regs->sp);
                 Core::Debug::LogRawf("\n");
             } else {
+                s32 processorId = svcGetProcessorID();
                 Core::Debug::LogRawf("\n\tException type: Core abort\n");
+                Core::Debug::LogRawf("\tThread ID: %d (Core %d)\n", threadId, (int)processorId);
                 if (coreAbort) {
                     Core::Debug::LogRawf("\tAbort message:\n");
                     Core::Debug::LogRawf("\t\t%s\n", coreAbortMsg);

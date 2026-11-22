@@ -35,11 +35,18 @@ static u32* getHungerBarOffset() {
 // ----------------------------------------------------------------------------
 
 //!include LunaCoreRuntime/src/LuaModules/LoadModules.cpp
-//$Game.LocalPlayer
+
+/* @doc:v2
+@module Game.LocalPlayer
+@desc Local player entity state, movement, and camera control
+*/
 
 // ----------------------------------------------------------------------------
 
-//$Game.LocalPlayer.Position
+/* @doc:v2
+@module Game.LocalPlayer.Position
+@desc Local player position management
+*/
 
 static MC3DSPluginFramework::Vec3<float> *safePlayerPositionGet() {
     auto ply = MC3DSPluginFramework::Facade::getLocalPlayer();
@@ -57,12 +64,12 @@ static MC3DSPluginFramework::Vec3<float> *safePlayerVelocityGet() {
     return nullptr;
 }
 
-/*
-- Gets local player position
-## return: number
-## return: number
-## return: number
-### Game.LocalPlayer.Position.get
+/* @doc:v2
+@func Game.LocalPlayer.Position.get(): number
+@desc Gets local player position
+@return number
+@return number
+@return number
 */
 static int l_Player_Position_get(lua_State *L)
 {
@@ -79,12 +86,12 @@ static int l_Player_Position_get(lua_State *L)
     return 3;
 }
 
-/*
-- Sets player position
-## x: number
-## y: number
-## z: number
-### Game.LocalPlayer.Position.set
+/* @doc:v2
+@func Game.LocalPlayer.Position.set(x: number, y: number, z: number)
+@desc Sets player position
+@param x number
+@param y number
+@param z number
 */
 static int l_Player_Position_set(lua_State *L)
 {
@@ -100,12 +107,12 @@ static int l_Player_Position_set(lua_State *L)
     return 0;
 }
 
-/*
-- Adds X, Y, Z to current player position
-## x: number
-## y: number
-## z: number
-### Game.LocalPlayer.Position.add
+/* @doc:v2
+@func Game.LocalPlayer.Position.add(x: number, y: number, z: number)
+@desc Adds X, Y, Z to current player position
+@param x number
+@param y number
+@param z number
 */
 static int l_Player_Position_add(lua_State *L)
 {
@@ -131,14 +138,17 @@ static const luaL_Reg player_position_methods[] =
 
 // ----------------------------------------------------------------------------
 
-//$Game.LocalPlayer.Velocity
+/* @doc:v2
+@module Game.LocalPlayer.Velocity
+@desc Local player velocity management
+*/
 
-/*
-- Gets local player velocity
-## return: number
-## return: number
-## return: number
-### Game.LocalPlayer.Velocity.get
+/* @doc:v2
+@func Game.LocalPlayer.Velocity.get(): number
+@desc Gets local player velocity
+@return number
+@return number
+@return number
 */
 static int l_Player_Velocity_get(lua_State *L)
 {
@@ -157,12 +167,12 @@ static int l_Player_Velocity_get(lua_State *L)
     return 3;
 }
 
-/*
-- Sets player velocity
-## x: number
-## y: number
-## z: number
-### Game.LocalPlayer.Velocity.set
+/* @doc:v2
+@func Game.LocalPlayer.Velocity.set(x: number, y: number, z: number)
+@desc Sets player velocity
+@param x number
+@param y number
+@param z number
 */
 static int l_Player_Velocity_set(lua_State *L)
 {
@@ -178,12 +188,12 @@ static int l_Player_Velocity_set(lua_State *L)
     return 0;
 }
 
-/*
-- Adds X, Y, Z velocity to current player velocity
-## x: number
-## y: number
-## z: number
-### Game.LocalPlayer.Velocity.add
+/* @doc:v2
+@func Game.LocalPlayer.Velocity.add(x: number, y: number, z: number)
+@desc Adds X, Y, Z velocity to current player velocity
+@param x number
+@param y number
+@param z number
 */
 static int l_Player_Velocity_add(lua_State *L)
 {
@@ -209,32 +219,32 @@ static const luaL_Reg player_velocity_methods[] =
 
 // ----------------------------------------------------------------------------
 
-/*
-=Game.LocalPlayer.OnGround = false
-=Game.LocalPlayer.Sneaking = false
-=Game.LocalPlayer.Jumping = false
-=Game.LocalPlayer.Sprinting = false
-=Game.LocalPlayer.Flying = false
-=Game.LocalPlayer.UnderWater = false
-=Game.LocalPlayer.TouchingWall = false
-=Game.LocalPlayer.Invincible = false
-=Game.LocalPlayer.CanFly = false
-=Game.LocalPlayer.CanConsumeItems = false
-=Game.LocalPlayer.BaseMoveSpeed = 0.0
-=Game.LocalPlayer.MoveSpeed = 0.0
-=Game.LocalPlayer.SwimSpeed = 0.02
-=Game.LocalPlayer.FlySpeed = 0.0
-=Game.LocalPlayer.CurrentHP = 0.0
-=Game.LocalPlayer.MaxHP = 0.0
-=Game.LocalPlayer.CurrentHunger = 0.0
-=Game.LocalPlayer.MaxHunger = 0.0
-=Game.LocalPlayer.CurrentLevel = 0.0
-=Game.LocalPlayer.LevelProgress = 0.0
-=Game.LocalPlayer.Gamemode = 0
-=Game.LocalPlayer.ReachDistance = 0.0
-=Game.LocalPlayer.SprintDelay = 0.0
-=Game.LocalPlayer.Dimension = 0
-=Game.LocalPlayer.Loaded = false
+/* @doc:v2
+@const Game.LocalPlayer.OnGround = false
+@const Game.LocalPlayer.Sneaking = false
+@const Game.LocalPlayer.Jumping = false
+@const Game.LocalPlayer.Sprinting = false
+@const Game.LocalPlayer.Flying = false
+@const Game.LocalPlayer.UnderWater = false
+@const Game.LocalPlayer.TouchingWall = false
+@const Game.LocalPlayer.Invincible = false
+@const Game.LocalPlayer.CanFly = false
+@const Game.LocalPlayer.CanConsumeItems = false
+@const Game.LocalPlayer.BaseMoveSpeed = 0.0
+@const Game.LocalPlayer.MoveSpeed = 0.0
+@const Game.LocalPlayer.SwimSpeed = 0.02
+@const Game.LocalPlayer.FlySpeed = 0.0
+@const Game.LocalPlayer.CurrentHP = 0.0
+@const Game.LocalPlayer.MaxHP = 0.0
+@const Game.LocalPlayer.CurrentHunger = 0.0
+@const Game.LocalPlayer.MaxHunger = 0.0
+@const Game.LocalPlayer.CurrentLevel = 0.0
+@const Game.LocalPlayer.LevelProgress = 0.0
+@const Game.LocalPlayer.Gamemode = 0
+@const Game.LocalPlayer.ReachDistance = 0.0
+@const Game.LocalPlayer.SprintDelay = 0.0
+@const Game.LocalPlayer.Dimension = 0
+@const Game.LocalPlayer.Loaded = false
 */
 static int l_LocalPlayer_index(lua_State *L)
 {
@@ -460,11 +470,11 @@ static int l_LocalPlayer_newindex(lua_State *L)
     else return LUACT_INVALID_KEY;
 }
 
-/*
-- Checks if the player is currently in the provided state. stateId: The entity state id from Game.Entity.States
-## stateId: EntityState
-## return: boolean
-### Game.LocalPlayer.getState
+/* @doc:v2
+@func Game.LocalPlayer.getState(stateId: EntityState): boolean
+@desc Checks if the player is currently in the provided state. stateId: The entity state id from Game.Entity.States
+@param stateId EntityState
+@return boolean
 */
 static int l_LocalPlayer_getState(lua_State* L) {
     using EntitySharedFlag = MC3DSPluginFramework::SynchedEntityData::EntitySharedFlag;

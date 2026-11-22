@@ -21,9 +21,11 @@
 #include "LuaModules.hpp"
 #include "CoreConstants.hpp"
 #include "CoreGlobals.hpp"
-#include "ExtendedHeap.hpp"
+#include "CoreTools.hpp"
+#include "Core/ModInfo.hpp"
+// #include "ExtendedHeap.hpp"
 
-#include "game/gmalloc.h"
+#include "tlsf.h"
 
 using json = nlohmann::ordered_json;
 namespace CTRPF = CTRPluginFramework;
@@ -31,75 +33,55 @@ using namespace Core;
 
 CTRPF::Clock timeoutLoadClock;
 
-#define HEAP_PLUGIN 0
-#define HEAP_GAME_APP 1
-#define HEAP_GAME_LINEAR 2
+#define VRAM_BANK_A_START (0x1F200000)
+#define VRAM_BANK_A_SIZE  (1 * 1024 * 1024) // 1 MB (dejando 2 MB para framebuffers de pantalla)
 
-u32 pluginHeapUsage = 0;
-#define PLUGIN_HEAP_MAX (1 * 1024 * 1024) // 1 Mb
+#define VRAM_BANK_B_START (0x1F400000)
+#define VRAM_BANK_B_SIZE  (2 * 1024 * 1024) // 2 MB (dejando 1 MB para el Z-buffer de la GPU)
 
-void* custom_lua_allocator(void* ud, void* ptr, size_t osize, size_t nsize) {
-    if (nsize == 0 && ptr != nullptr) {
-        // ExtendedHeapFree(ptr);
-        u32* heapType = ((u32*)ptr - 2);
-        if (*heapType == HEAP_PLUGIN) {
-            pluginHeapUsage -= osize + 8;
-            free(heapType);
-        } else
-            gstd_free(heapType);
-        return NULL;
-    } else {
-        if (ptr == NULL) {
-            if (pluginHeapUsage >= PLUGIN_HEAP_MAX) {
-                // NOTE: As far as I know, the game's allocator returns memory from the app heap
-                // if it's called from outside a game's thread. That makes glinearAlloc the same
-                // as gstd_malloc in this context
-                void* mem = glinearMemAlign(nsize + 8, 8);
-                u32* p = (u32*)mem;
-                *p = HEAP_GAME_APP;
-                return p + 2;
-            } else {
-                void* mem = malloc(nsize + 8);
-                if (!mem) return nullptr;
-                pluginHeapUsage += nsize + 8;
-                u32* p = (u32*)mem;
-                *p = HEAP_PLUGIN;
-                return p + 2;
-            }
-        }
-        else {
-            u32* heapType = ((u32*)ptr - 2);
-            if (*heapType == HEAP_PLUGIN) {
-                void* mem = realloc(heapType, nsize + 8);
-                if (!mem) return nullptr;
-                pluginHeapUsage += (ssize_t)(nsize + 8) - (ssize_t)(osize + 8);
-                return (u32*)mem + 2;
-            } else
-                return (u32*)custom_glinearReallocAligned(heapType, nsize + 8, 8) + 2;
-        }
+/* Lua heap uses free VRAM memory */
+static tlsf_t g_luaHeapAllocator = nullptr;
+
+Result InitLuaHeap(void) {
+    memset((void*)VRAM_BANK_B_START, 0, VRAM_BANK_B_SIZE);
+
+    g_luaHeapAllocator = tlsf_create_with_pool((void*)VRAM_BANK_B_START, VRAM_BANK_B_SIZE);
+    if (!g_luaHeapAllocator) {
+        // Core::Debug::LogError("Lua Heap: Failed to create TLSF pool in VRAM Bank B");
+        return -1;
     }
+
+    memset((void*)VRAM_BANK_A_START, 0, VRAM_BANK_A_SIZE);
+    if (!tlsf_add_pool(g_luaHeapAllocator, (void*)VRAM_BANK_A_START, VRAM_BANK_A_SIZE)) {
+        // Core::Debug::LogError("Lua Heap: Failed to add TLSF pool in VRAM Bank A");
+        return -1;
+    }
+
+    Core::Debug::LogInfo("Lua Heap initialized with size of 3072 KB");
+    return 0;
 }
 
-void* extended_lua_allocator_extended(void* ud, void* ptr, size_t osize, size_t nsize) {
-    if (nsize == 0 && ptr != nullptr) {
-        ExtendedHeapFree(ptr);
-        return NULL;
-    } else {
-        if (ptr == NULL) {
-            return ExtendedHeapMalloc(nsize);
-        } else {
-            return ExtendedHeapRealloc(ptr, nsize);
+void* lua_heap_allocator(void* ud, void* ptr, size_t osize, size_t nsize) {
+    if (nsize == 0) {
+        if (ptr != nullptr) {
+            tlsf_free(g_luaHeapAllocator, ptr);
         }
+        return NULL;
     }
+    if (ptr == NULL) {
+        return tlsf_malloc(g_luaHeapAllocator, nsize);
+    }
+    return tlsf_realloc(g_luaHeapAllocator, ptr, nsize);
 }
 
 static void readString(Core::File& file, std::string& line) {
+    line.clear();
     s8 chr;
     while ((chr = file.getByte()) != '\0' && chr != -1) {
         line += chr;
-        file.seek(1, SEEK_CUR);
+        // file.seek(1, SEEK_CUR);
     }
-    file.seek(1, SEEK_CUR);
+    // file.seek(1, SEEK_CUR);
     return;
 }
 
@@ -122,14 +104,7 @@ void Core::GetCoreInfo(std::string& plgTitle, std::string& plgAuthor, std::strin
     pluginFile.close();
 }
 
-void Core::ParseVersion(u32 ver) {
-    Core::Version.major = (ver >> 24);
-    Core::Version.minor = (ver >> 16) & 0xFF;
-    Core::Version.patch = (ver >> 8) & 0xFF;
-}
-
 void Core::InitCore() {
-    u64 titleID = CTRPF::Process::GetTitleID();
     std::lock_guard<Core::Mutex> lock(Lua_Global_Mut);
 
     if (!Core::Filesystem::DirectoryExists(LC_FS"/scripts"))
@@ -137,13 +112,20 @@ void Core::InitCore() {
 
     bool loadScripts = G_config.getBool("enable_scripts", true);
     
+    // #ifdef EXPERIMENTAL
+    // Result result = ExtendedHeapInit(1000);
+    // if (result < 0) Core::Abort("Failed to initialize ExtendedHeap");
+    Result result = InitLuaHeap();
+    if (result < 0) Core::Abort("Failed to initialize heap for Lua");
+
+    Core::Debug::LogInfo("Creating Lua environment");
+    Lua_global = lua_newstate(lua_heap_allocator, NULL);
+    // #else
+    // Lua_global = luaL_newstate();
+    // #endif
+    if (Lua_global == nullptr)
+        Core::Abort("Failed to initialize Lua env");
     Core::Debug::LogInfo("Loading Lua environment");
-    #ifdef EXPERIMENTAL
-    Lua_global = lua_newstate(extended_lua_allocator_extended, NULL);
-    #else
-    // Lua_global = lua_newstate(custom_lua_allocator, NULL);
-    Lua_global = luaL_newstate();
-    #endif
     Core::LoadLuaEnv();
 
     std::string region;
@@ -239,7 +221,7 @@ bool Core::LoadBuffer(const char *buffer, size_t size, const char* name) {
         int errfunc = lua_gettop(L);
         lua_insert(L, errfunc - 1);
 
-        lua_sethook(L, TimeoutLoadHook, LUA_MASKCOUNT, 100);
+        // lua_sethook(L, TimeoutLoadHook, LUA_MASKCOUNT, 100);
         timeoutLoadClock.Restart();
         if (lua_pcall(L, 0, 0, errfunc - 1))
         {
@@ -316,22 +298,167 @@ static bool parse_semver(const char* v_str, SemVer* out) {
     return sscanf(v_str, "%d.%d.%d", &out->major, &out->minor, &out->patch) == 3;
 }
 
-bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& modsAvailable, std::vector<u32> &modsLoading, std::vector<u32> &modsLoaded, std::vector<u32> &modsDiscarded)
+class ModResourcesHashDB {
+    u32 mSize = 0;
+    u32* mEntries = nullptr;
+
+    public:
+    ModResourcesHashDB() {}
+    
+    void load(const char* fp) {
+        Core::File file(fp, FS_OPEN_READ);
+        u32 elements = 0;
+        if (!file.isOpen() || file.read(&elements, sizeof(u32)) != sizeof(u32) || elements == 0) return;
+
+        u32 size = sizeof(u32) * elements;
+        this->mEntries = (u32*)malloc(size);
+        if (!this->mEntries) return;
+        if (file.read(this->mEntries, size) != size) { // corrupted
+            free(this->mEntries);
+            this->mEntries = nullptr;
+            return;
+        }
+        this->mSize = elements;
+    }
+
+    ~ModResourcesHashDB() {
+        if (this->mEntries) free(this->mEntries);
+    }
+
+    bool contains(u32 hash) {
+        if (!this->mEntries) return false;
+
+        int low = 0;
+        int high = this->mSize - 1;
+
+        u32 target = hash;
+        u32* arr = this->mEntries;
+
+        while (low <= high) {
+            int mid = low + (high - low) / 2;
+
+            if (arr[mid] == target) {
+                return true;
+            }
+            if (arr[mid] < target) {
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
+        }
+        return false;
+    }
+
+    bool contains(const char* id) {
+        return this->contains(hash(id));
+    }
+};
+
+struct ModsLoadingContext {
+    std::unordered_map<std::string, std::string> modsAvailable;
+    std::vector<u32> modsLoading;
+    std::vector<u32> modsLoaded;
+    std::vector<u32> modsDiscarded;
+    ModResourcesHashDB modsResDB;
+
+    void init(const char* dbPath) {
+        this->modsResDB.load(dbPath);
+    }
+
+    bool isModDiscarded(const char* name) {
+        return std::find(this->modsDiscarded.begin(), this->modsDiscarded.end(), hash(name)) != this->modsDiscarded.end();
+    }
+
+    bool isModDiscarded(const std::string& name) {
+        return std::find(this->modsDiscarded.begin(), this->modsDiscarded.end(), hash(name.c_str())) != this->modsDiscarded.end();
+    }
+
+    bool isModLoading(const char* name) {
+        return std::find(this->modsLoading.begin(), this->modsLoading.end(), hash(name)) != this->modsLoading.end();
+    }
+
+    bool isModLoading(const std::string& name) {
+        return std::find(this->modsLoading.begin(), this->modsLoading.end(), hash(name.c_str())) != this->modsLoading.end();
+    }
+
+    bool isModLoaded(const char* name) {
+        return std::find(this->modsLoaded.begin(), this->modsLoaded.end(), hash(name)) != this->modsLoaded.end();
+    }
+
+    bool isModLoaded(const std::string& name) {
+        return std::find(this->modsLoaded.begin(), this->modsLoaded.end(), hash(name.c_str())) != this->modsLoaded.end();
+    }
+
+    void addLoadingMod(const char* name) {
+        this->modsLoading.emplace_back(hash(name));
+    }
+
+    void addLoadingMod(const std::string& name) {
+        this->addLoadingMod(name.c_str());
+    }
+
+    void removeLoadingMod(const char* name) {
+        std::vector<u32>::iterator it;
+        it = std::find(this->modsLoading.begin(), this->modsLoading.end(), hash(name));
+        if (it != this->modsLoading.end())
+            this->modsLoading.erase(it);
+    }
+
+    void removeLoadingMod(const std::string& name) {
+        this->removeLoadingMod(name.c_str());
+    }
+
+    void addLoadedMod(const char* name) {
+        this->modsLoaded.emplace_back(hash(name));
+    }
+
+    void addLoadedMod(const std::string& name) {
+        this->addLoadedMod(name.c_str());
+    }
+
+    void addDiscardedMod(const char* name) {
+        this->modsDiscarded.emplace_back(hash(name));
+    }
+
+    void addDiscardedMod(const std::string& name) {
+        this->addDiscardedMod(name.c_str());
+    }
+
+    std::string getModFolderName(const std::string& name) {
+        return this->modsAvailable[name];
+    }
+
+    std::string getModFolderPath(const std::string& name) {
+        return PLUGIN_FOLDER "/mods/" + this->modsAvailable[name];
+    }
+
+    bool isModPresent(const std::string& name) {
+        return this->modsAvailable.contains(name);
+    }
+
+    bool checkModResources(const std::string& name, const std::string& verStr) {
+        return this->modsResDB.contains((name + "@" + verStr).c_str());
+    }
+
+    bool checkModResources(const std::string& name, u8 major, u8 minor, u8 patch) {
+        char buffer[0x100];
+        snprintf(buffer, sizeof(buffer), "%d.%d.%d", major, minor, patch);
+        return this->modsResDB.contains((name + "@" + buffer).c_str());
+    }
+};
+
+bool LoadMod(std::string modName, ModsLoadingContext& context)
 {
-    std::vector<u32>::iterator it;
     json j;
 
     Core::Utils::toLower(modName);
-    if (std::find(modsDiscarded.begin(), modsDiscarded.end(), hash(modName.c_str())) != modsDiscarded.end() || 
-    std::find(modsLoading.begin(), modsLoading.end(), hash(modName.c_str())) != modsLoading.end())
-        return false;
-    if (std::find(modsLoaded.begin(), modsLoaded.end(), hash(modName.c_str())) != modsLoaded.end())
-        return true;
+    if (context.isModDiscarded(modName) || context.isModLoading(modName)) return false;
+    if (context.isModLoaded(modName)) return true;
 
-    modsLoading.emplace_back(hash(modName.c_str()));
-    std::string fileContent = Core::Utils::LoadFile(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/mod.json");
+    context.addLoadingMod(modName);
+    std::string fileContent = Core::Utils::LoadFile(context.getModFolderPath(modName) + "/mod.json");
     if (fileContent.empty()) {
-        Core::Debug::LogError(CTRPF::Utils::Format("Failed to load '%s'. Failed to load 'mod.json'", modName.c_str()));
+        Core::Debug::LogErrorf("Failed to load '%s'. Failed to load 'mod.json'", modName.c_str());
         goto errorDiscard;
     }
     
@@ -340,6 +467,12 @@ bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& 
     if (j.is_discarded()) {
         Core::Debug::LogErrorf("Failed to load '%s'. Failed to parse 'mod.json'", modName.c_str());
         goto errorDiscard;
+    }
+
+    if (j.contains("version") && j["version"].is_string()) {
+        if (!context.checkModResources(modName, j["version"])) LunaCore::LaunchTool("ResourceBuilder");
+    } else {
+        if (!context.checkModResources(modName, "0.0.0")) LunaCore::LaunchTool("ResourceBuilder");
     }
 
     if (j.contains("min_core_version")) {
@@ -358,13 +491,13 @@ bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& 
             Core::Debug::LogErrorf("Failed to load '%s'. The mod config file has an invalid 'min_core_version'", modName.c_str());
             goto errorDiscard;
         }
-        if (Core::Version.major < min_core_ver.major) {
+        if (LUNACORE_VER_MAJOR < min_core_ver.major) {
             compatible = false;
-        } else if (Core::Version.major == min_core_ver.major) {
-            if (Core::Version.minor < min_core_ver.minor) {
+        } else if (LUNACORE_VER_MAJOR == min_core_ver.major) {
+            if (LUNACORE_VER_MINOR < min_core_ver.minor) {
                 compatible = false;
-            } else if (Core::Version.minor == min_core_ver.minor) {
-                if (Core::Version.patch < min_core_ver.patch) {
+            } else if (LUNACORE_VER_MINOR == min_core_ver.minor) {
+                if (LUNACORE_VER_PATCH < min_core_ver.patch) {
                     compatible = false;
                 }
             }
@@ -381,8 +514,8 @@ bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& 
             if (modDependency.is_string()) {
                 std::string modDNameLower = Core::Utils::convertToLower(modDependency);
                 bool sucess = false;
-                if (modsAvailable.contains(modDNameLower))
-                    sucess = LoadMod(modDNameLower, modsAvailable, modsLoading, modsLoaded, modsDiscarded);
+                if (context.isModPresent(modDNameLower))
+                    sucess = LoadMod(modDNameLower, context);
 
                 if (!sucess) {
                     Core::Debug::LogErrorf("Failed to load '%s'. Failed to load dependency '%s'", modName.c_str(), modDNameLower.c_str());
@@ -396,42 +529,61 @@ bool LoadMod(std::string modName, std::unordered_map<std::string, std::string>& 
         for (const auto& modDependency : j["optional_dependencies"]) {
             if (modDependency.is_string()) {
                 std::string modDNameLower = Core::Utils::convertToLower(modDependency);
-                if (modsAvailable.contains(modDNameLower))
-                    LoadMod(modDNameLower, modsAvailable, modsLoading, modsLoaded, modsDiscarded);
+                if (context.isModPresent(modDNameLower))
+                    LoadMod(modDNameLower, context);
             }
         }
     }
 
-    if (!Core::Filesystem::FileExists(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/init.lua")) {
+    if (!Core::Filesystem::FileExists(context.getModFolderPath(modName) + "/init.lua")) {
         Core::Debug::LogErrorf("Failed to load '%s'. Required 'init.lua' but it's missing", modName.c_str());
         goto errorDiscard;
     }
     currentLoadingMod = modName;
-    modPaths[modName] = PLUGIN_FOLDER "/mods/" + modsAvailable[modName];
-    if (!Core::LoadScript(PLUGIN_FOLDER "/mods/" + modsAvailable[modName] + "/init.lua", "mods/" + modsAvailable[modName] + "/init.lua")) {
+    modPaths[modName] = context.getModFolderPath(modName);
+    if (!Core::LoadScript(context.getModFolderPath(modName) + "/init.lua", "mods/" + context.getModFolderName(modName) + "/init.lua")) {
         Core::Debug::LogErrorf("Failed to load '%s'. Failed to load 'init.lua'", modName.c_str());
         modPaths.erase(modName);
         goto errorDiscard;
     }
 
-    it = std::find(modsLoading.begin(), modsLoading.end(), hash(modName.c_str()));
-    if (it != modsLoading.end())
-        modsLoading.erase(it);
-    modsLoaded.emplace_back(hash(modName.c_str()));
+    context.removeLoadingMod(modName);
+    context.addLoadedMod(modName);
+
+    {
+        ModInfo info;
+        info.id = modName;
+        info.name = j.value("name", modName);
+        info.description = j.value("description", "");
+        info.version = j.value("version", "0.0.0");
+        if (j.contains("dependencies") && j["dependencies"].is_array()) {
+            for (const auto& dep : j["dependencies"]) {
+                if (dep.is_string()) info.dependencies.push_back(dep.get<std::string>());
+            }
+        }
+        if (j.contains("optional_dependencies") && j["optional_dependencies"].is_array()) {
+            for (const auto& dep : j["optional_dependencies"]) {
+                if (dep.is_string()) info.optionalDependencies.push_back(dep.get<std::string>());
+            }
+        }
+        info.folderPath = context.getModFolderPath(modName);
+        Core::LoadedModList.push_back(info);
+        loadedMods = (int)Core::LoadedModList.size();
+    }
 
     return true;
 
     errorDiscard:
-    modsDiscarded.emplace_back(hash(modName.c_str()));
+    context.removeLoadingMod(modName);
+    context.addDiscardedMod(modName);
     return false;
 }
 
 void Core::LoadMods() 
 {
-    std::unordered_map<std::string, std::string> modsAvailable;
-    std::vector<u32> modsLoading;
-    std::vector<u32> modsLoaded;
-    std::vector<u32> modsDiscarded;
+    Core::LoadedModList.clear();
+    loadedMods = 0;
+    ModsLoadingContext context{};
     std::vector<std::string> mods;
     Core::Filesystem::GetDirectoryEntries(PLUGIN_FOLDER "/mods", mods);
     
@@ -452,30 +604,30 @@ void Core::LoadMods()
         }
 
         if (j.contains("name") && j["name"].is_string()) {
-            modsAvailable[Core::Utils::convertToLower(j["name"])] = dir;
+            context.modsAvailable[Core::Utils::convertToLower(j["name"])] = dir;
         } else {
             Core::Debug::LogErrorf("Failed to load '%s'. Missing name in 'mod.json'", dir.c_str());
             continue;
         }
     }
 
+    if (context.modsAvailable.empty()) return;
+
+    if (!Core::Filesystem::FileExists("data:/mods_res_db.bin")) LunaCore::LaunchTool("ResourceBuilder");
+    context.init("data:/mods_res_db.bin");
+
     int modsLoadedCount = 0;
-    for (auto it = modsAvailable.begin(); it != modsAvailable.end(); it++) {
-        if (std::find(modsDiscarded.begin(), modsDiscarded.end(), hash(it->first.c_str())) != modsDiscarded.end())
-            continue;
-        if (std::find(modsLoaded.begin(), modsLoaded.end(), hash(it->first.c_str())) != modsLoaded.end()) {
+    for (auto it = context.modsAvailable.begin(); it != context.modsAvailable.end(); it++) {
+        if (context.isModDiscarded(it->first)) continue;
+        if (context.isModLoaded(it->first)) {
             modsLoadedCount++;
             continue;
         }
         // This takes the name of the mod from modsAvailable key
-        if (LoadMod(it->first, modsAvailable, modsLoading, modsLoaded, modsDiscarded))
+        if (LoadMod(it->first, context))
             modsLoadedCount++;
     }
     if (modsLoadedCount == 0)
         Core::Debug::LogInfo("No mods loaded");
-    modsLoaded.clear();
-    modsDiscarded.clear();
-    modsLoading.clear();
-    modsAvailable.clear();
     currentLoadingMod = "";
 }

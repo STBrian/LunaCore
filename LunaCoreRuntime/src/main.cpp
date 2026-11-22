@@ -28,9 +28,11 @@
 #include "CoreGlobals.hpp"
 
 #include "Helpers/Allocation.hpp"
-#include "ExtendedHeap.hpp"
+#include "Core/Utils/ResourcesInjector.hpp"
+#include "Core/Utils/IpsPatcher.hpp"
 
 #include "game/Minecraft.hpp"
+#include "ExtendedHeap.hpp"
 
 #include "OnionFS.hpp"
 
@@ -88,70 +90,36 @@ namespace CTRPluginFramework
         svcCloseHandle(processHandle);
     }
 
-    Result  PatchRead(Core::File& file, u8 *dst, u32 size)
-	{
-		Result          res;
-		std::vector<u8> buf;
+    bool copyFile(const std::string& fp1, const std::string& fp2) {
+        using namespace Core;
+        Core::File originalFile(fp1, FS_OPEN_READ);
+        if (!originalFile.isOpen()) return false;
 
-		buf.resize(size);
-		if ((res = file.read(buf.data(), size)) != size)
-			return res;
+        Core::File newFile(fp2, FS_OPEN_WRITE|FS_OPEN_CREATE);
+        if (!newFile.isOpen()) return false;
 
-		std::copy(buf.begin(), buf.end(), dst);
-		return 0;
-	}
+        if (originalFile.isOpen() && newFile.isOpen()) {
+            const size_t COPY_BUFFER_SIZE = 0x16000;
+            char* buffer = new(std::nothrow) char[COPY_BUFFER_SIZE];
+            if (!buffer) return false;
 
-    void ApplyIPSPatch() {
-        u64 titleId = Process::GetTitleID();
-        Core::File ipsFile(Utils::Format("sdmc:/luma/titles/%08X%08X/code.ips", (u32)(titleId >> 32), (u32)titleId), FS_OPEN_READ);
-		if (!ipsFile.isOpen()) {
-            Core::Debug::LogWarnf("IPS Patch not found: sdmc:/luma/titles/%08X%08X/code.ips", (u32)(titleId >> 32), (u32)titleId);
-			return;
-		}
+            size_t filesize1 = originalFile.getSize();
 
-		u8 buffer[5];
-		u64 ips_size = ipsFile.seek(0, SEEK_END);
-        ipsFile.rewind();
-		u8* code = (u8*)0x00100000;
-
-		if (ipsFile.read(buffer, sizeof(buffer)) != sizeof(buffer) || memcmp(buffer, "PATCH", sizeof(buffer))) {
-			return;
-		};
-
-		while (ipsFile.read(buffer, 3) == 3)
-		{
-			if (memcmp(buffer, "EOF", 3) == 0) break;
-
-			u32 offset = (buffer[0] << 16) | (buffer[1] << 8) | buffer[2];
-
-			if (ipsFile.read(buffer, 2) != 2) { return; } // corrupted
-
-			u32 patchSize = (buffer[0] << 8) | buffer[1];
-
-			if (!patchSize)
-			{
-				if (ipsFile.read(buffer, 2) != 2) { return; }; // corrupted
-
-				u32 rleSize = (buffer[0] << 8) | buffer[1];
-
-				if (ipsFile.read(buffer, 1) != 1) { return; }; // corrupted
-
-				if (!Process::CheckRegion((u32)code + offset, rleSize)) { return; }; // corrupted
-				memset(code + offset, buffer[0], rleSize);
-
-				continue;
-			}
-
-			if (PatchRead(ipsFile, (u8*)((u32)code + offset), patchSize)) { return; }; // corrupted/error
-		}
-        if (memcmp(buffer, "EOF", 3) == 0) {
-            Core::Debug::Message("IPS Patch applied");
+            size_t curOffset = 0;
+            while (curOffset < filesize1) {
+                int bytesRead = originalFile.read(buffer, filesize1 - curOffset > COPY_BUFFER_SIZE ? COPY_BUFFER_SIZE : filesize1 - curOffset);
+                if (bytesRead < 1) break;
+                newFile.write(buffer, bytesRead);
+                curOffset += bytesRead;
+            }
+            delete[] buffer;
+            return curOffset == filesize1;
         }
+        return false;
     }
 
     // This function is called before main and before the game starts
-    // Useful to do code edits safely
-    void    PatchProcess(FwkSettings &settings)
+    static void RealPatchProcess(FwkSettings &settings)
     {
         if (!Core::Utils::checkTitle())
             return;
@@ -166,12 +134,12 @@ namespace CTRPluginFramework
         Core::FsInit();
 
         if (!Debug::OpenLogFile(LOG_FILE))
-            OSD::Notify(Utils::Format("Failed to open log file"));
+            OSD::Notify(CTRPF::Utils::Format("Failed to open log file"));
 
         Core::GetCoreInfo(plgTitle, plgAuthor, plgSummary, plgDescription);
-        Core::ParseVersion(settings.Header->version);
         
-        Debug::LogInfof("LunaCore version: %d.%d.%d", Core::Version.major, Core::Version.minor, Core::Version.patch);
+        Debug::LogInfof("LunaCore version: %d.%d.%d", LUNACORE_VER_MAJOR, LUNACORE_VER_MINOR, LUNACORE_VER_PATCH);
+        Debug::LogInfof("IsEmulator: %s", System::IsCitra() ? "true" : "false");
         Debug::LogInfof("Loading config file '%s'", Core::Filesystem::GetRealPath(CONFIG_FILE).c_str());
         G_config = LoadConfig(CONFIG_FILE);
         if (!G_config.isLoaded()) {
@@ -182,11 +150,7 @@ namespace CTRPluginFramework
         bool disableDLandDR = G_config.getBool("disable_dleft_and_dright", false);
 
         if (Core::Utils::checkCompatibility() || System::IsCitra()) {
-            ApplyIPSPatch();
             //Minecraft::PatchProcess();
-            SetMainMenuLayoutLoadCallback();
-            SetLoadingWorldScreenMessageCallback();
-            SetLeaveLevelPromptCallback();
             if (disableZLandZR) {
                 Process::Write32(0x919530, 0); // Pos keycode for ZL
                 Process::Write32(0x919534, 0); // Pos keycode for ZR
@@ -195,10 +159,74 @@ namespace CTRPluginFramework
                 Process::Write32(0x919530-(4*8), 0); // Pos keycode for DPADRIGHT
                 Process::Write32(0x919530-(4*7), 0); // Pos keycode for DPADLEFT
             }
-            hookSomeFunctions();
+            CoreHooksInit();
+            Core::Hooks::InstallMainMenuHooks();
+            SetLeaveLevelPromptCallback();
+            SetLoadingWorldScreenMessageCallback();
             //MC3DSPluginFramework::Hooks::install();
+            Core::InitResourcesInjector();
             patchEnabled = true;
+
+            // *reinterpret_cast<u32*>(0x00228a7c) = 0xe320f000;
+            // *reinterpret_cast<u32*>(0x002289c4) = 0xe320f000;
+            // *reinterpret_cast<u32*>(0x00228e54) = 0xe320f000;
+
+            if (Core::Utils::ApplyIpsPatch(PLUGIN_FOLDER "/LunaCore/patches.ips")) {
+                Debug::LogInfo("LunaCore patches loaded");
+            }
+
+            std::string userPatchesDir = PLUGIN_FOLDER "/patches";
+            if (Core::Filesystem::DirectoryExists(userPatchesDir)) {
+                std::vector<std::string> entries;
+                Core::Filesystem::GetDirectoryEntries(userPatchesDir, entries);
+
+                int userPatchesLoaded = 0;
+                for (const std::string& entry : entries) {
+                    if (entry.length() >= 4) {
+                        std::string ext = entry.substr(entry.length() - 4);
+                        for (char& c : ext) c = std::tolower(c);
+                        if (ext == ".ips") {
+                            std::string patchPath = userPatchesDir + "/" + entry;
+                            if (Core::Utils::ApplyIpsPatch(patchPath)) {
+                                userPatchesLoaded++;
+                            }
+                        }
+                    }
+                }
+
+                if (userPatchesLoaded > 0) {
+                    Debug::LogInfo("User patches loaded");
+                }
+            }
         }
+        Debug::LogInfo("PatchProcess finished successfully");
+    }
+
+    alignas(8) static u8 s_patchProcessStack[32 * 1024];
+
+    // This function is called before main and before the game starts
+    // Useful to do code edits safely.
+    // CTRPF's KeepThreadMain provides only a tiny 4KB stack (keepThreadStack).
+    // Complex initialization (JSON parsing, hooks, files, patches) can easily overflow it
+    // and corrupt adjacent CTRPF globals (_sdmcArchive, g_gameHidHook, etc.).
+    // We switch to a dedicated 32KB stack for the duration of PatchProcess.
+    void    PatchProcess(FwkSettings &settings)
+    {
+        register FwkSettings* r0_settings asm("r0") = &settings;
+        register void* r1_stack asm("r1") = s_patchProcessStack + sizeof(s_patchProcessStack);
+        register void (*r2_func)(FwkSettings&) asm("r2") = RealPatchProcess;
+
+        asm volatile(
+            "push {r4, lr}\n"
+            "mov r4, sp\n"
+            "mov sp, %1\n"
+            "blx %2\n"
+            "mov sp, r4\n"
+            "pop {r4, lr}\n"
+            : "+r"(r0_settings), "+r"(r1_stack), "+r"(r2_func)
+            :
+            : "r3", "r4", "ip", "memory"
+        );
     }
 
     // This function is called when the process exits
@@ -207,7 +235,10 @@ namespace CTRPluginFramework
     {
         //ToggleTouchscreenForceOn();
         Core::CrashHandler::plg_state = Core::CrashHandler::PLUGIN_EXIT;
-        lua_close(Lua_global);
+        if (Lua_global != nullptr)
+            lua_close(Lua_global);
+
+        ExtendedHeapExit();
 
         // Cleanup
         Core::Debug::LogInfo("Exiting LunaCore");
@@ -217,37 +248,40 @@ namespace CTRPluginFramework
 
     int main()
     {
+        Debug::LogInfo("main() started");
         CrashHandler::plg_state = CrashHandler::PLUGIN_MAIN;
         MenuModsFolder = alloc<MenuFolder>("Mods");
         if (!Core::Utils::checkTitle())
             return 0;
 
-        if (!fslib::directory_exists(path_from_string(PLUGIN_FOLDER"/layouts")))
-            fslib::create_directory(path_from_string(PLUGIN_FOLDER"/layouts"));
+        if (!Core::Filesystem::DirectoryExists(PLUGIN_FOLDER"/layouts"))
+            Core::Filesystem::CreateDirectory(PLUGIN_FOLDER"/layouts");
 
         bool loadMenuLayout = G_config.getBool("custom_game_menu_layout", true);
         if (loadMenuLayout && patchEnabled) {
-            if ((fslib::file_exists(path_from_string(PLUGIN_FOLDER"/layouts/menu_layout.json")) 
-                && LoadGameMenuLayout(PLUGIN_FOLDER"/layouts/menu_layout.json")) || 
-                (fslib::file_exists(path_from_string(PLUGIN_FOLDER"/LunaCore/layouts/menu_layout.json")) 
-                && LoadGameMenuLayout(PLUGIN_FOLDER"/LunaCore/layouts/menu_layout.json"))
-            )
-                PatchGameMenuLayoutFunction();
+            std::vector<std::string> paths = {
+                PLUGIN_FOLDER"/layouts/menu_layout.json",
+                PLUGIN_FOLDER"/LunaCore/layouts/menu_layout.json",
+                PLUGIN_FOLDER"/layouts/main_menu_screen.json"
+            };
+            for (const auto& path : paths) {
+                if (Core::Filesystem::FileExists(path)) {
+                    if (LoadGameMenuLayout(path))
+                        break;
+                }
+            }
         }
 
         MC3DSPluginFramework::Hooks::pushPluginThreadId(std::this_thread::get_id());
-        #ifdef EXPERIMENTAL
-        if (R_FAILED(ExtendedHeapInit(0x800))) Core::Abort("Failed to initialize heap");
-        #endif
         CrashHandler::core_state = CrashHandler::CORE_LOADING_RUNTIME;
         Core::InitCore();
 
         #ifdef DEBUG
         OSD::Notify("Developer version", Color::Yellow);
-        gmenu = alloc<PluginMenu>("LunaCore Plugin Menu - Dev", Core::Version.major, Core::Version.minor, Core::Version.patch,
-            plgSummary + "\n\n" + plgDescription + "\nCompiled: " __TIMESTAMP__ " (CST)\nDeveloper version", 2);
+        gmenu = alloc<PluginMenu>("LunaCore Plugin Menu - Dev", LUNACORE_VER_MAJOR, LUNACORE_VER_MINOR, LUNACORE_VER_PATCH,
+            plgSummary + "\n\n" + plgDescription + "\nCompiled: " __TIMESTAMP__ " (CST)\nDeveloper version: " COMMIT_HASH, 2);
         #else
-        gmenu = alloc<PluginMenu>("LunaCore Plugin Menu", Core::Version.major, Core::Version.minor, Core::Version.patch,
+        gmenu = alloc<PluginMenu>("LunaCore Plugin Menu", LUNACORE_VER_MAJOR, LUNACORE_VER_MINOR, LUNACORE_VER_PATCH,
             plgSummary + "\n\n" + plgDescription + "\nCompiled: " __TIMESTAMP__ " (CST)", 2);
         #endif
 
@@ -257,6 +291,8 @@ namespace CTRPluginFramework
 
         gmenu->Callback(Core::EventHandlerCallback);
         gmenu->Callback(Core::Scheduler::Update);
+
+        Core::Initializated = true;
 
         // Init our menu entries & folders
         InitMenu(*gmenu);

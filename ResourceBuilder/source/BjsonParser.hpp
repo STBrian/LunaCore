@@ -1,7 +1,7 @@
 #pragma once
 
+#include <3ds/types.h>
 #include "json.hpp"
-#include "types.h"
 
 class BjsonParser {
     public:

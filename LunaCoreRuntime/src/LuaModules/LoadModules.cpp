@@ -11,11 +11,12 @@
 
 #include "Core/Utils/Utils.hpp"
 #include "Core/Utils/FileLoader.hpp"
-#include "Core/Utils/ExtensionLoader.hpp"
 
 namespace Core {
-    //Use global Game as entry point related to all game functions
-    //$Game
+    /* @doc:v2
+    @module Game
+    @desc Global Game entry point related to all game functions
+    */
     bool RegisterGameModule(lua_State *L)
     {
         lua_newtable(L);
@@ -30,12 +31,16 @@ namespace Core {
         return true;
     }
 
-    //$Core
-    /*
-    - Returns the full path that corresponds to the modname if registered
-    ## modname: string
-    ## return: string?
-    ### Core.getModpath
+    /* @doc:v2
+    @module Core
+    @desc Global Core table
+    */
+
+    /* @doc:v2
+    @func Core.getModpath(modname: string): string?
+    @desc Returns the full path that corresponds to the modname if registered
+    @param modname string
+    @return string?
     */
     static int l_Core_getModpath(lua_State* L) {
         const char* modnamec = luaL_checkstring(L, 1);
@@ -48,20 +53,20 @@ namespace Core {
         return 1;
     }
 
-    /*
-    - Returns the mod that is currently being loaded
-    ## return: string
-    ### Core.getCurrentModname
+    /* @doc:v2
+    @func Core.getCurrentModname(): string
+    @desc Returns the mod that is currently being loaded
+    @return string
     */
     static int l_Core_getCurrentModname(lua_State* L) {
         lua_pushstring(L, currentLoadingMod.c_str());
         return 1;
     }
 
-    /*
-    - Returns the title id formated in a hex string
-    ## return: string
-    ### Core.getTitleId
+    /* @doc:v2
+    @func Core.getTitleId(): string
+    @desc Returns the title id formated in a hex string
+    @return string
     */
     static int l_Core_getTitleId(lua_State* L) {
         std::string titleId;
@@ -73,8 +78,10 @@ namespace Core {
     bool RegisterCoreModule(lua_State *L) {
         LOGDEBUG("Setup Core global table");
         lua_newtable(L);
-        lua_pushfstring(L, "LunaCore %d.%d.%d", Core::Version.major, Core::Version.minor, Core::Version.patch);
-        //=Core._VERSION = "LunaCore 0.15.0"
+        lua_pushfstring(L, "LunaCore %d.%d.%d", LUNACORE_VER_MAJOR, LUNACORE_VER_MINOR, LUNACORE_VER_PATCH);
+        /* @doc:v2
+        @const Core._VERSION = "LunaCore 0.15.0"
+        */
         lua_setfield(L, -2, "_VERSION");
         lua_pushcfunction(L, l_Core_getModpath);
         lua_setfield(L, -2, "getModpath");
@@ -99,6 +106,8 @@ namespace Core {
         Core::Module::RegisterMemoryModule(L);
         LOGDEBUG("Loading Menu module");
         Core::Module::RegisterMenuModule(L);
+        LOGDEBUG("Loading ModSettings module");
+        Core::Module::RegisterModSettingsModule(L);
         return true;
     }
 }

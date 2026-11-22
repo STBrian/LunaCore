@@ -1,0 +1,7 @@
+{
+    "modid": "settingsexample",
+    "name": "Settings Example",
+    "description": "Example mod showcasing the LunaCore ModSettings interface with toggles, sliders, dropdowns and action buttons.",
+    "version": "1.0.0",
+    "dependencies": []
+}

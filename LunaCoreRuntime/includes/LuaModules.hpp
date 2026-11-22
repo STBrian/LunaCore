@@ -19,6 +19,8 @@ namespace Core::Module {
 
     bool RegisterMenuModule(lua_State *L);
 
+    bool RegisterModSettingsModule(lua_State *L);
+
     bool RegisterEnumsModule(lua_State *L);
 
     bool RegisterResourcesModule(lua_State *L);

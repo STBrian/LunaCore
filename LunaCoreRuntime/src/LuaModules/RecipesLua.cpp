@@ -26,8 +26,15 @@ static bool repeatedValue(std::vector<Minecraft::RecipeComponentDefIns>& compone
 
 // ----------------------------------------------------------------------------
 
-//$Game.Recipes
-//@@RecipesTable
+/* @doc:v2
+@module Game.Recipes
+@desc Crafting recipes registration module
+*/
+
+/* @doc:v2
+@class RecipesTable
+@desc Crafting recipes registry table passed to OnRegisterRecipes
+*/
 
 // ----------------------------------------------------------------------------
 
@@ -83,28 +90,49 @@ static const char* ProcessTableKeys(lua_State* L, std::vector<Minecraft::RecipeC
     return nullptr;
 }
 
-/*
-- Allows to register a recipe. Use with the value given in event Game.Recipes.OnRegisterRecipes to get RecipesTable value
-## recipesTable: RecipesTable
-## resultItem: MCItemInstance
-## categoryId: integer
-## position: integer
-## line1: string
-## line2: string
-## line3: string
-## components: table
-### Game.Recipes.registerShapedRecipe
+/* @doc:v2
+@func Game.Recipes.registerShapedRecipe(recipesTable: RecipesTable, resultItem: MCItemInstance, categoryId: integer, position: integer, line1: string, line2: string, line3: string, components: table)
+@desc Allows to register a recipe
+@param resultItem MCItemInstance
+@param categoryId integer
+@param position integer
+@param line1 string
+@param line2 string
+@param line3 string
+@param components table
 */
+extern void* s_RecipesInstance;
+
 static int l_Recipes_registerShapedRecipe(lua_State* L) {
-    void* ptr1 = LuaObjectUtils::CheckObject<void>(L, 1, "RecipesTable").get();
-    Minecraft::ItemInstance* resultItem = LuaObjectUtils::CheckObject<Minecraft::ItemInstance>(L, 2, "MCItemInstance").get();
-    u16 categoryId = luaL_checkinteger(L, 3);
-    s16 position = luaL_checkinteger(L, 4);
+    int argIdx = 1;
+    void* ptr1 = nullptr;
+
+    if (LuaObjectUtils::IsObject(L, 1, "RecipesTable")) {
+        ptr1 = LuaObjectUtils::CheckObject<void>(L, 1, "RecipesTable").get();
+        argIdx = 2;
+    } else if (lua_isnil(L, 1)) {
+        argIdx = 2; // to avoid breaking mod compatibility
+    }
+
+    if (!ptr1) {
+        ptr1 = s_RecipesInstance;
+    }
+    if (!ptr1 && *reinterpret_cast<void**>(0x00a33ebc) != nullptr) {
+        ptr1 = *reinterpret_cast<void**>(0x00a33ebc);
+    }
+
+    if (!ptr1) {
+        return luaL_error(L, "Recipes instance is not available yet (must be called inside OnRegisterRecipes)");
+    }
+
+    Minecraft::ItemInstance* resultItem = LuaObjectUtils::CheckObject<Minecraft::ItemInstance>(L, argIdx++, "MCItemInstance").get();
+    u16 categoryId = luaL_checkinteger(L, argIdx++);
+    s16 position = luaL_checkinteger(L, argIdx++);
     size_t line1s = 0, line2s = 0, line3s = 0;
-    const char* line1 = luaL_checklstring(L, 5, &line1s);
-    const char* line2 = luaL_checklstring(L, 6, &line2s);
-    const char* line3 = luaL_checklstring(L, 7, &line3s);
-    luaL_checktype(L, 8, LUA_TTABLE); // Table
+    const char* line1 = luaL_checklstring(L, argIdx++, &line1s);
+    const char* line2 = luaL_checklstring(L, argIdx++, &line2s);
+    const char* line3 = luaL_checklstring(L, argIdx++, &line3s);
+    luaL_checktype(L, argIdx, LUA_TTABLE); // Table
     if (line1s > 3 || line2s > 3 || line3s > 3)
         return luaL_error(L, "shape is not a square!");
     if (line1s + line2s + line3s < 1)
@@ -112,7 +140,7 @@ static int l_Recipes_registerShapedRecipe(lua_State* L) {
 
     {
     std::vector<Minecraft::RecipeComponentDefIns> components;
-    lua_pushvalue(L, 8); // Table
+    lua_pushvalue(L, argIdx); // Table
     const char* errorMsg = ProcessTableKeys(L, components);
 
     if (errorMsg)
@@ -147,7 +175,7 @@ static const luaL_Reg recipes_functions[] = {
     {NULL, NULL}
 };
 
-class RecipesTableDummyClass {};
+// class RecipesTableDummyClass {};
 
 bool Core::Module::RegisterRecipesModule(lua_State *L) {
     ClassBuilder<DummyEmpty>(L, "RecipesTable").build();
@@ -155,7 +183,10 @@ bool Core::Module::RegisterRecipesModule(lua_State *L) {
     lua_getglobal(L, "Game");
     lua_newtable(L); // Recipes
 
-    //$@@@Game.Recipes.OnRegisterRecipes: EventClass
+    /* @doc:v2
+    @class OnRegisterRecipes: EventClass
+    @target Game.Recipes.OnRegisterRecipes
+    */
     Core::Event::NewEvent(L, "OnRegisterRecipes");
 
     luaL_register(L, NULL, recipes_functions);

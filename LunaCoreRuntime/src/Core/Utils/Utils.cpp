@@ -92,11 +92,15 @@ namespace Core::Utils {
         size_t fileSize = file_ptr.seek(0, SEEK_END);
         file_ptr.rewind();
         auto fileContent = UniqueAlloc::alloc_array_raw<char>(fileSize + 1);
-        if (!fileContent) return content;
+        if (!fileContent) {
+            file_ptr.close();
+            return content;
+        }
 
         file_ptr.read(fileContent.get(), fileSize);
         fileContent.get()[fileSize] = '\0';
         content = std::string(fileContent.get());
+        file_ptr.close();
         return content;
     }
 }

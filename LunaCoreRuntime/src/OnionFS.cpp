@@ -151,6 +151,19 @@ RT_HOOK fsObsSetThisSecValHook = { 0 };
 RT_HOOK fsSetSecValHook = { 0 };
 u32 fsMountArchive = 0;
 
+// FSFILE hooks for VFS
+RT_HOOK fileReadHook = { 0 };
+RT_HOOK fileCloseHook = { 0 };
+RT_HOOK fileGetSizeHook = { 0 };
+RT_HOOK fileSetPriorityHook = { 0 };
+RT_HOOK fileWriteHook = { 0 };
+
+typedef u32 (*fsFileReadTypeDef)(Handle* handle, u32* bytesRead, u64 offset, void* buffer, u32 size);
+typedef u32 (*fsFileCloseTypeDef)(Handle* handle);
+typedef u32 (*fsFileGetSizeTypeDef)(Handle* handle, u64* size);
+typedef u32 (*fsFileSetPriorityTypeDef)(Handle* handle, u32 priority);
+typedef u32 (*fsFileWriteTypeDef)(Handle* handle, u32* bytesWritten, u64 offset, const void* buffer, u32 size, u32 flags);
+
 // --------------- ONIONFS_SAVE ---------------
 
 #define SAVE_MAGIC 0x53464E4F
@@ -796,6 +809,165 @@ namespace OnionFS {
 		return 0;
 	}
 
+	// --------------- ONIONFS_VFS (Proposal A: LRU Handle Pool) ---------------
+
+	#define MAX_VIRTUAL_FILES 256
+	#define MAX_ACTIVE_SD_HANDLES 8
+	#define VFS_HANDLE_MASK 0x7F000000
+	#define IS_VFS_HANDLE(h) (((h) & 0xFF000000) == VFS_HANDLE_MASK)
+	#define VFS_INDEX(h) ((h) & 0x00FFFFFF)
+	#define MAKE_VFS_HANDLE(idx) (VFS_HANDLE_MASK | ((idx) & 0x00FFFFFF))
+
+	struct VirtualFileEntry {
+		bool inUse;
+		u16 sdmcPath[256];
+		u64 fileSize;
+		Handle realHandle;
+		u32 lastAccessTick;
+	};
+
+	static VirtualFileEntry s_vfiles[MAX_VIRTUAL_FILES + 1];
+	static LightLock s_vfsLock;
+	static u32 s_accessCounter = 0;
+
+	static Result EnsurePhysicalHandle(VirtualFileEntry& vf) {
+		if (vf.realHandle != 0) {
+			vf.lastAccessTick = ++s_accessCounter;
+			return 0;
+		}
+
+		int activeCount = 0;
+		int oldestIdx = -1;
+		u32 oldestTick = 0xFFFFFFFF;
+
+		for (int i = 1; i <= MAX_VIRTUAL_FILES; i++) {
+			if (s_vfiles[i].inUse && s_vfiles[i].realHandle != 0) {
+				activeCount++;
+				if (s_vfiles[i].lastAccessTick < oldestTick) {
+					oldestTick = s_vfiles[i].lastAccessTick;
+					oldestIdx = i;
+				}
+			}
+		}
+
+		// Evict oldest physical handle if pool limit is reached
+		if (activeCount >= MAX_ACTIVE_SD_HANDLES && oldestIdx != -1) {
+			((fsFileCloseTypeDef)fileCloseHook.callCode)(&s_vfiles[oldestIdx].realHandle);
+			s_vfiles[oldestIdx].realHandle = 0;
+		}
+
+		// Open physical file directly on SDMC
+		Handle newH = 0;
+		Result res = FSUSER_OpenFileDirectly(
+			&newH,
+			ARCHIVE_SDMC,
+			fsMakePath(PATH_EMPTY, ""),
+			fsMakePath(PATH_UTF16, vf.sdmcPath),
+			FS_OPEN_READ,
+			0
+		);
+
+		if (R_FAILED(res)) {
+			return res;
+		}
+
+		vf.realHandle = newH;
+		vf.lastAccessTick = ++s_accessCounter;
+		return 0;
+	}
+
+	u32 fsFileReadHook(Handle* handlePtr, u32* bytesRead, u64 offset, void* buffer, u32 size) {
+		if (!handlePtr) return 0xD8E007F7;
+		Handle h = *handlePtr;
+		if (IS_VFS_HANDLE(h)) {
+			int idx = VFS_INDEX(h);
+			LightLock_Lock(&s_vfsLock);
+			if (idx < 1 || idx > MAX_VIRTUAL_FILES || !s_vfiles[idx].inUse) {
+				LightLock_Unlock(&s_vfsLock);
+				return 0xC8804470; // Invalid handle
+			}
+
+			VirtualFileEntry& vf = s_vfiles[idx];
+			Result res = EnsurePhysicalHandle(vf);
+			if (R_FAILED(res)) {
+				LightLock_Unlock(&s_vfsLock);
+				return res;
+			}
+
+			res = ((fsFileReadTypeDef)fileReadHook.callCode)(&vf.realHandle, bytesRead, offset, buffer, size);
+			LightLock_Unlock(&s_vfsLock);
+			return res;
+		}
+
+		return ((fsFileReadTypeDef)fileReadHook.callCode)(handlePtr, bytesRead, offset, buffer, size);
+	}
+
+	u32 fsFileCloseHook(Handle* handlePtr) {
+		if (!handlePtr) return 0;
+		Handle h = *handlePtr;
+		if (IS_VFS_HANDLE(h)) {
+			int idx = VFS_INDEX(h);
+			LightLock_Lock(&s_vfsLock);
+			if (idx >= 1 && idx <= MAX_VIRTUAL_FILES && s_vfiles[idx].inUse) {
+				if (s_vfiles[idx].realHandle != 0) {
+					((fsFileCloseTypeDef)fileCloseHook.callCode)(&s_vfiles[idx].realHandle);
+					s_vfiles[idx].realHandle = 0;
+				}
+				s_vfiles[idx].inUse = false;
+			}
+			*handlePtr = 0;
+			LightLock_Unlock(&s_vfsLock);
+			return 0;
+		}
+
+		return ((fsFileCloseTypeDef)fileCloseHook.callCode)(handlePtr);
+	}
+
+	u32 fsFileGetSizeHook(Handle* handlePtr, u64* sizeOut) {
+		if (!handlePtr) return 0xD8E007F7;
+		Handle h = *handlePtr;
+		if (IS_VFS_HANDLE(h)) {
+			int idx = VFS_INDEX(h);
+			LightLock_Lock(&s_vfsLock);
+			if (idx < 1 || idx > MAX_VIRTUAL_FILES || !s_vfiles[idx].inUse) {
+				LightLock_Unlock(&s_vfsLock);
+				return 0xC8804470;
+			}
+			if (sizeOut) {
+				*sizeOut = s_vfiles[idx].fileSize;
+			}
+			LightLock_Unlock(&s_vfsLock);
+			return 0;
+		}
+
+		return ((fsFileGetSizeTypeDef)fileGetSizeHook.callCode)(handlePtr, sizeOut);
+	}
+
+	u32 fsFileSetPriorityHook(Handle* handlePtr, u32 priority) {
+		if (!handlePtr) return 0xD8E007F7;
+		Handle h = *handlePtr;
+		if (IS_VFS_HANDLE(h)) {
+			int idx = VFS_INDEX(h);
+			LightLock_Lock(&s_vfsLock);
+			if (idx >= 1 && idx <= MAX_VIRTUAL_FILES && s_vfiles[idx].inUse && s_vfiles[idx].realHandle != 0) {
+				((fsFileSetPriorityTypeDef)fileSetPriorityHook.callCode)(&s_vfiles[idx].realHandle, priority);
+			}
+			LightLock_Unlock(&s_vfsLock);
+			return 0;
+		}
+
+		return ((fsFileSetPriorityTypeDef)fileSetPriorityHook.callCode)(handlePtr, priority);
+	}
+
+	u32 fsFileWriteHook(Handle* handlePtr, u32* bytesWritten, u64 offset, const void* buffer, u32 size, u32 flags) {
+		if (!handlePtr) return 0xD8E007F7;
+		Handle h = *handlePtr;
+		if (IS_VFS_HANDLE(h)) {
+			return 0xE0C04702; // Operation not supported on read-only virtual RomFS file
+		}
+		return ((fsFileWriteTypeDef)fileWriteHook.callCode)(handlePtr, bytesWritten, offset, buffer, size, flags);
+	}
+
 	u32  fsOpenFileFunc(u32 a1, u16* path, u32 a2) {
 		bool reopen;
 		// DEBUGLOCK;
@@ -804,7 +976,57 @@ namespace OnionFS {
 		// DEBUGUNLOCK;
 		int ret = ((fsu32u16u32)fileOpHooks[OPEN_FILE_OP].callCode)(a1, newPath, a2);
 		if (newPath != path) {
-			if (OnionSave::getArchiveMode(path) == ARCH_EXTDATA) {
+			u8 mode = OnionSave::getArchiveMode(path);
+			if (mode == ARCH_ROMFS) {
+				if (ret >= 0 && a1 != 0) {
+					u32* fileObj = *(u32**)a1;
+					if (fileObj != nullptr) {
+						Handle realH = (Handle)fileObj[1];
+						u64 fileSize = 0;
+						if (realH != 0) {
+							((fsFileGetSizeTypeDef)fileGetSizeHook.callCode)(&realH, &fileSize);
+							((fsFileCloseTypeDef)fileCloseHook.callCode)(&realH);
+						}
+
+						LightLock_Lock(&s_vfsLock);
+						int slotIdx = -1;
+						for (int i = 1; i <= MAX_VIRTUAL_FILES; i++) {
+							if (!s_vfiles[i].inUse) {
+								slotIdx = i;
+								break;
+							}
+						}
+						if (slotIdx != -1) {
+							s_vfiles[slotIdx].inUse = true;
+							u16* src = skipArchive(newPath);
+							int p = 0;
+							while (src[p] && p < 255) {
+								s_vfiles[slotIdx].sdmcPath[p] = src[p];
+								p++;
+							}
+							s_vfiles[slotIdx].sdmcPath[p] = 0;
+							s_vfiles[slotIdx].fileSize = fileSize;
+							s_vfiles[slotIdx].realHandle = 0;
+							s_vfiles[slotIdx].lastAccessTick = ++s_accessCounter;
+
+							// Store the virtual handle into fileObj[1]
+							fileObj[1] = (u32)MAKE_VFS_HANDLE(slotIdx);
+							LightLock_Unlock(&s_vfsLock);
+							return ret;
+						}
+						LightLock_Unlock(&s_vfsLock);
+					}
+				}
+
+				// If opening on SD failed, fallback to native RomFS
+				if (ret < 0) {
+					ret = ((fsu32u16u32)fileOpHooks[OPEN_FILE_OP].callCode)(a1, path, a2);
+				}
+				return ret;
+			}
+
+			// Non-RomFS modes (ARCH_SAVE, ARCH_EXTDATA)
+			if (mode == ARCH_EXTDATA) {
 				if (ret == 0xC92044FA) {
 					// DEBUGLOCK;
 					// LOGDEBUG("fsOpenFile: Returned %08X\n", ret);
@@ -1277,6 +1499,41 @@ static void initOnionFSHooks(u32 textSize) {
         // LOGDEBUG("ERROR: Some hooks couldn't be initialized, aborting.\n");
         Core::Abort("OnionFS: failed to initialize");
     }
+
+    // Initialize VFS hooks (Proposal A)
+    u32 fsFileRead = 0x4ad5b0;
+    u32 fsFileClose = 0x4ad608;
+    u32 fsFileGetSize = 0x4ad694;
+    u32 fsFileSetPriority = 0x4ad578;
+    u32 fsFileWrite = 0x4ad634;
+
+    u32* scan = (u32*)0x100000;
+    while (scan < endAddr) {
+        if (*scan == 0x080200C2) {
+            fsFileRead = (u32)(scan - 21);
+            fsFileClose = (u32)(scan + 1);
+            fsFileWrite = (u32)(scan + 12);
+            fsFileGetSize = (u32)(scan + 36);
+            fsFileSetPriority = (u32)(scan - 35);
+            break;
+        }
+        scan++;
+    }
+
+    rtInitHook(&fileReadHook, fsFileRead, (u32)fsFileReadHook);
+    rtEnableHook(&fileReadHook);
+
+    rtInitHook(&fileCloseHook, fsFileClose, (u32)fsFileCloseHook);
+    rtEnableHook(&fileCloseHook);
+
+    rtInitHook(&fileGetSizeHook, fsFileGetSize, (u32)fsFileGetSizeHook);
+    rtEnableHook(&fileGetSizeHook);
+
+    rtInitHook(&fileSetPriorityHook, fsFileSetPriority, (u32)fsFileSetPriorityHook);
+    rtEnableHook(&fileSetPriorityHook);
+
+    rtInitHook(&fileWriteHook, fsFileWrite, (u32)fsFileWriteHook);
+    rtEnableHook(&fileWriteHook);
 }
 
 void InitFS(void) {
@@ -1284,6 +1541,9 @@ void InitFS(void) {
     sprintf(g_ProcessTID, "%016lX", tid);
     LightLock_Init(&regLock);
     LightLock_Init(&openLock);
+    LightLock_Init(&s_vfsLock);
+    memset(s_vfiles, 0, sizeof(s_vfiles));
+    s_accessCounter = 0;
 
     OnionSave::loadSettings();
     OnionSave::setupPackPaths();

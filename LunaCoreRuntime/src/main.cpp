@@ -90,34 +90,6 @@ namespace CTRPluginFramework
         svcCloseHandle(processHandle);
     }
 
-    bool copyFile(const std::string& fp1, const std::string& fp2) {
-        using namespace Core;
-        Core::File originalFile(fp1, FS_OPEN_READ);
-        if (!originalFile.isOpen()) return false;
-
-        Core::File newFile(fp2, FS_OPEN_WRITE|FS_OPEN_CREATE);
-        if (!newFile.isOpen()) return false;
-
-        if (originalFile.isOpen() && newFile.isOpen()) {
-            const size_t COPY_BUFFER_SIZE = 0x16000;
-            char* buffer = new(std::nothrow) char[COPY_BUFFER_SIZE];
-            if (!buffer) return false;
-
-            size_t filesize1 = originalFile.getSize();
-
-            size_t curOffset = 0;
-            while (curOffset < filesize1) {
-                int bytesRead = originalFile.read(buffer, filesize1 - curOffset > COPY_BUFFER_SIZE ? COPY_BUFFER_SIZE : filesize1 - curOffset);
-                if (bytesRead < 1) break;
-                newFile.write(buffer, bytesRead);
-                curOffset += bytesRead;
-            }
-            delete[] buffer;
-            return curOffset == filesize1;
-        }
-        return false;
-    }
-
     // This function is called before main and before the game starts
     static void RealPatchProcess(FwkSettings &settings)
     {
@@ -126,10 +98,6 @@ namespace CTRPluginFramework
         CrashHandler::Init();
         settings.UseGameHidMemory = true;
         //ToggleTouchscreenForceOn();
-
-        // Init OnionFS
-        *(u32*)0x1226fc = 0xe92d41f0; // Remove Luma3DS layeredfs if present
-        OnionFS::InitFS();
 
         Core::FsInit();
 
@@ -145,6 +113,10 @@ namespace CTRPluginFramework
         if (!G_config.isLoaded()) {
             Core::Debug::LogInfof("Failed to load config file. Using defaults");
         }
+
+        // Init OnionFS
+        *(u32*)0x1226fc = 0xe92d41f0; // Remove Luma3DS layeredfs if present
+        OnionFS::InitFS();
 
         bool disableZLandZR = G_config.getBool("disable_zl_and_zr", false);
         bool disableDLandDR = G_config.getBool("disable_dleft_and_dright", false);
@@ -296,7 +268,6 @@ namespace CTRPluginFramework
 
         // Init our menu entries & folders
         InitMenu(*gmenu);
-        OnionFS::InitMenu(gmenu);
 
         // Launch menu and mainloop
         Debug::LogInfo("Starting plugin mainloop");

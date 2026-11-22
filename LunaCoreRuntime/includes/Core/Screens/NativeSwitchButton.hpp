@@ -70,6 +70,22 @@ namespace Core {
             }
         }
 
+        bool onTouchRelease(MC3DSPF::MinecraftGame *minecraftGame, int touchX, int touchY) override
+        {
+            bool clicked = mDragging && isHovered(touchX, touchY);
+            stopDragging();
+
+            if (!clicked)
+                return false;
+
+            toggle();
+
+            if (mScreen_UnknownClass2)
+                mScreen_UnknownClass2->Unknown1(*this);
+
+            return true;
+        }
+
         void render(MC3DSPF::MinecraftGame *minecraftGame, int touchX, int touchY) override
         {
             // Draw button background if row is wider than standalone toggle

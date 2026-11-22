@@ -3,6 +3,8 @@
 #include <CTRPluginFramework.hpp>
 
 #include "CoreConstants.hpp"
+#include "CoreGlobals.hpp"
+#include "Core/Config.hpp"
 #include "Core/Debug.hpp"
 
 #include "Unicode.h"
@@ -164,148 +166,45 @@ typedef u32 (*fsFileGetSizeTypeDef)(Handle* handle, u64* size);
 typedef u32 (*fsFileSetPriorityTypeDef)(Handle* handle, u32 priority);
 typedef u32 (*fsFileWriteTypeDef)(Handle* handle, u32* bytesWritten, u64 offset, const void* buffer, u32 size, u32 flags);
 
-// --------------- ONIONFS_SAVE ---------------
+// --------------- ONIONFS_ARCHIVES ---------------
 
-#define SAVE_MAGIC 0x53464E4F
-#define SAVE_REVISION 0
-#define MAX_SAVE_ENTRIES 50
+#define MAX_ARCHIVE_ENTRIES 50
 
 typedef struct archEntry_s {
-		char archName[0x10];
-		u64 archHandle;
-		u8 type;
-		u8 finished;
-	} archEntry;
-	typedef struct archData_s {
-		u32 numEntries;
-		archEntry entries[MAX_SAVE_ENTRIES];
-	} archData;
-	typedef struct saveEntry_s {
-		char name[0x1F];
-		u8 flags;
-	} saveEntry;
-	typedef struct saveHdr_s {
-		u32 magic;
-		u32 version;
-		u32 lastLoadedPack;
-		u32 numEntries;
-	} saveHdr;
-	typedef struct saveData_s {
-		saveHdr header;
-		saveEntry entries[MAX_SAVE_ENTRIES];
-	} saveData;
+	char archName[0x10];
+	u64 archHandle;
+	u8 type;
+	u8 finished;
+} archEntry;
 
-	enum ArchTypes
-	{
-		ARCH_ROMFS = 1,
-		ARCH_SAVE = 2,
-		ARCH_EXTDATA = 4,
-	};
+typedef struct archData_s {
+	u32 numEntries;
+	archEntry entries[MAX_ARCHIVE_ENTRIES];
+} archData;
+
+enum ArchTypes
+{
+	ARCH_ROMFS = 1,
+	ARCH_SAVE = 2,
+	ARCH_EXTDATA = 4,
+};
+
+namespace OnionFS {
+	bool g_onionfs_enable_romfs_redir = true;
+	bool g_onionfs_enable_extdata_redir = false;
+	std::string g_onionfs_default_romfs_redir_path = "default";
+	std::string g_onionfs_default_extdata_redir_path = "default";
+	void ReloadConfig();
+}
 
 namespace OnionSave {
-    using namespace CTRPluginFramework;
+	using namespace CTRPluginFramework;
 
-    archData save = {0};
-	saveData settings = { 0 };
-	char savePath[100] = {0};
-	u16 romPath[50] = { 0 };
-	u16 dataPath[50] = { 0 };
-	u16 extPath[50] = { 0 };
-	// File* debugFile = nullptr;
-	bool needsReboot = false;
+	archData save = {0};
+	u16 romPath[256] = { 0 };
+	u16 extPath[256] = { 0 };
 
-    bool checkFolderExists(u16* name) {
-		FS_Archive sdmcArchive;
-		Handle dirHandle;
-		Result ret = 0;
-		ret = FSUSER_OpenArchive(&sdmcArchive, ARCHIVE_SDMC, fsMakePath(PATH_EMPTY, ""));
-		if (ret) return false;
-		ret = FSUSER_OpenDirectory(&dirHandle, sdmcArchive, fsMakePath(PATH_UTF16, name));
-		FSDIR_Close(dirHandle);
-		FSUSER_CloseArchive(sdmcArchive);
-		if (ret) {
-			return false;
-		}
-		return true;
-	}
-
-	bool createDirectory(char* name) {
-		return Directory::Create(name) == 0;
-	}
-
-    Result saveSettings() {
-		// DEBUG("Trying to save settings.\n");
-		FS_Archive sdmcArchive;
-		Handle fileHandle;
-		if (!savePath[0]) {
-			sprintf(savePath, "%s%s%s", TOP_DIR"/", g_ProcessTID, ".onionfs");
-		}
-		if (!checkFolderExists((u16*)u"/Minecraft 3DS/saves")) createDirectory((char*)TOP_DIR);
-		File::Remove(savePath);
-		File savFile(savePath, File::RWC);
-		if (!savFile.IsOpen()) {
-			// DEBUG("Failed to save settings.\n");
-			return -1;
-		}
-		// DEBUG("Settings saved.\n");
-		u32 writeSize = sizeof(saveHdr) + settings.header.numEntries * sizeof(saveEntry);
-		savFile.Write(&settings, writeSize);
-		return 0;
-	}
-
-    bool checkEntryExists(const char* name) {
-		for (int i = 0; i < settings.header.numEntries; i++)
-			if (strcmp(settings.entries[i].name, name) == 0) return true;
-		return false;
-	}
-
-    bool addModEntry(const char* name, u8 flags) {
-		if (!name) return false;
-		if (settings.header.numEntries >= MAX_SAVE_ENTRIES) return false;
-		flags &= 0x7;
-		if (strlen(name) + 1 > sizeof(settings.entries[0].name)) return false;
-		if (checkEntryExists(name)) return false;
-		// DEBUG("Adding mod entry %s with flags 0x%02X\n", name, (u32)flags);
-		strcpy(settings.entries[settings.header.numEntries].name, name);
-		settings.entries[settings.header.numEntries].flags = flags;
-		char* dirName = static_cast<char *>(::operator new(0x200));
-		if (!dirName) return false;
-		//
-		strcpy(dirName, (char*)TOP_DIR"/");
-		strcat(dirName, name);
-		createDirectory(dirName);
-		//
-		strcpy(dirName, (char*)TOP_DIR"/");
-		strcat(dirName, name);
-		strcat(dirName, (char*)"/romfs");
-		createDirectory(dirName);
-		//
-		strcpy(dirName, (char*)TOP_DIR"/");
-		strcat(dirName, name);
-		strcat(dirName, (char*)"/save");
-		createDirectory(dirName);
-		//
-		strcpy(dirName, (char*)TOP_DIR"/");
-		strcat(dirName, name);
-		strcat(dirName, (char*)"/extdata");
-		createDirectory(dirName);		
-		delete[] dirName;
-		settings.header.numEntries++;
-		OnionSave::saveSettings();
-		return true;
-	}
-
-    Result loadDeafults() {
-		// LOGDEBUG("Config file not found, loading defaults.\n");
-		settings.header.magic = SAVE_MAGIC;
-		settings.header.version = SAVE_REVISION;
-		settings.header.numEntries = 0;
-		settings.header.lastLoadedPack = 0;
-		OnionSave::saveSettings();
-		return addModEntry("default", ARCH_ROMFS);
-	}
-
-    int strcmpu8u16(char* ptr1, u16* ptr2) {
+	int strcmpu8u16(char* ptr1, u16* ptr2) {
 		int i = 0;
 		u16 char1;
 		u16 char2;
@@ -316,7 +215,7 @@ namespace OnionSave {
 		return char1 - char2;
 	}
 
-    int strcmpdot(char* ptr1, char* ptr2) {
+	int strcmpdot(char* ptr1, char* ptr2) {
 		int i = 0;
 		char char1;
 		char char2;
@@ -327,7 +226,7 @@ namespace OnionSave {
 		return char1 - char2;
 	}
 
-    void strcpydot(char* dst, char* src, int n) {
+	void strcpydot(char* dst, char* src, int n) {
 		while (*src != ':' && n) {
 			*dst++ = *src++;
 			n--;
@@ -335,14 +234,14 @@ namespace OnionSave {
 		*dst = '\0';
 	}
 
-    void strcatu16(u16* dest, char* s1, char* s2, char* s3) {
+	void strcatu16(u16* dest, char* s1, char* s2, char* s3) {
 		while (*s1) *dest++ = *s1++;
 		while (*s2) *dest++ = *s2++;
 		while (*s3) *dest++ = *s3++;
 		*dest = '\0';
 	}
-    
-    int existArchiveu16(u16 * arch)
+
+	int existArchiveu16(u16 * arch)
 	{
 		for (int i = 0; i < save.numEntries; i++) {
 			if (strcmpu8u16(save.entries[i].archName, arch) == 0) {
@@ -353,7 +252,7 @@ namespace OnionSave {
 		return -1;
 	}
 
-    int existArchiveHnd(u64 hnd)
+	int existArchiveHnd(u64 hnd)
 	{
 		for (int i = 0; i < save.numEntries; i++) {
 			if (save.entries[i].archHandle == hnd) {
@@ -363,7 +262,7 @@ namespace OnionSave {
 		return -1;
 	}
 
-    int existArchiveu8(u8 * arch)
+	int existArchiveu8(u8 * arch)
 	{
 		for (int i = 0; i < save.numEntries; i++) {
 			if (strcmpdot(save.entries[i].archName, (char*)arch) == 0) {
@@ -374,17 +273,14 @@ namespace OnionSave {
 		return -1;
 	}
 
-    void addArchiveHnd(u64 handle, u32 archid) {
+	void addArchiveHnd(u64 handle, u32 archid) {
 		if (archid != 4) {
-			// DEBUG("Rejected %016llX, archiveID: 0x%08X\n", handle, archid);
 			return;
 		}
 		if (existArchiveHnd(handle) != -1) return;
-		if (save.numEntries >= MAX_SAVE_ENTRIES) {
-			// DEBUG("Archive buffer is full.\n");
+		if (save.numEntries >= MAX_ARCHIVE_ENTRIES) {
 			return;
 		}
-		// DEBUG("Adding save archive: %016lX\n", handle);
 		save.entries[save.numEntries].type = ARCH_SAVE;
 		save.entries[save.numEntries].archHandle = handle;
 		save.entries[save.numEntries++].finished = 0;
@@ -395,16 +291,13 @@ namespace OnionSave {
 		char newbuf[10];
 		strcpydot(newbuf, (char*)arch, 10);
 		if (arch[0] == '$') {
-			// DEBUG("Rejected \"%s\"\n", newbuf, (u32)(handle >> 32), (u32)handle);
-			return; //Archives starting with $ are used by the game internally, usually mii data.
+			return;
 		}
 		if (existArchiveu8(arch) == -1) {
 			int hndpos = existArchiveHnd(handle);
 			if (hndpos == -1) {
-				if ((u32)(handle) > 0x100000 && (u32)(handle) < 0x20000000) { // rom archives doesn't have a fsarchive handle, it has a pointer in its place.
-					// DEBUG("Added \"%s\" as romfs archive!\n", newbuf);
-					if (save.numEntries >= MAX_SAVE_ENTRIES) {
-						// DEBUG("Archive buffer is full.\n");
+				if ((u32)(handle) > 0x100000 && (u32)(handle) < 0x20000000) {
+					if (save.numEntries >= MAX_ARCHIVE_ENTRIES) {
 						return;
 					}
 					save.entries[save.numEntries].type = ARCH_ROMFS;
@@ -414,11 +307,8 @@ namespace OnionSave {
 					return;
 				}
 				else {
-					// If the archive name contains "extdata" treat it as EXTDATA
 					if (strstr(newbuf, "extdata") != nullptr) {
-						// DEBUG("Added \"%s\" as extdata archive!\n", newbuf);
-						if (save.numEntries >= MAX_SAVE_ENTRIES) {
-							// DEBUG("Archive buffer is full.\n");
+						if (save.numEntries >= MAX_ARCHIVE_ENTRIES) {
 							return;
 						}
 						save.entries[save.numEntries].type = ARCH_EXTDATA;
@@ -427,262 +317,35 @@ namespace OnionSave {
 						save.entries[save.numEntries++].finished = 1;
 						return;
 					}
-					// DEBUG("Rejected \"%s\" with handle: 0x%08X%08X\n", newbuf, (u32)(handle >> 32), (u32)handle);
 					return;
 				}
 			}
-			// DEBUG("Added \"%s\" with handle: 0x%08X%08X\n", newbuf, (u32)(handle >> 32), (u32)handle);
 			if (save.entries[hndpos].finished == 1) return;
 			strcpydot((save.entries[hndpos].archName), (char*)arch, sizeof(save.entries[0].archName));
 			save.entries[hndpos].finished = 1;
 		}
 	}
 
-    int getArchiveMode(u16* arch) {
+	int getArchiveMode(u16* arch) {
 		int entry = existArchiveu16(arch);
 		if (entry == -1) return -1;
 		else return save.entries[entry].type;
 	}
 
-    bool getArchive(u16 * arch, u8* mode, bool isReadOnly)
+	bool getArchive(u16 * arch, u8* mode, bool isReadOnly)
 	{
 		int entry = existArchiveu16(arch);
 		if (entry == -1) return false;
 		u8 flag = save.entries[entry].type;
 		*mode = flag;
-		u8 romode = !((flag & ARCH_ROMFS) && isReadOnly); //Only allow functions without the readonly flag
-		return romode && flag & settings.entries[settings.header.lastLoadedPack].flags;
-	}
-
-    void setupPackPaths() {
-		strcatu16(OnionSave::romPath, (char*)"ram:" TOP_DIR"/", settings.entries[settings.header.lastLoadedPack].name, (char*)"/romfs/");
-		strcatu16(OnionSave::dataPath, (char*)"ram:" TOP_DIR"/", settings.entries[settings.header.lastLoadedPack].name, (char*)"/save/");
-		strcatu16(OnionSave::extPath, (char*)"ram:" TOP_DIR"/", settings.entries[settings.header.lastLoadedPack].name, (char*)"/extdata/");
-		if (!Directory::IsExists(TOP_DIR "/" << std::string(settings.entries[settings.header.lastLoadedPack].name))) Directory::Create(TOP_DIR "/" << std::string(settings.entries[settings.header.lastLoadedPack].name));
-		if (!checkFolderExists(OnionSave::romPath + 4)) Directory::Create(TOP_DIR "/" << std::string(settings.entries[settings.header.lastLoadedPack].name) << "/romfs");
-		if (!checkFolderExists(OnionSave::dataPath + 4)) Directory::Create(TOP_DIR "/" << std::string(settings.entries[settings.header.lastLoadedPack].name) << "/save");
-		if (!checkFolderExists(OnionSave::extPath + 4)) Directory::Create(TOP_DIR "/" << std::string(settings.entries[settings.header.lastLoadedPack].name) << "/extdata");
-	}
-
-    bool loadSettings() {
-		// initDebug();
-		// DEBUG("Trying to load settings.\n");
-		Result ret = 0;
-		if (!savePath[0]) {
-			sprintf(savePath, "%s%s%s", TOP_DIR"/", g_ProcessTID, ".onionfs");
+		u8 romode = !((flag & ARCH_ROMFS) && isReadOnly);
+		if (flag == ARCH_ROMFS) {
+			return romode && OnionFS::g_onionfs_enable_romfs_redir;
 		}
-		File savFile(savePath, File::READ);
-		if (!savFile.IsOpen()) {
-			ret = loadDeafults();
-			if (ret) {
-				return false;
-			}
-			return true;
+		if (flag == ARCH_EXTDATA) {
+			return OnionFS::g_onionfs_enable_extdata_redir;
 		}
-		savFile.Read(&settings, sizeof(saveData));
-		savFile.Close();
-		if (settings.header.magic == SAVE_MAGIC && settings.header.version == SAVE_REVISION && settings.header.numEntries > 0) {
-			if (settings.header.numEntries > MAX_SAVE_ENTRIES) settings.header.numEntries = MAX_SAVE_ENTRIES;
-			if (settings.header.lastLoadedPack > MAX_SAVE_ENTRIES - 1) settings.header.lastLoadedPack = 0;
-			// DEBUG("Settings loaded.\n")
-			return true;
-		}
-		else {
-			ret = loadDeafults();
-			if (ret) {
-				return false;
-			}
-			return true;
-		}
-	}
-
-    std::string generateByPage(u32 &page, u32 &maxPages, bool mode) //max 12 lines
-	{
-		maxPages = ((settings.header.numEntries -1) / 9) + 1;
-		if (page >= maxPages) page = maxPages - 1;
-		if (page < 0) page = 0;
-		std::string out;
-		if (mode) out = "Entries: (Page " + std::to_string(page+1) + " / " + std::to_string(maxPages) + " )  " << Color::LimeGreen << "Entry currently in use." << Color::White;
-		else out = "Choose Entry: (Press " FONT_B " to exit.)";
-		out.append("\n--------------------------------------\n");
-		int i = page * 9;
-		int j = settings.header.numEntries - i;
-		if (j > 9) j = 9;
-		int remain = 9 - j;
-		for (int k = 0; k < j; i++, k++) {
-			Color numb = (i == settings.header.lastLoadedPack) ? Color::ForestGreen : Color::Gray;
-			Color norm = (i == settings.header.lastLoadedPack) ? Color::LimeGreen : Color::White;
-			out.append(" " << numb << std::to_string(i+1) << ": " << norm << std::string(settings.entries[i].name) << "\n");
-		}
-		for (int k = 0; k < remain; k++) out.append("\n");
-		out.append("" << Color::White << "--------------------------------------");
-		return out;
-	}
-
-    bool showRebootMsg() {
-		if (needsReboot) return true;
-		return needsReboot = showMsgKbd("Doing this action will reboot the console after\nexiting the OnionFS config. Are you sure?", DialogType::DialogOkCancel);
-	}
-
-    bool removeModEntry(u32 index) {
-		if (index >= settings.header.numEntries || settings.header.numEntries == 1) return false;
-		// DEBUG("Removing entry %s\n", settings.entries[index].name);
-		for (int i = index; i < settings.header.numEntries - 1; i++) {
-			memcpy(&(settings.entries[i]), &(settings.entries[i + 1]), sizeof(saveEntry));
-		}
-		settings.header.numEntries--;
-		if (settings.header.lastLoadedPack > index) settings.header.lastLoadedPack--;
-		if (settings.header.lastLoadedPack >= settings.header.numEntries) settings.header.lastLoadedPack = settings.header.numEntries - 1;
-		return true;
-	}
-
-    void editEntryById(u32 val)
-	{
-        using StringVector = std::vector<std::string>;
-		std::string enSlid = Color::LimeGreen << "\u2282\u25CF";
-		std::string disSlid = Color::Red << "\u25CF\u2283";
-		std::string title;
-		bool loop = true;
-		Keyboard kbd("dummy");
-		StringVector opts;
-		kbd.CanAbort(false);
-		while (loop) {
-			title = "Editing single entry:\n\n";
-			title.append("Index: " << Color::Gray << std::to_string(val + 1) << Color::White << "\n");
-			title.append("Name: " << Color::Gray << std::string(settings.entries[val].name) << Color::White << "\n\n");
-			title.append("1: ROMFS Redirection: " << ((settings.entries[val].flags & ARCH_ROMFS) ? (Color::LimeGreen << "Enabled") : (Color::Red << "Disabled")) << Color::White << "\n");
-			title.append("2: SAVE Redirection: " << ((settings.entries[val].flags & ARCH_SAVE) ? (Color::LimeGreen << "Enabled") : (Color::Red << "Disabled")) << Color::White << "\n");
-			title.append("3: EXTDATA Redirection: " << ((settings.entries[val].flags & ARCH_EXTDATA) ? (Color::LimeGreen << "Enabled") : (Color::Red << "Disabled")) << Color::White << "\n");
-			opts.clear();
-			opts.push_back(std::string("1: ") << ((settings.entries[val].flags & ARCH_ROMFS) ? enSlid : disSlid)); 
-			opts.push_back(std::string("2: ") << ((settings.entries[val].flags & ARCH_SAVE) ? enSlid : disSlid));
-			opts.push_back(std::string("3: ") << ((settings.entries[val].flags & ARCH_EXTDATA) ? enSlid : disSlid));
-			opts.push_back("Remove");
-			if (settings.header.lastLoadedPack != val) {
-				opts.push_back("Use Entry");
-			}
-			else {
-				title.append("\n" << Color::LimeGreen << "This entry is currently in use." << Color::White << "\n");
-			}
-			kbd.GetMessage() = title;
-			opts.push_back("Back");
-			kbd.Populate(opts);
-			int chose;
-			switch (chose = kbd.Open())
-			{
-			case 0:
-			{
-				bool ret = true;
-				if (settings.header.lastLoadedPack == val) {
-					ret = showRebootMsg();
-				}
-				if (ret) {
-					settings.entries[val].flags ^= ARCH_ROMFS;
-				}
-				break;
-			}
-			case 1:
-			{
-				bool ret = true;
-				if (settings.header.lastLoadedPack == val) {
-					ret = showRebootMsg();
-				}
-				if (ret) {
-					settings.entries[val].flags ^= ARCH_SAVE;
-				}
-				break;
-			}
-			case 2:
-			{
-				bool ret = true;
-				if (settings.header.lastLoadedPack == val) {
-					ret = showRebootMsg();
-				}
-				if (ret) {
-					settings.entries[val].flags ^= ARCH_EXTDATA;
-				}
-				break;
-			}
-			case 3:
-			{
-				if (!showMsgKbd("Are you sure you want to delete this entry?\nThe actual files won't be removed.", DialogType::DialogYesNo)) break;
-				bool ret = true;
-				if (settings.header.lastLoadedPack == val) {
-					ret = showRebootMsg();
-				}
-				if (ret) {
-					bool ret2 = removeModEntry(val);
-					if (!ret2) {
-						showMsgKbd("Cannot remove this entry if it is the only one.", DialogType::DialogOk);
-					}
-					else {
-						loop = false;
-					}
-				}
-				break;
-			}
-			default:
-			{
-				if (settings.header.lastLoadedPack == val) chose++;
-				if (chose == 4) {
-					if (showRebootMsg()) {
-						settings.header.lastLoadedPack = val;
-						loop = false;
-					}
-					break;
-				}
-				else {
-					loop = false;
-					break;
-				}
-			}
-			}
-		}
-	}
-
-    bool entryNameCompareCallback(const void* input, std::string &error) {
-		std::string in = *reinterpret_cast<const std::string *>(input);
-		if (in.size() >= sizeof(OnionSave::settings.entries[0].name)) {
-			error = "Name can only be " + std::to_string(sizeof(OnionSave::settings.entries[0].name) - 1) +" characters long.";
-			return false;
-		}
-		for (std::string::const_iterator s = in.begin(); s != in.end(); ++s) {
-			if (!(isalnum(*s) || *s == ' ' || *s == '_' || *s == '-' || *s == '#')) {
-				error = "Only \"a-z\", \"A-Z\", \"0-9\", \"space\", \"_\", \"#\" and \"-\" are allowed.";
-				return false;
-			}
-		}
-		return true;
-	}
-
-    void addModEntryUI() {
-		Keyboard kbd("Input the new entry name.\n\nPress Enter to confirm.\nPress " FONT_B " to cancel.");
-		kbd.SetCompareCallback(entryNameCompareCallback);
-		std::string name;
-		bool retry = true;
-		while (retry) {
-			int ret = kbd.Open(name);
-			if (ret != 0) return;
-			if (checkEntryExists(name.c_str())) {
-				showMsgKbd("An entry with the same name already exists for\nthis game, please chose a different name.", DialogType::DialogOk);
-			}
-			else {
-				bool doIt = true;
-				if (Directory::IsExists(TOP_DIR "/" + name)) {
-					doIt = showMsgKbd("An entry with the same name exists in the SD.\nThis could be an entry for another game or a\nremoved entry.\n\nWould you like to use it anyways?\n\n" << Color::Yellow << "WARNING: " << Color::White << "If it is for another game, make sure both game's saves are compatible with each\nother, otherwise the redirected save may get\ncorrupted.", DialogType::DialogYesNo);
-				}
-				if (doIt) {
-					bool ret2 = addModEntry(name.c_str(), 0);
-					if (ret2) {
-						showMsgKbd("The following entry:\n--------------------------------------\n" << Color::Gray << std::to_string(OnionSave::settings.header.numEntries) << ": " << Color::White << name << "\n--------------------------------------\nhas been added.\n\nYou can now config its settings from\n\"Manage Entries\".", DialogType::DialogOk);
-					}
-					else {
-						showMsgKbd("Cannot add more entries.\nMaximum number of entries: " TOSTRING(MAX_SAVE_ENTRIES), DialogType::DialogOk);
-					}
-					retry = false;
-				}
-			}
-		}
+		return false;
 	}
 }
 
@@ -765,10 +428,6 @@ namespace OnionFS {
 			u16* dst = GetBuffer(isSecondary);
 			switch (mode)
 			{
-			case ARCH_SAVE:
-				basePath = OnionSave::dataPath;
-				if (shouldReopen) *shouldReopen = false;
-				break;
 			case ARCH_EXTDATA:
 				basePath = OnionSave::extPath;
 				if (shouldReopen) *shouldReopen = false;
@@ -1192,11 +851,6 @@ namespace OnionFS {
 
 	//Stubbed functions, this prevents formatting the save data archive as well as updating secure nand values
 	int fsFormatSaveData(int *a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10, char a11) {
-		// DEBUGLOCK;
-		// LOGDEBUG("fsFormatSaveData called, removing save directory.\n");
-		// DEBUGUNLOCK;
-		Directory::Remove(TOP_DIR "/" << std::string(OnionSave::settings.entries[OnionSave::settings.header.lastLoadedPack].name) << "/save");
-		Directory::Create(TOP_DIR "/" << std::string(OnionSave::settings.entries[OnionSave::settings.header.lastLoadedPack].name) << "/save");
 		return 0;
 	}
 	int fsSetThisSaveDataSecureValue(u32 a1, u64 a2) { //0x086E00C0
@@ -1536,6 +1190,53 @@ static void initOnionFSHooks(u32 textSize) {
     rtEnableHook(&fileWriteHook);
 }
 
+void ReloadConfig(void) {
+    if (g_ProcessTID[0] == '\0') {
+        u64 tid = CTRPluginFramework::Process::GetTitleID();
+        sprintf(g_ProcessTID, "%016lX", tid);
+    }
+
+    g_onionfs_enable_romfs_redir = G_config.getBool("onionfs_enable_romfs_redir", true);
+    g_onionfs_enable_extdata_redir = G_config.getBool("onionfs_enable_extdata_redir", false);
+    g_onionfs_default_romfs_redir_path = G_config.getString("onionfs_default_romfs_redir_path", "default");
+    g_onionfs_default_extdata_redir_path = G_config.getString("onionfs_default_extdata_redir_path", "default");
+
+    std::string romfsPath = g_onionfs_default_romfs_redir_path;
+    if (romfsPath == "default") {
+        romfsPath = "sdmc:/luma/titles/" + std::string(g_ProcessTID) + "/romfs";
+    }
+
+    std::string extdataPath = g_onionfs_default_extdata_redir_path;
+    if (extdataPath == "default") {
+        extdataPath = PLUGIN_FOLDER "/saves";
+    }
+
+    Core::Filesystem::CreateDirectory(romfsPath);
+    Core::Filesystem::CreateDirectory(extdataPath);
+
+    auto toRamPath = [](const std::string& path, u16* outU16) {
+        std::string p = path;
+        if (p.rfind("sdmc:", 0) == 0) {
+            p = p.substr(5);
+        }
+        if (p.empty() || p[0] != '/') {
+            p = "/" + p;
+        }
+        if (p.back() != '/') {
+            p += "/";
+        }
+        std::string full = "ram:" + p;
+        int i = 0;
+        for (; i < (int)full.length() && i < 255; i++) {
+            outU16[i] = (u16)full[i];
+        }
+        outU16[i] = 0;
+    };
+
+    toRamPath(romfsPath, OnionSave::romPath);
+    toRamPath(extdataPath, OnionSave::extPath);
+}
+
 void InitFS(void) {
     u64 tid = Process::GetTitleID();
     sprintf(g_ProcessTID, "%016lX", tid);
@@ -1545,118 +1246,12 @@ void InitFS(void) {
     memset(s_vfiles, 0, sizeof(s_vfiles));
     s_accessCounter = 0;
 
-    OnionSave::loadSettings();
-    OnionSave::setupPackPaths();
+    ReloadConfig();
 
     initOnionFSHooks(CTRPluginFramework::Process::GetTextSize());
 }
 
-using StringVector = std::vector<std::string>;
-
-static void onionConfig(MenuEntry* entry) {
-    Keyboard kbd1("" << Color::Gray << "OnionFS settings.\n\n" << Color::White << "Choose Option:");
-    StringVector opts1 = { "Manage Entries", "Add Entry", "Exit" };
-    kbd1.Populate(opts1);
-    kbd1.CanAbort(false);
-    bool exit1 = false;
-    while (!exit1) {
-        switch (kbd1.Open()) {
-        case 0:
-            {
-                u32 page = 0;
-                u32 maxPage = 0;
-                Keyboard kbd2("dummy");
-                StringVector opts2 = { "Next Page", "Previous Page", "Edit Entry", "Back" };
-                kbd2.Populate(opts2);
-                kbd2.CanAbort(false);
-                bool exit2 = false;
-                while (!exit2) {
-                    kbd2.GetMessage() = OnionSave::generateByPage(page, maxPage, true);
-                    switch (kbd2.Open())
-                    {
-                    case 0:
-                        page++;
-                        if (page >= maxPage) page = 0;
-                        break;
-                    case 1:
-                        page--;
-                        if (page < 0) page = maxPage - 1;
-                        break;
-                    case 2:
-                    {
-                        Keyboard kbd3(OnionSave::generateByPage(page, maxPage, false));
-                        if (OnionSave::settings.header.numEntries - page * 9 == 1) {
-                            OnionSave::editEntryById(page * 9);
-                        } 
-                        else {
-                            kbd3.CanAbort(true);
-                            kbd3.IsHexadecimal(false);
-                            u32 val = 0;
-                            bool valueIsValid = false;
-                            while (!valueIsValid && kbd3.Open(val) == 0) {
-                                if ((val - 1) < OnionSave::settings.header.numEntries && (val - 1) >= (page * 9) && (val - 1) < ((page + 1) * 9)) {
-                                    valueIsValid = true;
-                                }
-                            }
-                            if (!valueIsValid) break;
-                            OnionSave::editEntryById(val - 1);
-                        }
-                        break;
-                    }
-                    default:
-                        exit2 = true;
-                        break;
-                    }
-                }
-            }
-        break;
-        case 1:
-            OnionSave::addModEntryUI();
-            break;
-        default:
-            if (OnionSave::needsReboot) {
-                bool ext = showMsgKbd("Exiting config.\nThe game will close now.", DialogType::DialogOkCancel);
-                if (ext) {
-                    OnionSave::saveSettings();
-                    // if (ENABLE_DEBUG) {
-                    //     OnionSave::debugFile->Close();
-                    // }
-                    Sleep(Seconds(0.5));
-                    CTRPluginFramework::Process::ReturnToHomeMenu();
-                    for (;;);
-                }
-            }
-            else {
-                OnionSave::saveSettings();
-                exit1 = true;
-            }
-        }
-    }
-    }
-
 void InitMenu(CTRPluginFramework::PluginMenu* menu) {
-    menu->Append(new MenuEntry("OnionFS", nullptr, onionConfig, "OnionFS configuration. Use this to configure different modpacks / savepacks."));
+    // Menu integration disabled in favor of native in-game settings screen
 }
-}
-
-bool showMsgKbd(std::string text, CTRPluginFramework::DialogType digtype) {
-    using StringVector = std::vector<std::string>;
-    CTRPluginFramework::Keyboard kbd(text);
-    StringVector opts;
-    switch (digtype)
-    {
-    case CTRPluginFramework::DialogType::DialogOk:
-        opts = { "Ok" };
-        break;
-    case CTRPluginFramework::DialogType::DialogOkCancel:
-        opts = { "Ok", "Cancel" };
-        break;
-    case CTRPluginFramework::DialogType::DialogYesNo:
-        opts = { "Yes", "No" };
-        break;
-    default:
-        break;
-    }
-    kbd.Populate(opts);
-    return kbd.Open() == 0;
 }

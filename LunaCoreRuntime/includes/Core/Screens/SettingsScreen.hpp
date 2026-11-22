@@ -5,12 +5,17 @@
 #include "Minecraft/Common/Client/Gui/Components/NinePatch.hpp"
 #include "Minecraft/Common/Client/Gui/Components/OptionItem.hpp"
 #include "Minecraft/Common/Client/Gui/Components/Slider.hpp"
+#include "Minecraft/Common/Client/Gui/Components/ScrollGuiElementContainer.hpp"
 #include "Minecraft/Common/Client/Gui/Screens/Screen.hpp"
 #include "Minecraft/Common/Client/Gui/Screens/ScreenStack.hpp"
 #include "Minecraft/Common/Client/Gui/Screens/SystemMessagesScreen.hpp"
 #include "Minecraft/Common/Platform/AppPlatform.hpp"
 #include <CTRPluginFramework.hpp>
 
+#include "CoreGlobals.hpp"
+#include "Core/Config.hpp"
+#include "Core/Screens/NativeSwitchButton.hpp"
+#include "OnionFS.hpp"
 #include "GameAPI.hpp"
 
 #ifndef STRINGIFY_MACRO
@@ -29,25 +34,38 @@ namespace Core {
         enum ButtonId {
             BUTTON_EXIT,
             BUTTON_OPTIONS,
+            BUTTON_ROMFS_REDIR,
+            BUTTON_EXTDATA_REDIR,
         };
 
     public:
         LunaCoreSettingsScreen(MC3DSPF::MinecraftGame *mg, MC3DSPF::ClientInstance *ci) :
             Screen(mg, ci) {}
 
-        ~LunaCoreSettingsScreen() override = default;
+        ~LunaCoreSettingsScreen() override
+        {
+            saveSettings();
+        }
+
+        void saveSettings()
+        {
+            if (mSaved) return;
+            mSaved = true;
+
+            if (mRomfsSwitch)
+            {
+                G_config.set("onionfs_enable_romfs_redir", mRomfsSwitch->isChecked());
+            }
+            if (mExtdataSwitch)
+            {
+                G_config.set("onionfs_enable_extdata_redir", mExtdataSwitch->isChecked());
+            }
+            G_config.save();
+            OnionFS::ReloadConfig();
+        }
 
         void setupComponents() override
         {
-            // IntRectangle uv1(64, 144, 8, 8);
-            // IntRectangle uv2(56, 144, 8, 8);
-            // void *unk = (void *)0xABFD74;
-            // int Y     = 15;
-
-            // BoxedPtr::Shared<IconButton> button1(std::make_unique<IconButton>(mMinecraftGame, 1, 110, Y, 200, 0x1C, "menu.options", false));
-            // button1->setTexture(unk, 224, 144, 16, 16, 0, uv1, uv2, 2, 2, 0);
-            // mButtons.push_back(std::move(button1));
-
             MC3DSPF::NinePatchFactory factory(mMinecraftGame->getTextures(), *(MC3DSPF::ResourceLocation *)0xABFD74);
             mBackgroundFrame = factory.createSymmetrical(MC3DSPF::IntRectangle(56, 160, 8, 8), 2, 2, MC3DSPF::AppPlatform::BOTTOM_SCREEN_WIDTH, MC3DSPF::AppPlatform::BOTTOM_SCREEN_HEIGHT);
             mBackground      = factory.createSymmetrical(MC3DSPF::IntRectangle(80, 176, 8, 8), 3, 3, 308, 204);
@@ -62,15 +80,41 @@ namespace Core {
 
             using namespace MinecraftAPI;
 
-            BoxedPtr::Shared<IconButton> exitButton(gstd::make_unique<IconButton>(
+            MC3DSPF::BoxedPtr::Shared<IconButton> exitButton(MC3DSPF::gstd::make_unique<IconButton>(
                 mMinecraftGame, ButtonId::BUTTON_EXIT, MC3DSPF::AppPlatform::BOTTOM_SCREEN_WIDTH - 7 - 16, 7, 16, 16, "", false));
             exitButton->setTextures(GuiAtlas::EMPTY, GuiAtlas::BUTTON_CLOSE_BG, GuiAtlas::BUTTON_CLOSE_BG_HOVERED, 0, 0);
+            exitButton->mScreen_UnknownClass2 = reinterpret_cast<MC3DSPF::Screen_UnknownClass2 *>(this);
             mButtons.push_back(std::move(exitButton));
 
-            BoxedPtr::Shared<IconButton> optionsButton(gstd::make_unique<IconButton>(
-                mMinecraftGame, ButtonId::BUTTON_OPTIONS, 16, 40, 28, 28, "Plugin Menu", false));
-            optionsButton->setTextures(GuiAtlas::OPTIONS_ICON, GuiAtlas::BUTTON_BG, GuiAtlas::BUTTON_BG_HOVERED, 2, 2);
-            mButtons.push_back(std::move(optionsButton));
+            // Scrollable container for settings options
+            mScrollContainer = MC3DSPF::BoxedPtr::Shared<MC3DSPF::ScrollGuiElementContainer>(
+                new MC3DSPF::ScrollGuiElementContainer(mMinecraftGame, 12, 35, 296, 194, true, false));
+
+            bool romfsInit = G_config.getBool("onionfs_enable_romfs_redir", true);
+            bool extdataInit = G_config.getBool("onionfs_enable_extdata_redir", false);
+
+            mRomfsSwitch = MC3DSPF::BoxedPtr::Shared<NativeSwitchButton>(
+                new NativeSwitchButton(mMinecraftGame, ButtonId::BUTTON_ROMFS_REDIR, 0, 0, 276, 26,
+                                       "Enable ROMFS redirection", romfsInit));
+            mRomfsSwitch->mScreen_UnknownClass2 = reinterpret_cast<MC3DSPF::Screen_UnknownClass2 *>(this);
+
+            mExtdataSwitch = MC3DSPF::BoxedPtr::Shared<NativeSwitchButton>(
+                new NativeSwitchButton(mMinecraftGame, ButtonId::BUTTON_EXTDATA_REDIR, 0, 0, 276, 26,
+                                       "Enable EXTDATA redirection", extdataInit));
+            mExtdataSwitch->mScreen_UnknownClass2 = reinterpret_cast<MC3DSPF::Screen_UnknownClass2 *>(this);
+
+            MC3DSPF::BoxedPtr::Shared<MC3DSPF::GuiButton> optionsButton(
+                new MC3DSPF::GuiButton(mMinecraftGame, ButtonId::BUTTON_OPTIONS, 0, 0, 276, 26, "Plugin Menu", false, INT_MAX));
+            optionsButton->mLabel = "Plugin Menu";
+            optionsButton->mLabelWidth = mMinecraftGame->getDefaultFont().getTextWidth("Plugin Menu", false, 1.f);
+            optionsButton->mScreen_UnknownClass2 = reinterpret_cast<MC3DSPF::Screen_UnknownClass2 *>(this);
+
+            mScrollContainer->addChild(mRomfsSwitch, false);
+            mScrollContainer->addChild(mExtdataSwitch, false);
+            mScrollContainer->addChild(optionsButton, false);
+
+            mUnk8.push_back(mScrollContainer);
+            mScrollContainer->Unknown6();
         }
 
         void buttonPressed(MC3DSPF::BaseButton &b) override
@@ -79,6 +123,7 @@ namespace Core {
             {
                 default: break;
                 case ButtonId::BUTTON_EXIT:
+                    saveSettings();
                     MC3DSPF::Facade::getMinecraftGame()->getScreenStack().schedulePopScreen(1);
                     break;
                 case ButtonId::BUTTON_OPTIONS:
@@ -89,6 +134,7 @@ namespace Core {
 
         bool onBack(int p1) override
         {
+            saveSettings();
             MC3DSPF::Facade::getMinecraftGame()->getScreenStack().schedulePopScreen(1);
             return true;
         }
@@ -244,5 +290,9 @@ namespace Core {
         MC3DSPF::gstd::unique_ptr<MC3DSPF::NinePatchLayer> mBackgroundFrame;
         MC3DSPF::gstd::unique_ptr<MC3DSPF::NinePatchLayer> mBackground;
         MC3DSPF::gstd::unique_ptr<MC3DSPF::Sprite>         mSprite1;
+        bool mSaved = false;
+        MC3DSPF::BoxedPtr::Shared<MC3DSPF::ScrollGuiElementContainer> mScrollContainer;
+        MC3DSPF::BoxedPtr::Shared<NativeSwitchButton> mRomfsSwitch;
+        MC3DSPF::BoxedPtr::Shared<NativeSwitchButton> mExtdataSwitch;
     };
 }

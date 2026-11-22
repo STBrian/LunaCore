@@ -4,7 +4,7 @@
 #include "CoreGlobals.hpp"
 #include "Core/Filesystem.hpp"
 
-#include <unordered_map>
+#include <map>
 
 namespace CTRPF = CTRPluginFramework;
 
@@ -19,7 +19,7 @@ namespace Core {
 
     class Config {
         private:
-        std::unordered_map<std::string, std::string> values;
+        std::map<std::string, std::string> values;
         std::string _path;
         bool loaded = false;
 

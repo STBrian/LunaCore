@@ -83,12 +83,12 @@ namespace Core {
             MC3DSPF::BoxedPtr::Shared<IconButton> exitButton(MC3DSPF::gstd::make_unique<IconButton>(
                 mMinecraftGame, ButtonId::BUTTON_EXIT, MC3DSPF::AppPlatform::BOTTOM_SCREEN_WIDTH - 7 - 16, 7, 16, 16, "", false));
             exitButton->setTextures(GuiAtlas::EMPTY, GuiAtlas::BUTTON_CLOSE_BG, GuiAtlas::BUTTON_CLOSE_BG_HOVERED, 0, 0);
-            exitButton->mScreen_UnknownClass2 = reinterpret_cast<MC3DSPF::Screen_UnknownClass2 *>(this);
             mButtons.push_back(std::move(exitButton));
 
             // Scrollable container for settings options
             mScrollContainer = MC3DSPF::BoxedPtr::Shared<MC3DSPF::ScrollGuiElementContainer>(
                 new MC3DSPF::ScrollGuiElementContainer(mMinecraftGame, 12, 35, 296, 194, true, false));
+            mScrollContainer->setParentScreen(this);
 
             bool romfsInit = G_config.getBool("onionfs_enable_romfs_redir", true);
             bool extdataInit = G_config.getBool("onionfs_enable_extdata_redir", false);
@@ -96,18 +96,16 @@ namespace Core {
             mRomfsSwitch = MC3DSPF::BoxedPtr::Shared<NativeSwitchButton>(
                 new NativeSwitchButton(mMinecraftGame, ButtonId::BUTTON_ROMFS_REDIR, 0, 0, 276, 26,
                                        "Enable ROMFS redirection", romfsInit));
-            mRomfsSwitch->mScreen_UnknownClass2 = reinterpret_cast<MC3DSPF::Screen_UnknownClass2 *>(this);
 
             mExtdataSwitch = MC3DSPF::BoxedPtr::Shared<NativeSwitchButton>(
                 new NativeSwitchButton(mMinecraftGame, ButtonId::BUTTON_EXTDATA_REDIR, 0, 0, 276, 26,
                                        "Enable EXTDATA redirection", extdataInit));
-            mExtdataSwitch->mScreen_UnknownClass2 = reinterpret_cast<MC3DSPF::Screen_UnknownClass2 *>(this);
 
             MC3DSPF::BoxedPtr::Shared<MC3DSPF::GuiButton> optionsButton(
                 new MC3DSPF::GuiButton(mMinecraftGame, ButtonId::BUTTON_OPTIONS, 0, 0, 276, 26, "Plugin Menu", false, INT_MAX));
+            optionsButton->buildBackground();
             optionsButton->mLabel = "Plugin Menu";
             optionsButton->mLabelWidth = mMinecraftGame->getDefaultFont().getTextWidth("Plugin Menu", false, 1.f);
-            optionsButton->mScreen_UnknownClass2 = reinterpret_cast<MC3DSPF::Screen_UnknownClass2 *>(this);
 
             mScrollContainer->addChild(mRomfsSwitch, false);
             mScrollContainer->addChild(mExtdataSwitch, false);
@@ -282,7 +280,7 @@ namespace Core {
                 mBackgroundFrame->draw(MC3DSPF::Tessellator::instance, 0, 0);
                 mBackground->draw(MC3DSPF::Tessellator::instance, 6, 30);
                 mSprite1->render();
-                Screen::render(touchX, touchY, useScreen, tick);
+                renderComponents(touchX, touchY, useScreen, tick);
             }
         }
 

@@ -9,8 +9,6 @@
 
 #include "Unicode.h"
 
-#define TOP_DIR PLUGIN_ROOT_FOLDER"/saves"
-
 #ifndef STRINGIFY
 #define STRINGIFY(x)        #x
 #endif
@@ -296,7 +294,7 @@ namespace OnionSave {
 		if (existArchiveu8(arch) == -1) {
 			int hndpos = existArchiveHnd(handle);
 			if (hndpos == -1) {
-				if ((u32)(handle) > 0x100000 && (u32)(handle) < 0x20000000) {
+				if (strstr(newbuf, "rom") != nullptr || ((u32)(handle) > 0x100000 && (u32)(handle) < 0x20000000)) {
 					if (save.numEntries >= MAX_ARCHIVE_ENTRIES) {
 						return;
 					}
@@ -356,11 +354,6 @@ namespace OnionFS {
 
 	LightLock regLock;
 	LightLock openLock;
-	Mutex debugMutex;
-	// #define DEBUGLOCK do{if (ENABLE_DEBUG) debugMutex.Lock();} while (0)
-	// #define DEBUGUNLOCK do{if (ENABLE_DEBUG) debugMutex.Unlock();} while (0)
-    #define DEBUGLOCK 
-    #define DEBUGUNLOCK
     #define DEBUGU16 
 	int strlen16(u16* str) {
 		int sz = 0;
@@ -378,23 +371,24 @@ namespace OnionFS {
 	}
 
 	static void concatFileName(u16* dest, u16* s1, u16* s2) {
-		while (*s1)    *dest++ = *s1++; //Copy the default file path
+		while (*s1) *dest++ = *s1++; // Copy the default file path
 
-		while (*s2++ != u'/'); //Skip the archive lowpath
+		// Skip archive lowpath (e.g. "rom:/...")
+		while (*s2 && *s2 != u'/') s2++;
+		while (*s2 == u'/') ++s2; // Skip any remaining /
 
-		while (*s2 == u'/') ++s2; // Skip any remaining  /
-
-		while (*s2) *dest++ = *s2++; //Copy the rest of the filename
+		while (*s2) *dest++ = *s2++; // Copy the rest of the filename
 
 		*dest = '\0';
 	}
 
 	static inline u16* skipArchive(u16* src) {
-		while (*src++ != u'/'); //Skip the archive lowpath
-
-		while (*src == u'/') ++src; // Skip any remaining  /
-
-		return src - 1; //Return the position of the last /
+		while (*src && *src != u'/') src++;
+		if (*src == u'/') {
+			while (*(src + 1) == u'/') src++;
+			return src;
+		}
+		return src;
 	}
 
 	void strcpy16(u16* dst, u16* src) {
@@ -420,8 +414,7 @@ namespace OnionFS {
 	u16* calculateNewPath(u16* initialPath, bool isReadOnly, bool isSecondary = false, bool* shouldReopen = nullptr) {
 		u8 mode;
 		if (shouldReopen) *shouldReopen = true;
-		// DEBUGLOCK;
-		// LOGDEBUG("Checking: ");
+		LOGDEBUG("Checking: ");
 		// DEBUGU16(initialPath);
 		if (OnionSave::getArchive(initialPath, &mode, isReadOnly)) {
 			u16* basePath;
@@ -441,15 +434,13 @@ namespace OnionFS {
 			// Normalize any accidental double slashes
 			// Some games like Minecraft 3DS have paths with double slashes
 			collapseSlashes(dst);
-			// LOGDEBUG(" redirected: ");
+			LOGDEBUG(" redirected: ");
 			// DEBUGU16(dst);
-			// LOGDEBUG("\n");
-			// DEBUGUNLOCK;
+			LOGDEBUG("\n");
 			return dst;
 		}
 		else {
-			// LOGDEBUG(" not redirected.\n");
-			// DEBUGUNLOCK;
+			LOGDEBUG(" not redirected.\n");
 			return initialPath;
 		}
 	}
@@ -464,7 +455,7 @@ namespace OnionFS {
 			FSDIR_Close(dir);
 			return 0xE0C04702; //.. return "not supported" error.
 		}
-		// LOGDEBUG("fsOpenFile: Check returned %08X\n", ret);
+		LOGDEBUG("fsOpenFile: Check returned %08X\n", ret);
 		return 0;
 	}
 
@@ -489,6 +480,26 @@ namespace OnionFS {
 	static LightLock s_vfsLock;
 	static u32 s_accessCounter = 0;
 
+	static void CloseRealHandle(Handle& h) {
+		if (h != 0) {
+			Result res = FSFILE_Close(h);
+			if (R_FAILED(res)) {
+				svcCloseHandle(h);
+			}
+			h = 0;
+		}
+	}
+
+	static std::string u16ToStr(const u16* s) {
+		if (!s) return "(null)";
+		std::string res;
+		while (*s) {
+			res += (char)(*s & 0xFF);
+			s++;
+		}
+		return res;
+	}
+
 	static Result EnsurePhysicalHandle(VirtualFileEntry& vf) {
 		if (vf.realHandle != 0) {
 			vf.lastAccessTick = ++s_accessCounter;
@@ -496,23 +507,28 @@ namespace OnionFS {
 		}
 
 		int activeCount = 0;
-		int oldestIdx = -1;
-		u32 oldestTick = 0xFFFFFFFF;
-
 		for (int i = 1; i <= MAX_VIRTUAL_FILES; i++) {
 			if (s_vfiles[i].inUse && s_vfiles[i].realHandle != 0) {
 				activeCount++;
-				if (s_vfiles[i].lastAccessTick < oldestTick) {
-					oldestTick = s_vfiles[i].lastAccessTick;
-					oldestIdx = i;
-				}
 			}
 		}
 
-		// Evict oldest physical handle if pool limit is reached
-		if (activeCount >= MAX_ACTIVE_SD_HANDLES && oldestIdx != -1) {
-			((fsFileCloseTypeDef)fileCloseHook.callCode)(&s_vfiles[oldestIdx].realHandle);
-			s_vfiles[oldestIdx].realHandle = 0;
+		// Evict oldest physical handles if pool limit is reached
+		while (activeCount >= MAX_ACTIVE_SD_HANDLES) {
+			int oldestIdx = -1;
+			u32 oldestTick = 0xFFFFFFFF;
+			for (int i = 1; i <= MAX_VIRTUAL_FILES; i++) {
+				if (s_vfiles[i].inUse && s_vfiles[i].realHandle != 0) {
+					if (s_vfiles[i].lastAccessTick < oldestTick) {
+						oldestTick = s_vfiles[i].lastAccessTick;
+						oldestIdx = i;
+					}
+				}
+			}
+			if (oldestIdx == -1) break;
+			LOGDEBUG("VFS Evict slot %d: handle 0x%08X", oldestIdx, s_vfiles[oldestIdx].realHandle);
+			CloseRealHandle(s_vfiles[oldestIdx].realHandle);
+			activeCount--;
 		}
 
 		// Open physical file directly on SDMC
@@ -532,6 +548,7 @@ namespace OnionFS {
 
 		vf.realHandle = newH;
 		vf.lastAccessTick = ++s_accessCounter;
+		LOGDEBUG("VFS Opened physical handle 0x%08X for path '%s' (active: %d)", newH, u16ToStr(vf.sdmcPath).c_str(), activeCount + 1);
 		return 0;
 	}
 
@@ -540,9 +557,11 @@ namespace OnionFS {
 		Handle h = *handlePtr;
 		if (IS_VFS_HANDLE(h)) {
 			int idx = VFS_INDEX(h);
+			LOGDEBUG("VFS Read: handle 0x%08X (idx %d), size %u, offset %llu", h, idx, size, offset);
 			LightLock_Lock(&s_vfsLock);
 			if (idx < 1 || idx > MAX_VIRTUAL_FILES || !s_vfiles[idx].inUse) {
 				LightLock_Unlock(&s_vfsLock);
+				Core::Debug::LogErrorf("VFS Read: invalid handle 0x%08X", h);
 				return 0xC8804470; // Invalid handle
 			}
 
@@ -550,6 +569,7 @@ namespace OnionFS {
 			Result res = EnsurePhysicalHandle(vf);
 			if (R_FAILED(res)) {
 				LightLock_Unlock(&s_vfsLock);
+				Core::Debug::LogErrorf("VFS Read: EnsurePhysicalHandle failed: %08X", res);
 				return res;
 			}
 
@@ -566,11 +586,12 @@ namespace OnionFS {
 		Handle h = *handlePtr;
 		if (IS_VFS_HANDLE(h)) {
 			int idx = VFS_INDEX(h);
+			LOGDEBUG("VFS Close: handle 0x%08X (idx %d)", h, idx);
 			LightLock_Lock(&s_vfsLock);
 			if (idx >= 1 && idx <= MAX_VIRTUAL_FILES && s_vfiles[idx].inUse) {
 				if (s_vfiles[idx].realHandle != 0) {
-					((fsFileCloseTypeDef)fileCloseHook.callCode)(&s_vfiles[idx].realHandle);
-					s_vfiles[idx].realHandle = 0;
+					LOGDEBUG("VFS Close physical handle 0x%08X (slot %d)", s_vfiles[idx].realHandle, idx);
+					CloseRealHandle(s_vfiles[idx].realHandle);
 				}
 				s_vfiles[idx].inUse = false;
 			}
@@ -587,9 +608,11 @@ namespace OnionFS {
 		Handle h = *handlePtr;
 		if (IS_VFS_HANDLE(h)) {
 			int idx = VFS_INDEX(h);
+			LOGDEBUG("VFS GetSize: handle 0x%08X (idx %d)", h, idx);
 			LightLock_Lock(&s_vfsLock);
 			if (idx < 1 || idx > MAX_VIRTUAL_FILES || !s_vfiles[idx].inUse) {
 				LightLock_Unlock(&s_vfsLock);
+				Core::Debug::LogErrorf("VFS GetSize: invalid handle 0x%08X", h);
 				return 0xC8804470;
 			}
 			if (sizeOut) {
@@ -629,23 +652,17 @@ namespace OnionFS {
 
 	u32  fsOpenFileFunc(u32 a1, u16* path, u32 a2) {
 		bool reopen;
-		// DEBUGLOCK;
-		// LOGDEBUG("fsOpenFile: ");
+		LOGDEBUG("fsOpenFile: ");
 		u16* newPath = calculateNewPath(path, 0, false,  &reopen);
-		// DEBUGUNLOCK;
 		int ret = ((fsu32u16u32)fileOpHooks[OPEN_FILE_OP].callCode)(a1, newPath, a2);
 		if (newPath != path) {
 			u8 mode = OnionSave::getArchiveMode(path);
 			if (mode == ARCH_ROMFS) {
+				LOGDEBUG("RomFS Open: '%s' -> '%s' (ret 0x%08X)", u16ToStr(path).c_str(), u16ToStr(newPath).c_str(), ret);
 				if (ret >= 0 && a1 != 0) {
 					u32* fileObj = *(u32**)a1;
 					if (fileObj != nullptr) {
 						Handle realH = (Handle)fileObj[1];
-						u64 fileSize = 0;
-						if (realH != 0) {
-							((fsFileGetSizeTypeDef)fileGetSizeHook.callCode)(&realH, &fileSize);
-							((fsFileCloseTypeDef)fileCloseHook.callCode)(&realH);
-						}
 
 						LightLock_Lock(&s_vfsLock);
 						int slotIdx = -1;
@@ -656,6 +673,13 @@ namespace OnionFS {
 							}
 						}
 						if (slotIdx != -1) {
+							u64 fileSize = 0;
+							Handle oldRealH = realH;
+							if (realH != 0) {
+								((fsFileGetSizeTypeDef)fileGetSizeHook.callCode)(&realH, &fileSize);
+								CloseRealHandle(realH);
+							}
+
 							s_vfiles[slotIdx].inUse = true;
 							u16* src = skipArchive(newPath);
 							int p = 0;
@@ -670,6 +694,7 @@ namespace OnionFS {
 
 							// Store the virtual handle into fileObj[1]
 							fileObj[1] = (u32)MAKE_VFS_HANDLE(slotIdx);
+							LOGDEBUG("RomFS VFS slot %d: vhandle 0x%08X, size %llu, closed realH 0x%08X, path '%s'", slotIdx, fileObj[1], fileSize, oldRealH, u16ToStr(s_vfiles[slotIdx].sdmcPath).c_str());
 							LightLock_Unlock(&s_vfsLock);
 							return ret;
 						}
@@ -680,6 +705,7 @@ namespace OnionFS {
 				// If opening on SD failed, fallback to native RomFS
 				if (ret < 0) {
 					ret = ((fsu32u16u32)fileOpHooks[OPEN_FILE_OP].callCode)(a1, path, a2);
+					LOGDEBUG("RomFS Fallback: '%s' -> native ret 0x%08X", u16ToStr(path).c_str(), ret);
 				}
 				return ret;
 			}
@@ -687,11 +713,9 @@ namespace OnionFS {
 			// Non-RomFS modes (ARCH_SAVE, ARCH_EXTDATA)
 			if (mode == ARCH_EXTDATA) {
 				if (ret == 0xC92044FA) {
-					// DEBUGLOCK;
-					// LOGDEBUG("fsOpenFile: Returned %08X\n", ret);
+					LOGDEBUG("fsOpenFile: Returned %08X\n", ret);
 					int res = checkDirExistsWithFile(newPath);
-					// LOGDEBUG("fsOpenFile: Second returned %08X\n", res);
-					// DEBUGUNLOCK;
+					LOGDEBUG("fsOpenFile: Second returned %08X\n", res);
 					return 0xE0C04702; //.. return "not supported" error.
 				}
 			}
@@ -717,10 +741,8 @@ namespace OnionFS {
 
 	u32  fsOpenDirectoryFunc(u32 a1, u16* path) {
 		//customBreak(0xbaca, 1, 0);
-		// DEBUGLOCK;
-		// LOGDEBUG("fsOpenDirectory: ");
+		LOGDEBUG("fsOpenDirectory: ");
 		u16* newPath = calculateNewPath(path, 0);
-		// DEBUGUNLOCK;
 		if (newPath != path) {
 			int res = checkFileExistsWithDir(newPath);
 			if (res) return res;
@@ -732,72 +754,58 @@ namespace OnionFS {
 
 	u32  fsDeleteFileFunc(u16* path) {
 		//customBreak(0xbaca, 2, 0);
-		// DEBUGLOCK;
-		// LOGDEBUG("fsDeleteFile: ");
+		LOGDEBUG("fsDeleteFile: ");
 		u16* newPath = calculateNewPath(path, 1);
-		// DEBUGUNLOCK;
 		int ret = ((fsu16)fileOpHooks[DELETE_FILE_OP].callCode)(newPath);
 		return ret;
 	}
 
 	u32  fsRenameFileFunc(u16* path1, u16* path2) {
 		//customBreak(0xbaca, 3, 0);
-		// DEBUGLOCK;
-		// LOGDEBUG("fsRenameFileFrom: ");
+		LOGDEBUG("fsRenameFileFrom: ");
 		u16* newPath1 = calculateNewPath(path1, 1);
-		// LOGDEBUG("fsRenameFileTo: ");
+		LOGDEBUG("fsRenameFileTo: ");
 		u16* newPath2 = calculateNewPath(path2, 1, true);
-		// DEBUGUNLOCK;
 		int ret = ((fsu16u16)fileOpHooks[RENAME_FILE_OP].callCode)(newPath1, newPath2);
 		return ret;
 	}
 
 	u32  fsDeleteDirectoryFunc(u16* path) {
 		//customBreak(0xbaca, 4, 0);
-		// DEBUGLOCK;
-		// LOGDEBUG("fsDeleteDirectory: ");
+		LOGDEBUG("fsDeleteDirectory: ");
 		u16* newPath = calculateNewPath(path, 1);
-		// DEBUGUNLOCK;
 		int ret = ((fsu16)fileOpHooks[DELETE_DIRECTORY_OP].callCode)(newPath);
 		return ret;
 	}
 	u32  fsDeleteDirectoryRecFunc(u16* path) {
 		//customBreak(0xbaca, 5, 0);
-		// DEBUGLOCK;
-		// LOGDEBUG("fsDeleteDirectoryRecursive: ");
+		LOGDEBUG("fsDeleteDirectoryRecursive: ");
 		u16* newPath = calculateNewPath(path, 1);
-		// DEBUGUNLOCK;
 		int ret = ((fsu16)fileOpHooks[DELETE_DIRECTORY_RECURSIVE_OP].callCode)(newPath);
 		return ret;
 	}
 	u32  fsCreateFileFunc(u16* path, u64 a2) {
 		//customBreak(0xbaca, 6, 0);
-		// DEBUGLOCK;
-		// LOGDEBUG("fsCreateFile: ");
+		LOGDEBUG("fsCreateFile: ");
 		u16* newPath = calculateNewPath(path, 1);
-		// DEBUGUNLOCK;
 		int ret = ((fsu16u64)fileOpHooks[CREATE_FILE_OP].callCode)(newPath, a2);
 		return ret;
 	}
 
 	u32  fsCreateDirectoryFunc(u16* path) {
 		//customBreak(0xbaca, 7, 0);
-		// DEBUGLOCK;
-		// LOGDEBUG("fsCreateDirectory: ");
+		LOGDEBUG("fsCreateDirectory: ");
 		u16* newPath = calculateNewPath(path, 1);
-		// DEBUGUNLOCK;
 		int ret = ((fsu16)fileOpHooks[CREATE_DIRECTORY_OP].callCode)(newPath);
 		return ret;
 	}
 
 	u32  fsRenameDirectoryFunc(u16* path1, u16* path2) {
 		//customBreak(0xbaca, 8, 0);
-		// DEBUGLOCK;
-		// LOGDEBUG("fsRenameDirectoryFrom: ");
+		LOGDEBUG("fsRenameDirectoryFrom: ");
 		u16* newPath1 = calculateNewPath(path1, 1);
-		// LOGDEBUG("fsRenameDirectoryTo: ");
+		LOGDEBUG("fsRenameDirectoryTo: ");
 		u16* newPath2 = calculateNewPath(path2, 1, true);
-		// DEBUGUNLOCK;
 		int ret = ((fsu16u16)fileOpHooks[RENAME_DIRECTORY_OP].callCode)(newPath1, newPath2);
 		return ret;
 	}
@@ -810,11 +818,9 @@ namespace OnionFS {
 		u32 sdmcArchive = 0;
 		ret = ((fsRegArchiveTypeDef)regArchiveHook.callCode)(path, arch, isAddOnContent, isAlias);
 		if (!ret) {
-			// DEBUGLOCK;
 			LightLock_Lock(&regLock);
 			OnionSave::addArchive(path, arch[2] | (u64)(arch[3]) << 32);
 			LightLock_Unlock(&regLock);
-			// DEBUGUNLOCK;
 		}
 		if (isFisrt) {
 			isFisrt = 0;
@@ -841,11 +847,9 @@ namespace OnionFS {
 		if (R_FAILED(ret = svcSendSyncRequest(*fsHandle))) Core::Abort("FS error");
 
 		*out = cmdbuf[2] | ((u64)(cmdbuf[3]) << 32);
-		// DEBUGLOCK;
-		// LOGDEBUG("fsOpenArch return 0x%08X%08X\n", cmdbuf[3], cmdbuf[2]);
+		LOGDEBUG("fsOpenArch return 0x%08X%08X\n", cmdbuf[3], cmdbuf[2]);
 		if ((u32)(*out) < 0x100000) 
 			OnionSave::addArchiveHnd(*out, archiveID);
-		// DEBUGUNLOCK;
 		return cmdbuf[1];
 	}
 
@@ -854,21 +858,15 @@ namespace OnionFS {
 		return 0;
 	}
 	int fsSetThisSaveDataSecureValue(u32 a1, u64 a2) { //0x086E00C0
-		// DEBUGLOCK;
-		// LOGDEBUG("fsSetThisSaveDataSecureValue called with secure value 0x%016llX, ignoring.\n", a2);
-		// DEBUGUNLOCK;
+		LOGDEBUG("fsSetThisSaveDataSecureValue called with secure value 0x%016llX, ignoring.\n", a2);
 		return 0;
 	}
 	int Obsoleted_5_0_fsSetSaveDataSecureValue(u64 a1, u32 a2, u32 a3, u8 a4) { // 0x08650140
-		// DEBUGLOCK;
-		// LOGDEBUG("fsSetThisSaveDataSecureValue called with secure value 0x%016llX, ignoring.\n", a1);
-		// DEBUGUNLOCK;
+		LOGDEBUG("fsSetThisSaveDataSecureValue called with secure value 0x%016llX, ignoring.\n", a1);
 		return 0;
 	}
 	int fsSetSaveDataSecureValue(u64 a1, u32 a2, u64 a3, u8 a4 ) { // 0x08750180
-		// DEBUGLOCK;
-		// LOGDEBUG("fsSetThisSaveDataSecureValue called with secure value 0x%016llX, ignoring.\n", a1);
-		// DEBUGUNLOCK;
+		LOGDEBUG("fsSetThisSaveDataSecureValue called with secure value 0x%016llX, ignoring.\n", a1);
 		return 0;
 	}
 }
@@ -895,77 +893,6 @@ bool ENABLE_DEBUG = false;
 //
 bool canSaveRedirect = true;
 
-// void deleteSecureVal() {
-//     DEBUG("NOTE: This game uses a secure value, ");
-//     Result res;
-//     u8 out;
-//     u64 secureValue = ((u64)SECUREVALUE_SLOT_SD << 32) | (((u32)Process::GetTitleID() >> 8) << 8);
-//     res = FSUSER_ControlSecureSave(SECURESAVE_ACTION_DELETE, &secureValue, 8, &out, 1);
-//     if (res) {
-//         DEBUG(" fsControlSecureSave returned: 0x%08X, proceeding to patch fs", res);
-//         Handle prochand;
-//         res = svcOpenProcess(&prochand, 0); //fs processID
-//         if (res) {
-//             DEBUG(", svcOpenProcess returned: 0x%08X, aborting.\n", res); 
-//             customBreak(0xAB047, 1, 0);
-//         }
-//         s64 info;
-//         res = svcGetProcessInfo(&info, prochand, 0x10005); //get start of .text
-//         if (res) {
-//             DEBUG(", svcGetProcessInfo 0x10005 returned: 0x%08X, aborting.\n", res);
-//             customBreak(0xAB047, 1, 0);
-//         }
-//         u32* addr = (u32*)info;
-//         res = svcGetProcessInfo(&info, prochand, 0x10002); //get .text size
-//         if (res) {
-//             DEBUG(", svcGetProcessInfo 0x10002 returned: 0x%08X, aborting.\n", res);
-//             customBreak(0xAB047, 1, 0);
-//         }
-//         res = svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, 0x08000000, prochand, (u32)addr, (u32)info);
-//         if (res) {
-//             DEBUG(", svcMapProcessMemoryEx returned: 0x%08X, aborting.\n", res);
-//             customBreak(0xAB047, 1, 0);
-//         }
-//         addr = (u32*)0x08000000;
-//         u32* endAddr = (u32*)((u32)addr + (u32)info);
-//         std::vector<u32*> backup;
-//         DEBUG(" (patched : ");
-//         bool first = true;
-//         while (addr < endAddr) {
-//             if (memcmp(addr, fsCheckPermsPat, sizeof(fsCheckPermsPat)) == 0) {
-//                 backup.push_back(addr);
-//                 *addr = 0x80; //SD access patched by Luma3DS
-//                 if (first) {
-//                     DEBUG("0x%08X", (u32)addr);
-//                     first = false;
-//                 } else 	DEBUG(", 0x%08X", (u32)addr);
-//             }
-//             addr++;
-//         }
-//         DEBUG("), ");
-//         svcInvalidateEntireInstructionCache();
-//         res = FSUSER_ControlSecureSave(SECURESAVE_ACTION_DELETE, &secureValue, 8, &out, 1);
-//         if (res) {
-//             DEBUG("patched fsControlSecureSave returned: 0x%08X, abort.\n", res);
-//             customBreak(0xAB047, 1, 0);
-//         }
-//         else {
-//             DEBUG("patch succeeded, ");
-//         }
-//         for (u32 *addrRest : backup)
-//             *addrRest = 0x121004;
-//         svcInvalidateEntireInstructionCache();
-//         svcUnmapProcessMemoryEx(CUR_PROCESS_HANDLE, 0x08000000, (u32)info);
-//         svcCloseHandle(prochand);
-//     }
-//     if (out) {
-//         DEBUG("secure value has been deleted.\n");
-//     }
-//     else {
-//         DEBUG("but there was no secure value stored.\n");
-//     }
-// }
-
 static u32* findNearestSTMFD(u32* newaddr) {
     u32 i;
     for (i = 0; i < 1024; i++) {
@@ -989,48 +916,11 @@ static inline u32   decodeARMBranch(const u32 *src)
 static void storeAddrByOffset(u32* addr, u16 offset) {
     if (offset % 4 != 0) return;
     offset >>= 2;
-    // if (ENABLE_DEBUG) {
-    //     char* funcstr = (char*)"";
-    //     char buf[10];
-    //     switch (offset) {
-    //     case 0:
-    //         funcstr = (char*)"fsOpenFile";
-    //         break;
-    //     case 1:
-    //         funcstr = (char*)"fsOpenDirectory";
-    //         break;
-    //     case 2:
-    //         funcstr = (char*)"fsDeleteFile";
-    //         break;
-    //     case 3:
-    //         funcstr = (char*)"fsRenameFile";
-    //         break;
-    //     case 4:
-    //         funcstr = (char*)"fsDeleteDirectory";
-    //         break;
-    //     case 5:
-    //         funcstr = (char*)"fsDeleteDirectoryRecursive";
-    //         break;
-    //     case 6:
-    //         funcstr = (char*)"fsCreateFile";
-    //         break;
-    //     case 7:
-    //         funcstr = (char*)"fsCreateDirectory";
-    //         break;
-    //     case 8:
-    //         funcstr = (char*)"fsRenameDirectory";
-    //         break;
-    //     default:
-    //         snprintf(buf, sizeof(buf), "%d", offset);
-    //         funcstr = buf;
-    //     }
-    //     LOGDEBUG("> %s found at 0x%08X\n", funcstr, (u32)addr);
-    // }
     if (offset < NUMBER_FILE_OP) fileOperations[offset] = addr;
 }
 
 static void processFileSystemOperations(u32* funct, u32* endAddr) {
-    // LOGDEBUG("\nStarting to process fs functions...\n");
+    LOGDEBUG("\nStarting to process fs functions...\n");
     int i;
     for (i = 0; i < 0x20; i++) { // Search for the closest BL, this BL will branch to getArchObj
         if ((*(funct + i) & 0xFF000000) == 0xEB000000) {
@@ -1042,12 +932,12 @@ static void processFileSystemOperations(u32* funct, u32* endAddr) {
     u32* addr;
     int ctr = 1;
     if (i >= 0x20) { // If there are no branches, the function couldn't be found.
-        // LOGDEBUG("> ERROR: Couldn't find getArchObj\n");
+        LOGDEBUG("> ERROR: Couldn't find getArchObj\n");
         ctr = 0;
         goto exit;
     }
     funcAddr = decodeARMBranch(funct); // Get the address of getArchObj
-    // LOGDEBUG("> getArchObj found at 0x%08X\n", funcAddr);
+    LOGDEBUG("> getArchObj found at 0x%08X\n", funcAddr);
     addr = (u32*)0x100000;
     while (addr < endAddr) { // Scan the text section of the code for the fs functions
         if ((*addr & 0xFF000000) == 0xEB000000 && (decodeARMBranch(addr) == funcAddr)) { //If a branch to getArchObj if found analize it.
@@ -1080,7 +970,7 @@ static void processFileSystemOperations(u32* funct, u32* endAddr) {
         rtEnableHook(&fileOpHooks[i]);
     }
     exit:
-    // LOGDEBUG("Finished processing fs functions: %d/%d found.\n\n", ctr, NUMBER_FILE_OP + 1);
+    LOGDEBUG("Finished processing fs functions: %d/%d found.\n\n", ctr, NUMBER_FILE_OP + 1);
     return;
 }
 
@@ -1091,55 +981,55 @@ static void initOnionFSHooks(u32 textSize) {
     while (addr < endAddr && (contOpen || contMount || contReg || contArch || contDelete || contSetThis || contSetObs || contSet)) {
         if (contOpen && (memcmp(addr, userFsTryOpenFilePat1, sizeof(userFsTryOpenFilePat1)) == 0 || memcmp(addr, userFsTryOpenFilePat2, sizeof(userFsTryOpenFilePat2)) == 0)) {
             u32* fndaddr = findNearestSTMFD(addr);
-            // LOGDEBUG("tryOpenFile found at 0x%08X\n", (u32)fndaddr);
+            LOGDEBUG("tryOpenFile found at 0x%08X\n", (u32)fndaddr);
             contOpen = false;
             processFileSystemOperations(fndaddr, endAddr);
         }
         if (contMount && (memcmp(addr, fsMountArchivePat1, sizeof(fsMountArchivePat1)) == 0 || memcmp(addr, fsMountArchivePat2, sizeof(fsMountArchivePat2)) == 0)) {
             u32* fndaddr = findNearestSTMFD(addr);
-            // LOGDEBUG("mountArchive found at 0x%08X\n", (u32)fndaddr);
+            LOGDEBUG("mountArchive found at 0x%08X\n", (u32)fndaddr);
             contMount = false;
             fsMountArchive = (u32)fndaddr;
         }
         if (contReg && memcmp(addr, fsRegArchivePat, sizeof(fsRegArchivePat)) == 0) {
             contReg = false;
             u32* fndaddr = findNearestSTMFD(addr);
-            // LOGDEBUG("registerArchive found at 0x%08X\n", (u32)fndaddr);
+            LOGDEBUG("registerArchive found at 0x%08X\n", (u32)fndaddr);
             rtInitHook(&regArchiveHook, (u32)fndaddr, (u32)fsRegArchiveCallback);
             rtEnableHook(&regArchiveHook);
         }
         if (contArch && memcmp(addr, openArchivePat, sizeof(openArchivePat)) == 0) {
             contArch = false;
             u32* fndaddr = findNearestSTMFD(addr);
-            // LOGDEBUG("openArchive found at 0x%08X\n", (u32)fndaddr);
+            LOGDEBUG("openArchive found at 0x%08X\n", (u32)fndaddr);
             rtInitHook(&openArchiveHook, (u32)fndaddr, (u32)fsOpenArchiveFunc);
             rtEnableHook(&openArchiveHook);
         }
         if (contDelete && (memcmp(addr, formatSavePat1, sizeof(formatSavePat1)) == 0 || memcmp(addr, formatSavePat2, sizeof(formatSavePat2)) == 0)) {
             contDelete = false;
             u32* fndaddr = findNearestSTMFD(addr);
-            // LOGDEBUG("formatSaveData found at 0x%08X\n", (u32)fndaddr);
+            LOGDEBUG("formatSaveData found at 0x%08X\n", (u32)fndaddr);
             rtInitHook(&formatSaveHook, (u32)fndaddr, (u32)fsFormatSaveData);
             rtEnableHook(&formatSaveHook);
         }
         if (contSetThis && memcmp(addr, fsSetThisSecValPat, sizeof(fsSetThisSecValPat)) == 0) {
             contSetThis = false;
             u32* fndaddr = findNearestSTMFD(addr);
-            // LOGDEBUG("fsSetThisSaveDataSecureValue found at 0x%08X\n", (u32)fndaddr);
+            LOGDEBUG("fsSetThisSaveDataSecureValue found at 0x%08X\n", (u32)fndaddr);
             rtInitHook(&fsSetThisSecValHook, (u32)fndaddr, (u32)fsSetThisSaveDataSecureValue);
             rtEnableHook(&fsSetThisSecValHook);
         }
         if (contSetObs && memcmp(addr, fsObsSetThisSecValPat, sizeof(fsObsSetThisSecValPat)) == 0) {
             contSetObs = false;
             u32* fndaddr = findNearestSTMFD(addr);
-            // LOGDEBUG("Obsoleted_5_0_fsSetSaveDataSecureValue found at 0x%08X\n", (u32)fndaddr);
+            LOGDEBUG("Obsoleted_5_0_fsSetSaveDataSecureValue found at 0x%08X\n", (u32)fndaddr);
             rtInitHook(&fsObsSetThisSecValHook, (u32)fndaddr, (u32)Obsoleted_5_0_fsSetSaveDataSecureValue);
             rtEnableHook(&fsObsSetThisSecValHook);
         }
         if (contSet && memcmp(addr, fsSetSecValPat, sizeof(fsSetSecValPat)) == 0) {
             contSet = false;
             u32* fndaddr = findNearestSTMFD(addr);
-            // LOGDEBUG("fsSetSaveDataSecureValue found at 0x%08X\n", (u32)fndaddr);
+            LOGDEBUG("fsSetSaveDataSecureValue found at 0x%08X\n", (u32)fndaddr);
             rtInitHook(&fsSetSecValHook, (u32)fndaddr, (u32)fsSetSaveDataSecureValue);
             rtEnableHook(&fsSetSecValHook);
         }
@@ -1150,7 +1040,7 @@ static void initOnionFSHooks(u32 textSize) {
         Core::Abort("OnionFS: Unexpected secure value");
     }
     if (!(formatSaveHook.isEnabled && openArchiveHook.isEnabled && regArchiveHook.isEnabled)) {
-        // LOGDEBUG("ERROR: Some hooks couldn't be initialized, aborting.\n");
+        LOGDEBUG("ERROR: Some hooks couldn't be initialized, aborting.\n");
         Core::Abort("OnionFS: failed to initialize");
     }
 
@@ -1168,7 +1058,7 @@ static void initOnionFSHooks(u32 textSize) {
             fsFileClose = (u32)(scan + 1);
             fsFileWrite = (u32)(scan + 12);
             fsFileGetSize = (u32)(scan + 36);
-            fsFileSetPriority = (u32)(scan - 35);
+            fsFileSetPriority = (u32)(scan - 47);
             break;
         }
         scan++;
@@ -1193,7 +1083,7 @@ static void initOnionFSHooks(u32 textSize) {
 void ReloadConfig(void) {
     if (g_ProcessTID[0] == '\0') {
         u64 tid = CTRPluginFramework::Process::GetTitleID();
-        sprintf(g_ProcessTID, "%016lX", tid);
+        sprintf(g_ProcessTID, "%016llX", (unsigned long long)tid);
     }
 
     g_onionfs_enable_romfs_redir = G_config.getBool("onionfs_enable_romfs_redir", true);
@@ -1239,7 +1129,7 @@ void ReloadConfig(void) {
 
 void InitFS(void) {
     u64 tid = Process::GetTitleID();
-    sprintf(g_ProcessTID, "%016lX", tid);
+    sprintf(g_ProcessTID, "%016llX", (unsigned long long)tid);
     LightLock_Init(&regLock);
     LightLock_Init(&openLock);
     LightLock_Init(&s_vfsLock);
@@ -1249,9 +1139,5 @@ void InitFS(void) {
     ReloadConfig();
 
     initOnionFSHooks(CTRPluginFramework::Process::GetTextSize());
-}
-
-void InitMenu(CTRPluginFramework::PluginMenu* menu) {
-    // Menu integration disabled in favor of native in-game settings screen
 }
 }

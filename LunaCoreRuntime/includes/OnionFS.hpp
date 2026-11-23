@@ -17,5 +17,4 @@ namespace OnionFS {
 
     void InitFS(void);
     void ReloadConfig(void);
-    void InitMenu(CTRPluginFramework::PluginMenu* menu);
 }

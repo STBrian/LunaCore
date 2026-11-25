@@ -279,6 +279,8 @@ namespace Core {
             {
                 mBackgroundFrame->draw(MC3DSPF::Tessellator::instance, 0, 0);
                 mBackground->draw(MC3DSPF::Tessellator::instance, 6, 30);
+                int textWidth = mFont->getTextWidth("LunaCore Settings", false, 1.0f);
+                mFont->drawWithShadow((MC3DSPF::AppPlatform::BOTTOM_SCREEN_WIDTH - textWidth) / 2, 12, 1.0f, "LunaCore Settings", MC3DSPF::Color(0, 0, 0), 0, -1);
                 mSprite1->render();
                 renderComponents(touchX, touchY, useScreen, tick);
             }

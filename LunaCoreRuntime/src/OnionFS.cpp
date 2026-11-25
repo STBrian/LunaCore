@@ -2,6 +2,14 @@
 
 #include <CTRPluginFramework.hpp>
 
+#define NO_ONIONFS_LOGS
+
+#ifdef NO_ONIONFS_LOGS
+#ifdef DEBUG
+#undef DEBUG
+#endif
+#endif
+
 #include "CoreConstants.hpp"
 #include "CoreGlobals.hpp"
 #include "Core/Config.hpp"

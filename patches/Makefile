@@ -19,12 +19,12 @@ ifneq ($(strip $(PATCH_SRCS)),)
 # Unified IPS target: rebuilds if any individual IPS file changes
 $(UNIFIED_IPS): $(IPS_TARGETS) $(BUILDER)
 	@mkdir -p $(DIST_DIR)
-	$(PYTHON) $(BUILDER) --merge $(IPS_TARGETS) -o $(UNIFIED_IPS)
+	@$(PYTHON) $(BUILDER) --merge $(IPS_TARGETS) -o $(UNIFIED_IPS)
 
 # Individual IPS rule: incremental build (only rebuilds if %.patch changed)
 $(OUT_DIR)/%.ips: %.patch $(BUILDER)
 	@mkdir -p $(OUT_DIR)
-	$(PYTHON) $(BUILDER) $< -o $@
+	@$(PYTHON) $(BUILDER) $< -o $@
 
 else
 
